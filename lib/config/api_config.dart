@@ -1,18 +1,17 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-
 class ApiConfig {
-  /// Base API URL dynamically resolving based on execution target
+  /// Base API URL pointing directly to the deployed Railway Production Backend
+  static const String productionUrl =
+      'https://stylestorebackend-production.up.railway.app/api/v1';
+
+  /// Toggle for local development vs production Railway backend
+  static const bool useProduction = true;
+
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000/api/v1';
-    } else if (Platform.isAndroid) {
-      // 10.0.2.2 points to host localhost in Android Emulator
-      return 'http://10.0.2.2:8000/api/v1';
-    } else {
-      // Windows / macOS / Linux / iOS simulator
-      return 'http://localhost:8000/api/v1';
+    if (useProduction) {
+      return productionUrl;
     }
+    // Local fallback
+    return 'http://10.0.2.2:8000/api/v1';
   }
 
   // Auth endpoints
