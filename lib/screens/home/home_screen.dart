@@ -136,10 +136,26 @@ class HomeScreen extends StatelessWidget {
                         _buildDataRow('ID de Usuario', '#${user?.id ?? "-"}'),
                         _buildDataRow('Nombre', user?.name ?? '-'),
                         _buildDataRow('Correo Electrónico', user?.email ?? '-'),
+                        _buildDataRow('Rol', user?.role ?? 'cliente'),
                         _buildDataRow(
                           'Estado',
                           user?.isActive == true ? 'Activo' : 'Inactivo',
                           isSuccess: user?.isActive == true,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, AppRoutes.changePassword);
+                          },
+                          icon: const Icon(Icons.lock_outline, size: 16),
+                          label: const Text('Cambiar Contraseña (CU4)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.accentIndigo,
+                            side: const BorderSide(color: AppTheme.accentIndigo),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
                         ),
                       ],
                     ),
