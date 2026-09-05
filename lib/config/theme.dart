@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors
-  static const Color bgPrimary = Color(0xFF0A0D14);
-  static const Color bgSecondary = Color(0xFF101524);
-  static const Color bgCard = Color(0xFF161C2E);
-  static const Color accentIndigo = Color(0xFF6366F1);
-  static const Color accentPurple = Color(0xFFA855F7);
-  static const Color accentPink = Color(0xFFEC4899);
+  // Brand Colors — Deep Dark Navy & Royal Blue
+  static const Color bgPrimary = Color(0xFF121924);
+  static const Color bgSecondary = Color(0xFF172230);
+  static const Color bgCard = Color(0xFF1E2C3D);
+  static const Color accentIndigo = Color(0xFF2563EB); // Royal Blue
+  static const Color accentPurple = Color(0xFF3B82F6); // Lighter Blue
+  static const Color accentPink = Color(0xFF38BDF8);   // Sky Accent
   static const Color successGreen = Color(0xFF10B981);
   static const Color dangerRed = Color(0xFFEF4444);
   static const Color textPrimary = Color(0xFFF8FAFC);
