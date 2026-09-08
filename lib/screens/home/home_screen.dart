@@ -143,19 +143,40 @@ class HomeScreen extends StatelessWidget {
                           isSuccess: user?.isActive == true,
                         ),
                         const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(context, AppRoutes.changePassword);
-                          },
-                          icon: const Icon(Icons.lock_outline, size: 16),
-                          label: const Text('Cambiar Contraseña (CU4)'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.accentIndigo,
-                            side: const BorderSide(color: AppTheme.accentIndigo),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, AppRoutes.catalog);
+                                },
+                                icon: const Icon(Icons.checkroom, size: 18),
+                                label: const Text('Ver Catálogo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.accentIndigo,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pushNamed(context, AppRoutes.changePassword);
+                              },
+                              icon: const Icon(Icons.lock_outline, size: 16),
+                              label: const Text('Contraseña'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.accentIndigo,
+                                side: const BorderSide(color: AppTheme.accentIndigo),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -7,6 +7,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/catalog_service.dart';
 import 'services/storage_service.dart';
 
 void main() {
@@ -28,6 +29,9 @@ class StyleStoreApp extends StatelessWidget {
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider<AuthService>(
           create: (_) => AuthService(apiService, storageService),
+        ),
+        ChangeNotifierProvider<CatalogService>(
+          create: (_) => CatalogService(apiService),
         ),
       ],
       child: Consumer<AuthService>(
