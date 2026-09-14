@@ -8,6 +8,9 @@ import 'screens/home/home_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/catalog_service.dart';
+import 'services/proximamente_service.dart';
+import 'services/cart_service.dart';
+import 'services/order_service.dart';
 import 'services/storage_service.dart';
 
 void main() {
@@ -32,6 +35,15 @@ class StyleStoreApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<CatalogService>(
           create: (_) => CatalogService(apiService),
+        ),
+        ChangeNotifierProvider<ProximamenteService>(
+          create: (_) => ProximamenteService(apiService),
+        ),
+        ChangeNotifierProvider<CartService>(
+          create: (_) => CartService(apiService),
+        ),
+        ChangeNotifierProvider<OrderService>(
+          create: (_) => OrderService(apiService),
         ),
       ],
       child: Consumer<AuthService>(

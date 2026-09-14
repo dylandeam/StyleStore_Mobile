@@ -140,6 +140,11 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCurrentUser(User user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     try {
       await _apiService.post(ApiConfig.logoutUrl);

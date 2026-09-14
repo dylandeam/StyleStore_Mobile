@@ -8,7 +8,10 @@ class Producto {
   final String? categoriaNombre;
   final int temporadaId;
   final String? temporadaNombre;
+  final int? coleccionId;
+  final String? coleccionNombre;
   final bool active;
+  final bool visibleEnCatalogo;
   final List<String> colores;
   final int stockTotal;
 
@@ -22,7 +25,10 @@ class Producto {
     this.categoriaNombre,
     required this.temporadaId,
     this.temporadaNombre,
+    this.coleccionId,
+    this.coleccionNombre,
     required this.active,
+    this.visibleEnCatalogo = true,
     required this.colores,
     required this.stockTotal,
   });
@@ -46,7 +52,10 @@ class Producto {
       categoriaNombre: json['categoria_nombre'],
       temporadaId: json['temporada_id'] ?? 0,
       temporadaNombre: json['temporada_nombre'],
+      coleccionId: json['coleccion_id'],
+      coleccionNombre: json['coleccion_nombre'],
       active: json['active'] ?? true,
+      visibleEnCatalogo: json['visible_en_catalogo'] ?? true,
       colores: parsedColores,
       stockTotal: json['stock_total'] ?? 0,
     );

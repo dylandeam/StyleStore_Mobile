@@ -151,7 +151,7 @@ class HomeScreen extends StatelessWidget {
                                   Navigator.pushNamed(context, AppRoutes.catalog);
                                 },
                                 icon: const Icon(Icons.checkroom, size: 18),
-                                label: const Text('Ver Catálogo'),
+                                label: const Text('Catálogo & Pedidos'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.accentIndigo,
                                   foregroundColor: Colors.white,
@@ -164,10 +164,25 @@ class HomeScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             OutlinedButton.icon(
                               onPressed: () {
+                                Navigator.pushNamed(context, AppRoutes.profile);
+                              },
+                              icon: const Icon(Icons.person_outline, size: 16),
+                              label: const Text('Mi Perfil'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.accentIndigo,
+                                side: const BorderSide(color: AppTheme.accentIndigo),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () {
                                 Navigator.pushNamed(context, AppRoutes.changePassword);
                               },
                               icon: const Icon(Icons.lock_outline, size: 16),
-                              label: const Text('Contraseña'),
+                              label: const Text('Clave'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppTheme.accentIndigo,
                                 side: const BorderSide(color: AppTheme.accentIndigo),

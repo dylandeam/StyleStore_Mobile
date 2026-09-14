@@ -39,4 +39,35 @@ class ApiService {
       body: body != null ? jsonEncode(body) : null,
     );
   }
+
+  Future<http.Response> put(
+    String url, {
+    Map<String, dynamic>? body,
+    bool requireAuth = true,
+  }) async {
+    final headers = await _getHeaders(requireAuth: requireAuth);
+    return await http.put(
+      Uri.parse(url),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+  }
+
+  Future<http.Response> patch(
+    String url, {
+    Map<String, dynamic>? body,
+    bool requireAuth = true,
+  }) async {
+    final headers = await _getHeaders(requireAuth: requireAuth);
+    return await http.patch(
+      Uri.parse(url),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+  }
+
+  Future<http.Response> delete(String url, {bool requireAuth = true}) async {
+    final headers = await _getHeaders(requireAuth: requireAuth);
+    return await http.delete(Uri.parse(url), headers: headers);
+  }
 }

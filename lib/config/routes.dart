@@ -3,6 +3,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/account/change_password_screen.dart';
+import '../screens/account/profile_screen.dart';
 import '../screens/catalog/catalog_screen.dart';
 
 class AppRoutes {
@@ -10,6 +11,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String home = '/home';
   static const String changePassword = '/change-password';
+  static const String profile = '/profile';
   static const String catalog = '/catalog';
 
   static Map<String, WidgetBuilder> get routes => {
@@ -17,6 +19,7 @@ class AppRoutes {
         register: (context) => const RegisterScreen(),
         home: (context) => const HomeScreen(),
         changePassword: (context) => const ChangePasswordScreen(),
+        profile: (context) => const ProfileScreen(),
         catalog: (context) => const CatalogScreen(),
       };
 }
