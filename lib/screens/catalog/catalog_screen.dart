@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
@@ -11,6 +12,7 @@ import '../../services/cart_service.dart';
 import '../../services/order_service.dart';
 import '../../services/api_service.dart';
 import '../../config/api_config.dart';
+import 'product_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -130,6 +132,21 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     );
   }
 
+  void _openProductDetail(Producto p) async {
+    final goToCart = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(codigo: p.codigo),
+      ),
+    );
+    if (goToCart == true) {
+      if (mounted) {
+        Provider.of<CartService>(context, listen: false).fetchCart();
+        _tabController.animateTo(2); // Pestaña de Carrito
+      }
+    }
+  }
+
   Widget _buildProductCard(Producto p) {
     final imageUrl = _resolveImageUrl(p.foto);
 
@@ -147,18 +164,48 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (imageUrl != null)
-            SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(p),
-              ),
-            )
-          else
-            _buildImagePlaceholder(p),
+          GestureDetector(
+            onTap: () => _openProductDetail(p),
+            child: Stack(
+              children: [
+                if (imageUrl != null)
+                  SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(p),
+                    ),
+                  )
+                else
+                  _buildImagePlaceholder(p),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC14263D),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0x33C5A880)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Ver Ficha & IA',
+                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           Padding(
             padding: const EdgeInsets.all(16),
@@ -186,17 +233,23 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  p.nombre,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                GestureDetector(
+                  onTap: () => _openProductDetail(p),
+                  child: Text(
+                    p.nombre,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
                 ),
                 if (p.descripcion != null && p.descripcion!.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    p.descripcion!,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  GestureDetector(
+                    onTap: () => _openProductDetail(p),
+                    child: Text(
+                      p.descripcion!,
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 10),
@@ -218,7 +271,24 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 ),
                 const SizedBox(height: 14),
 
-                // Botones de acción (Carrito / Reservar)
+                // Botón Ficha Detallada & Recomendados IA
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openProductDetail(p),
+                    icon: const Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 16),
+                    label: const Text('Ver Detalle, Tallas y Recomendados IA'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF14263D),
+                      side: const BorderSide(color: Color(0xFFC5A880)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Botones rápidos de acción (Carrito / Reservar)
                 Row(
                   children: [
                     Expanded(
@@ -702,6 +772,130 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           if (order.envioEstado != null) ...[
             const SizedBox(height: 4),
             Text('Envío: ${order.envioEstado}', style: const TextStyle(fontSize: 12, color: AppTheme.accentIndigo)),
+          ],
+
+          // TARJETA DE RASTREO YANGO DELIVERY
+          if (order.yangoTrackingCode != null && order.yangoTrackingCode!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x1AFC2B2B),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFC2B2B)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFC2B2B),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Yango Delivery',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Rastreo en Vivo Asignado',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Código Yango: ${order.yangoTrackingCode}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                  ),
+                  if (order.deliveryConductor != null && order.deliveryConductor!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        'Conductor: ${order.deliveryConductor}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: order.yangoTrackingCode!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Código Yango copiado al portapapeles.'),
+                              backgroundColor: Color(0xFFFC2B2B),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.copy, size: 14),
+                        label: const Text('Copiar Código'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFC2B2B),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      if (order.yangoTrackingUrl != null && order.yangoTrackingUrl!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Enlace Yango Delivery'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Seguimiento en directo del conductor:'),
+                                    const SizedBox(height: 8),
+                                    SelectableText(
+                                      order.yangoTrackingUrl!,
+                                      style: const TextStyle(color: AppTheme.accentIndigo, decoration: TextDecoration.underline),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: order.yangoTrackingUrl!));
+                                      Navigator.pop(ctx);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Enlace copiado al portapapeles.')),
+                                      );
+                                    },
+                                    child: const Text('Copiar Enlace'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Cerrar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.open_in_new, size: 14),
+                          label: const Text('Ver Enlace'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFFC2B2B),
+                            side: const BorderSide(color: Color(0xFFFC2B2B)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            textStyle: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 10),
 
