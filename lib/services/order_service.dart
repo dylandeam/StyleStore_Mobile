@@ -70,4 +70,33 @@ class OrderService extends ChangeNotifier {
     } catch (_) {}
     return false;
   }
+
+  Future<bool> solicitarCambio({
+    required int ordenVentaId,
+    required int detalleVentaId,
+    required String tipo,
+    required String motivo,
+    required int sucursalId,
+    required DateTime fechaProgramada,
+    required String descripcionProblema,
+  }) async {
+    try {
+      final res = await _apiService.post(
+        ApiConfig.cambiosUrl,
+        body: {
+          'orden_venta_id': ordenVentaId,
+          'detalle_venta_id': detalleVentaId,
+          'tipo': tipo,
+          'motivo': motivo,
+          'sucursal_id': sucursalId,
+          'fecha_programada': '${fechaProgramada.year.toString().padLeft(4, '0')}-${fechaProgramada.month.toString().padLeft(2, '0')}-${fechaProgramada.day.toString().padLeft(2, '0')}',
+          'descripcion_problema': descripcionProblema,
+        },
+        requireAuth: true,
+      );
+      return res.statusCode == 200 || res.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
+  }
 }

@@ -29,6 +29,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CatalogService>(context, listen: false).fetchSucursales();
       Provider.of<CatalogService>(context, listen: false).fetchCatalog();
       Provider.of<ProximamenteService>(context, listen: false).fetchProximamente();
       Provider.of<CartService>(context, listen: false).fetchCart();
@@ -95,40 +96,87 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   Widget _buildCatalogTab() {
     final catalogService = Provider.of<CatalogService>(context);
 
-    if (catalogService.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo));
-    }
-    if (catalogService.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 48),
-            const SizedBox(height: 12),
-            Text(catalogService.errorMessage!, style: const TextStyle(color: AppTheme.textSecondary)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => catalogService.fetchCatalog(),
-              child: const Text('Reintentar'),
-            ),
-          ],
+    return Column(
+      children: [
+        // Selector de Sucursal v6
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: const BoxDecoration(
+            color: AppTheme.bgSecondary,
+            border: Border(bottom: BorderSide(color: AppTheme.borderGlass)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.storefront, size: 20, color: Color(0xFFC5A880)),
+              const SizedBox(width: 8),
+              const Text(
+                'Sucursal:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: catalogService.selectedSucursalId,
+                    isExpanded: true,
+                    dropdownColor: AppTheme.bgCard,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('🌐 Todas las sucursales', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      ...catalogService.sucursales.map((s) {
+                        final id = s['id'] as int;
+                        final nombre = s['nombre'] ?? s['name'] ?? 'Sucursal #$id';
+                        final ciudad = s['ciudad'] ?? s['city'] ?? '';
+                        return DropdownMenuItem<int?>(
+                          value: id,
+                          child: Text('$nombre ($ciudad)'),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) => catalogService.setSucursal(val),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    }
-    if (catalogService.productos.isEmpty) {
-      return const Center(child: Text('No hay productos disponibles por ahora.', style: TextStyle(color: AppTheme.textSecondary)));
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => catalogService.fetchCatalog(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: catalogService.productos.length,
-        itemBuilder: (context, index) {
-          final p = catalogService.productos[index];
-          return _buildProductCard(p);
-        },
-      ),
+        Expanded(
+          child: catalogService.isLoading
+              ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
+              : catalogService.errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 48),
+                          const SizedBox(height: 12),
+                          Text(catalogService.errorMessage!, style: const TextStyle(color: AppTheme.textSecondary)),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: () => catalogService.fetchCatalog(),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : catalogService.productos.isEmpty
+                      ? const Center(child: Text('No hay productos disponibles para esta sucursal.', style: TextStyle(color: AppTheme.textSecondary)))
+                      : RefreshIndicator(
+                          onRefresh: () => catalogService.fetchCatalog(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: catalogService.productos.length,
+                            itemBuilder: (context, index) {
+                              final p = catalogService.productos[index];
+                              return _buildProductCard(p);
+                            },
+                          ),
+                        ),
+        ),
+      ],
     );
   }
 
@@ -597,8 +645,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   }
 
   void _showCheckoutModal(CartService cartService) {
-    String metodo = 'paypal';
     final addressCtrl = TextEditingController(text: 'Av. América #450');
+    final mapsCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -615,89 +663,130 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 top: 20,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('Finalizar Pedido', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: addressCtrl,
-                    decoration: InputDecoration(
-                      labelText: 'Dirección de Entrega',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      filled: true,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Método de Pago:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () => setModalState(() => metodo = 'paypal'),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Finalizar Pedido Online', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 14),
+
+                    // Alerta informativa Yango
+                    Container(
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: metodo == 'paypal' ? const Color(0x1A14263D) : AppTheme.bgSecondary,
+                        color: const Color(0x1AFC2B2B),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: metodo == 'paypal' ? AppTheme.accentIndigo : AppTheme.borderGlass),
+                        border: Border.all(color: const Color(0x66FC2B2B)),
                       ),
-                      child: Row(
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(metodo == 'paypal' ? Icons.radio_button_checked : Icons.radio_button_off, color: AppTheme.accentIndigo, size: 20),
-                          const SizedBox(width: 10),
-                          const Text('PayPal (Sandbox / Pago Digital)', style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () => setModalState(() => metodo = 'caja'),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: metodo == 'caja' ? const Color(0x1A14263D) : AppTheme.bgSecondary,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: metodo == 'caja' ? AppTheme.accentIndigo : AppTheme.borderGlass),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(metodo == 'caja' ? Icons.radio_button_checked : Icons.radio_button_off, color: AppTheme.accentIndigo, size: 20),
-                          const SizedBox(width: 10),
-                          const Text('Pago en Caja / Efectivo', style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(ctx);
-                      final res = await cartService.checkout(
-                        metodoPago: metodo,
-                        distanciaKm: 4.5,
-                        direccionEnvio: addressCtrl.text,
-                      );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(res != null ? '¡Orden generada con éxito!' : 'Pedido procesado.'),
-                            backgroundColor: AppTheme.successGreen,
+                          Icon(Icons.local_shipping_outlined, color: Color(0xFFFC2B2B), size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Tarifa Yango: No se cobra por adelantado. Te sugerimos consultar el costo estimado del viaje directamente en la app de Yango según el clima y la disponibilidad.',
+                              style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+                            ),
                           ),
-                        );
-                        Provider.of<OrderService>(context, listen: false).fetchOrders();
-                        _tabController.animateTo(3);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF14263D),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                        ],
+                      ),
                     ),
-                    child: const Text('Confirmar y Realizar Pago', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: addressCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Dirección o Referencia de Entrega',
+                        hintText: 'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: mapsCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Enlace de Google Maps o Apple Maps (Obligatorio para Yango)',
+                        hintText: 'https://maps.app.goo.gl/...',
+                        prefixIcon: const Icon(Icons.location_on, color: Color(0xFFFC2B2B)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text('Método de Pago Online:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0x1A14263D),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.accentIndigo),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.radio_button_checked, color: AppTheme.accentIndigo, size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('PayPal v2 (Tarjeta o Saldo Digital)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                SizedBox(height: 2),
+                                Text('Pago seguro internacional. Para compras presenciales en efectivo visita nuestras cajas POS en tienda física.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    ElevatedButton(
+                      onPressed: () async {
+                        final address = addressCtrl.text.trim();
+                        final mapsUrl = mapsCtrl.text.trim();
+                        if (address.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor ingresa la dirección de entrega.')),
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(ctx);
+                        final direccionCompleta = mapsUrl.isNotEmpty
+                            ? '$address | Maps: $mapsUrl'
+                            : address;
+
+                        final res = await cartService.checkout(
+                          metodoPago: 'paypal',
+                          distanciaKm: 4.5,
+                          direccionEnvio: direccionCompleta,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res != null ? '¡Orden generada con éxito con PayPal!' : 'Pedido procesado.'),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
+                          );
+                          Provider.of<OrderService>(context, listen: false).fetchOrders();
+                          _tabController.animateTo(3);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF14263D),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Confirmar y Pagar con PayPal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -901,25 +990,230 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
 
           // Botón ¿Le llegó su pedido?
           if (order.envioId != null && order.envioEstado != 'entregado')
-            ElevatedButton.icon(
-              onPressed: () async {
-                final ok = await service.confirmarEntregaEnvio(order.envioId!);
-                if (mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('¡Entrega confirmada con éxito!'), backgroundColor: AppTheme.successGreen),
-                  );
-                }
-              },
-              icon: const Icon(Icons.check, size: 16),
-              label: const Text('¿Le llegó su pedido? Confirmar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.successGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final ok = await service.confirmarEntregaEnvio(order.envioId!);
+                  if (mounted && ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('¡Entrega confirmada con éxito!'), backgroundColor: AppTheme.successGreen),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('¿Le llegó su pedido? Confirmar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.successGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+
+          // Botón de Garantía: Solicitar Cambio / Devolución (v6 Punto 9)
+          if ((order.estado.toLowerCase() == 'pagada' ||
+               order.estado.toLowerCase() == 'pagado' ||
+               order.estado.toLowerCase() == 'entregado' ||
+               order.estado.toLowerCase() == 'completada') &&
+              DateTime.now().difference(order.createdAt).inDays <= 7)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: OutlinedButton.icon(
+                onPressed: () => _showSolicitarCambioDialog(order, service),
+                icon: const Icon(Icons.sync_alt, size: 16),
+                label: const Text('Solicitar Cambio o Devolución (Plazo 7 días)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFC5A880),
+                  side: const BorderSide(color: Color(0xFFC5A880)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
         ],
       ),
+    );
+  }
+
+  void _showSolicitarCambioDialog(OrderItem order, OrderService service) {
+    if (order.detalles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay detalles registrados para esta orden.')),
+      );
+      return;
+    }
+
+    int selectedDetalleId = order.detalles.first.id;
+    String tipo = 'cambio';
+    String motivo = 'Talla incorrecta';
+    final descCtrl = TextEditingController();
+    DateTime fechaProgramada = DateTime.now().add(const Duration(days: 1));
+
+    final motivos = [
+      'Talla incorrecta',
+      'Defecto de fábrica en la prenda',
+      'Disconformidad con el color o modelo',
+      'Otro motivo',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.sync_alt, color: Color(0xFFC5A880)),
+                        SizedBox(width: 8),
+                        Text('Solicitar Cambio o Devolución', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Orden: ${order.codigo}', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 14),
+
+                    const Text('Prenda a cambiar/devolver:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedDetalleId,
+                      dropdownColor: AppTheme.bgCard,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: order.detalles.map((d) {
+                        return DropdownMenuItem<int>(
+                          value: d.id,
+                          child: Text('${d.productoNombre} (${d.tallaNombre ?? ''} / ${d.colorNombre ?? ''}) - Bs. ${d.subtotal.toStringAsFixed(2)}', overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => selectedDetalleId = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    const Text('Tipo de Solicitud:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('Cambio')),
+                            selected: tipo == 'cambio',
+                            selectedColor: const Color(0xFFC5A880),
+                            onSelected: (_) => setModalState(() => tipo = 'cambio'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('Devolución')),
+                            selected: tipo == 'devolucion',
+                            selectedColor: const Color(0xFFC5A880),
+                            onSelected: (_) => setModalState(() => tipo = 'devolucion'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    const Text('Motivo:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: motivo,
+                      dropdownColor: AppTheme.bgCard,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: motivos.map((m) {
+                        return DropdownMenuItem<String>(
+                          value: m,
+                          child: Text(m),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => motivo = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: descCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Descripción del problema',
+                        hintText: 'Explica brevemente qué ocurrió con la prenda...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        final desc = descCtrl.text.trim().isEmpty ? 'Solicitud desde app móvil' : descCtrl.text.trim();
+                        final ok = await service.solicitarCambio(
+                          ordenVentaId: order.id,
+                          detalleVentaId: selectedDetalleId,
+                          tipo: tipo,
+                          motivo: motivo,
+                          sucursalId: order.sucursalId ?? 1,
+                          fechaProgramada: fechaProgramada,
+                          descripcionProblema: desc,
+                        );
+
+                        if (mounted) {
+                          if (ok) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('¡Solicitud registrada! Preséntate en la sucursal asignada con tu prenda y comprobante.'),
+                                backgroundColor: AppTheme.successGreen,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No se pudo registrar la solicitud. Comprueba que no supere los 7 días de compra.'),
+                                backgroundColor: AppTheme.dangerRed,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF14263D),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Enviar Solicitud a la Tienda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -27,6 +27,13 @@ class ApiConfig {
 
   // Reservas (CU13)
   static const String reservasUrl = '$baseUrl/reservas';
+  static const String reservasElegibilidadUrl = '$baseUrl/reservas/elegibilidad';
+
+  // Cambios y Devoluciones (v6 Punto 9)
+  static const String cambiosUrl = '$baseUrl/cambios';
+
+  // Sucursales
+  static const String sucursalesUrl = '$baseUrl/sucursales';
 
   // Ventas y Pedidos
   static const String misComprasUrl = '$baseUrl/ventas/mis-compras';

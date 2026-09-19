@@ -25,6 +25,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   // Variantes seleccionadas
   int? _selectedColorId;
   int? _selectedTallaId;
+  int? _selectedStockInventarioId;
   int _selectedSucursalId = 1;
   int _availableStock = 0;
   int _quantity = 1;
@@ -102,11 +103,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (existencias.isNotEmpty) {
       final primeraTalla = existencias.first;
       _selectedTallaId = primeraTalla['talla_id'];
+      _selectedStockInventarioId = primeraTalla['stock_inventario_id'] ?? primeraTalla['id'];
       _selectedSucursalId = primeraTalla['sucursal_id'] ?? 1;
       _availableStock = (primeraTalla['cantidad'] as num?)?.toInt() ?? 0;
       _quantity = _availableStock > 0 ? 1 : 0;
     } else {
       _selectedTallaId = null;
+      _selectedStockInventarioId = null;
       _availableStock = 0;
       _quantity = 0;
     }
@@ -455,6 +458,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         : () {
                             setState(() {
                               _selectedTallaId = e['talla_id'];
+                              _selectedStockInventarioId = e['stock_inventario_id'] ?? e['id'];
                               _selectedSucursalId = e['sucursal_id'] ?? 1;
                               _availableStock = stock;
                               _quantity = 1;
@@ -684,6 +688,167 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  Future<void> _abrirModalReserva(Map<String, dynamic> p) async {
+    final api = Provider.of<ApiService>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
+    );
+
+    bool puedeReservar = false;
+    String mensaje = '';
+    try {
+      final res = await api.get(ApiConfig.reservasElegibilidadUrl, requireAuth: true);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(res.bodyBytes));
+        puedeReservar = data['puede_reservar'] == true;
+        mensaje = data['mensaje'] ?? '';
+      }
+    } catch (_) {}
+
+    if (mounted) Navigator.pop(context);
+
+    if (!puedeReservar) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lock_clock, color: Color(0xFFC5A880)),
+              SizedBox(width: 8),
+              Text('Reserva Exclusiva', style: TextStyle(fontSize: 17)),
+            ],
+          ),
+          content: Text(
+            mensaje.isNotEmpty
+                ? mensaje
+                : 'La reserva de prendas es un beneficio exclusivo para clientes con al menos 1 compra previa pagada. ¡Realiza tu primera compra para desbloquear reservas gratuitas!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    int diasReserva = 2;
+    int sucursalSeleccionada = _selectedSucursalId;
+
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final fechaLimite = DateTime.now().add(Duration(days: diasReserva));
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Reservar Prenda en Tienda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text('Prenda: ${p['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF14263D))),
+                  const SizedBox(height: 12),
+                  const Text('Plazo de reserva (hasta 7 días):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [1, 2, 3, 5, 7].map((d) {
+                      final sel = diasReserva == d;
+                      return ChoiceChip(
+                        label: Text('$d días'),
+                        selected: sel,
+                        selectedColor: const Color(0xFFC5A880),
+                        onSelected: (_) => setModalState(() => diasReserva = d),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final stockId = _selectedStockInventarioId;
+                      if (stockId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Selecciona una talla disponible para reservar.')),
+                        );
+                        return;
+                      }
+
+                      final resPost = await api.post(
+                        ApiConfig.reservasUrl,
+                        body: {
+                          'sucursal_id': sucursalSeleccionada,
+                          'fecha_limite': fechaLimite.toIso8601String(),
+                          'detalles': [
+                            {
+                              'stock_inventario_id': stockId,
+                              'cantidad': _quantity,
+                            }
+                          ],
+                        },
+                        requireAuth: true,
+                      );
+
+                      if (mounted) {
+                        if (resPost.statusCode == 200 || resPost.statusCode == 201) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
+                          );
+                          _loadProductData();
+                        } else {
+                          try {
+                            final errBody = jsonDecode(resPost.body);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(errBody['detail'] ?? 'No se pudo realizar la reserva.'),
+                                backgroundColor: AppTheme.dangerRed,
+                              ),
+                            );
+                          } catch (_) {}
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF14263D),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Confirmar Reserva en Sucursal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildBottomBar(Map<String, dynamic> p) {
     final bool canBuy = _availableStock > 0 && _selectedColorId != null && _selectedTallaId != null;
 
@@ -712,7 +877,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: canBuy ? () => _abrirModalReserva(p) : null,
+              tooltip: 'Reservar Prenda (Elegibilidad v6)',
+              icon: const Icon(Icons.bookmark_add_outlined, color: Color(0xFFC5A880)),
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: canBuy ? () => _agregarAlCarrito(irAlCheckout: true) : null,
