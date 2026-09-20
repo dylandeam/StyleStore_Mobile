@@ -41,9 +41,18 @@ class OrderItem {
   final List<OrderDetailItem> detalles;
   final int? envioId;
   final String? envioEstado;
-  final String? yangoTrackingCode;
-  final String? yangoTrackingUrl;
+  // Delivery StyleStore - Rastreo
+  final String? trackingCode;
+  final String? trackingUrl;
+  final String? tokenSeguimiento;
   final String? deliveryConductor;
+  // GPS del repartidor
+  final double? repartidorLat;
+  final double? repartidorLon;
+  final String? repartidorNombre;
+  final double? latitudDestino;
+  final double? longitudDestino;
+  final int? minutosEstimados;
 
   OrderItem({
     required this.id,
@@ -56,14 +65,31 @@ class OrderItem {
     this.detalles = const [],
     this.envioId,
     this.envioEstado,
-    this.yangoTrackingCode,
-    this.yangoTrackingUrl,
+    this.trackingCode,
+    this.trackingUrl,
+    this.tokenSeguimiento,
     this.deliveryConductor,
+    this.repartidorLat,
+    this.repartidorLon,
+    this.repartidorNombre,
+    this.latitudDestino,
+    this.longitudDestino,
+    this.minutosEstimados,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     final envio = json['envio'] as Map<String, dynamic>?;
     final rawDetalles = json['detalles'] as List<dynamic>? ?? [];
+
+    // Tracking: leer de los campos nuevos, con fallback a los viejos yango_*
+    String? code = json['tracking_code'] as String?
+        ?? json['yango_tracking_code'] as String?
+        ?? (envio != null ? (envio['tracking_code'] ?? envio['yango_tracking_code']) as String? : null);
+    String? url = json['tracking_url'] as String?
+        ?? json['yango_tracking_url'] as String?
+        ?? (envio != null ? (envio['tracking_url'] ?? envio['yango_tracking_url']) as String? : null);
+    String? token = json['token_seguimiento'] as String?
+        ?? (envio != null ? envio['token_seguimiento'] as String? : null);
 
     return OrderItem(
       id: json['id'] as int? ?? 0,
@@ -78,12 +104,24 @@ class OrderItem {
       detalles: rawDetalles.map((d) => OrderDetailItem.fromJson(d as Map<String, dynamic>)).toList(),
       envioId: json['envio_id'] as int? ?? (envio != null ? envio['id'] as int? : null),
       envioEstado: json['envio_estado'] as String? ?? (envio != null ? envio['estado'] as String? : null),
-      yangoTrackingCode: json['yango_tracking_code'] as String? ??
-          (envio != null ? envio['yango_tracking_code'] as String? : null),
-      yangoTrackingUrl: json['yango_tracking_url'] as String? ??
-          (envio != null ? envio['yango_tracking_url'] as String? : null),
-      deliveryConductor: json['delivery_conductor'] as String? ??
-          (envio != null ? envio['delivery_conductor'] as String? : null),
+      trackingCode: code,
+      trackingUrl: url,
+      tokenSeguimiento: token,
+      deliveryConductor: json['delivery_conductor'] as String?
+          ?? (envio != null ? envio['delivery_conductor'] as String? : null),
+      repartidorLat: _parseDouble(envio?['repartidor_lat']),
+      repartidorLon: _parseDouble(envio?['repartidor_lon']),
+      repartidorNombre: envio?['repartidor_nombre'] as String?,
+      latitudDestino: _parseDouble(envio?['latitud_destino']),
+      longitudDestino: _parseDouble(envio?['longitud_destino']),
+      minutosEstimados: envio?['minutos_estimados'] as int?,
     );
+  }
+
+  static double? _parseDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 }

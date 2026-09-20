@@ -43,4 +43,8 @@ class ApiConfig {
   // Envíos (CU19)
   static const String cotizarEnvioUrl = '$baseUrl/envios/cotizar';
   static const String enviosUrl = '$baseUrl/envios';
+
+  // Delivery StyleStore - Rastreo GPS (v7)
+  static String rastreoPublicoUrl(String token) => '$baseUrl/envios/rastreo/$token';
+  static String conductorGpsUrl(int envioId) => '$baseUrl/envios/$envioId/gps';
 }

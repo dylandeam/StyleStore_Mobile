@@ -987,22 +987,22 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const Text('Finalizar Pedido Online', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 14),
 
-                    // Alerta informativa Yango
+                    // Alerta informativa Delivery StyleStore
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0x1AFC2B2B),
+                        color: const Color(0x1A14263D),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0x66FC2B2B)),
+                        border: Border.all(color: const Color(0x6614263D)),
                       ),
                       child: const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.local_shipping_outlined, color: Color(0xFFFC2B2B), size: 20),
+                          Icon(Icons.local_shipping_outlined, color: Color(0xFF14263D), size: 20),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Tarifa Yango: No se cobra por adelantado. Te sugerimos consultar el costo estimado del viaje directamente en la app de Yango según el clima y la disponibilidad.',
+                              'Delivery StyleStore: Nuestro servicio de envío propio. La tarifa se calcula automáticamente según la distancia y podrás rastrear tu pedido en tiempo real.',
                               style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
                             ),
                           ),
@@ -1025,9 +1025,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     TextField(
                       controller: mapsCtrl,
                       decoration: InputDecoration(
-                        labelText: 'Enlace de Google Maps o Apple Maps (Obligatorio para Yango)',
+                        labelText: 'Enlace de Google Maps (Opcional para ubicación exacta)',
                         hintText: 'https://maps.app.goo.gl/...',
-                        prefixIcon: const Icon(Icons.location_on, color: Color(0xFFFC2B2B)),
+                        prefixIcon: const Icon(Icons.location_on, color: AppTheme.accentIndigo),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         filled: true,
                       ),
@@ -1176,18 +1176,35 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           Text('Total: Bs. ${order.total.toStringAsFixed(2)} | Tipo: ${order.tipoVenta}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           if (order.envioEstado != null) ...[
             const SizedBox(height: 4),
-            Text('Envío: ${order.envioEstado}', style: const TextStyle(fontSize: 12, color: AppTheme.accentIndigo)),
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _getEnvioStatusColor(order.envioEstado!),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('Envío: ${order.envioEstado}', style: const TextStyle(fontSize: 12, color: AppTheme.accentIndigo, fontWeight: FontWeight.w600)),
+              ],
+            ),
           ],
 
-          // TARJETA DE RASTREO YANGO DELIVERY
-          if (order.yangoTrackingCode != null && order.yangoTrackingCode!.isNotEmpty) ...[
+          // TARJETA DE RASTREO DELIVERY STYLESTORE
+          if (order.trackingCode != null && order.trackingCode!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0x1AFC2B2B),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFC2B2B)),
+                gradient: const LinearGradient(
+                  colors: [Color(0x1A14263D), Color(0x0DC5A880)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x4414263D)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1195,104 +1212,116 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFC2B2B),
-                          borderRadius: BorderRadius.circular(4),
+                          color: AppTheme.accentIndigo,
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          'Yango Delivery',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_shipping, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'Delivery StyleStore',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Rastreo en Vivo Asignado',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textPrimary),
+                      const Spacer(),
+                      if (order.minutosEstimados != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0x2610B981),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '~${order.minutosEstimados} min',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.successGreen),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.qr_code, size: 16, color: AppTheme.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Código: ${order.trackingCode}',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Código Yango: ${order.yangoTrackingCode}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
-                  ),
-                  if (order.deliveryConductor != null && order.deliveryConductor!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        'Conductor: ${order.deliveryConductor}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                      ),
+                  if (order.deliveryConductor != null && order.deliveryConductor!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_pin, size: 16, color: AppTheme.textSecondary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Conductor: ${order.deliveryConductor}',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 8),
+                  ],
+                  if (order.repartidorNombre != null && order.repartidorNombre!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.badge, size: 16, color: AppTheme.textSecondary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Repartidor: ${order.repartidorNombre}',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
                   Row(
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: order.yangoTrackingCode!));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Código Yango copiado al portapapeles.'),
-                              backgroundColor: Color(0xFFFC2B2B),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.copy, size: 14),
-                        label: const Text('Copiar Código'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFC2B2B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      if (order.yangoTrackingUrl != null && order.yangoTrackingUrl!.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
+                      Expanded(
+                        child: ElevatedButton.icon(
                           onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Enlace Yango Delivery'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Seguimiento en directo del conductor:'),
-                                    const SizedBox(height: 8),
-                                    SelectableText(
-                                      order.yangoTrackingUrl!,
-                                      style: const TextStyle(color: AppTheme.accentIndigo, decoration: TextDecoration.underline),
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Clipboard.setData(ClipboardData(text: order.yangoTrackingUrl!));
-                                      Navigator.pop(ctx);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Enlace copiado al portapapeles.')),
-                                      );
-                                    },
-                                    child: const Text('Copiar Enlace'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('Cerrar'),
-                                  ),
-                                ],
+                            Clipboard.setData(ClipboardData(text: order.trackingCode!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Código de rastreo copiado.'),
+                                backgroundColor: AppTheme.accentIndigo,
                               ),
                             );
                           },
-                          icon: const Icon(Icons.open_in_new, size: 14),
-                          label: const Text('Ver Enlace'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFFC2B2B),
-                            side: const BorderSide(color: Color(0xFFFC2B2B)),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            textStyle: const TextStyle(fontSize: 11),
+                          icon: const Icon(Icons.copy, size: 14),
+                          label: const Text('Copiar Código'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentIndigo,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      if (order.tokenSeguimiento != null && order.tokenSeguimiento!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              _showTrackingDialog(order);
+                            },
+                            icon: const Icon(Icons.map_outlined, size: 14),
+                            label: const Text('Rastrear Envío'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.accentIndigo,
+                              side: const BorderSide(color: AppTheme.accentIndigo),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ],
@@ -1557,6 +1586,207 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           Text('Total: Bs. ${res.totalEstimado.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         ],
       ),
+    );
+  }
+
+  Color _getEnvioStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'entregado':
+        return AppTheme.successGreen;
+      case 'en_camino':
+      case 'en_ruta':
+        return const Color(0xFFC5A880);
+      case 'asignado':
+      case 'preparando':
+        return AppTheme.accentIndigo;
+      case 'fallido':
+      case 'cancelado':
+        return AppTheme.dangerRed;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  void _showTrackingDialog(OrderItem order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF14263D).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.two_wheeler, color: Color(0xFF14263D), size: 24),
+                      ),
+                      const SizedBox(width: 10),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delivery StyleStore',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                          ),
+                          Text(
+                            'Rastreo de Entrega en Vivo',
+                            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgPrimary,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.borderGlass),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Código de Rastreo:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                        Text(
+                          order.trackingCode ?? 'N/A',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentIndigo),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Estado del Envío:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                        _buildTag(
+                          (order.envioEstado ?? 'En Camino').toUpperCase(),
+                          _getEnvioStatusColor(order.envioEstado ?? 'en_camino'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (order.repartidorNombre != null || order.deliveryConductor != null) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.badge_outlined, size: 16, color: Color(0xFFC5A880)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Repartidor: ${order.repartidorNombre ?? order.deliveryConductor}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (order.minutosEstimados != null) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFC5A880)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tiempo estimado: ~${order.minutosEstimados} minutos',
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (order.repartidorLat != null && order.repartidorLon != null) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.gps_fixed, size: 16, color: AppTheme.successGreen),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'GPS Repartidor: ${order.repartidorLat!.toStringAsFixed(4)}, ${order.repartidorLon!.toStringAsFixed(4)}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Provider.of<OrderService>(context, listen: false).fetchOrders();
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Estado de pedidos actualizado.')),
+                        );
+                      },
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Actualizar Estado'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF14263D),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  if (order.trackingCode != null) ...[
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: order.trackingCode!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Código copiado al portapapeles.')),
+                        );
+                      },
+                      icon: const Icon(Icons.copy, size: 16),
+                      label: const Text('Copiar Código'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentIndigo,
+                        side: const BorderSide(color: AppTheme.accentIndigo),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
