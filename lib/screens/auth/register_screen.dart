@@ -14,6 +14,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _apellidoController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -21,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _apellidoController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -32,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final success = await authService.register(
       name: _nameController.text.trim(),
+      apellido: _apellidoController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
@@ -138,18 +141,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 18),
                     ],
 
-                    // Name Field
+                    // Nombres Field
                     TextFormField(
                       controller: _nameController,
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
-                        labelText: 'Nombre Completo',
+                        labelText: 'Nombres',
                         prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
-                        hintText: 'Juan Pérez',
+                        hintText: 'Ej: Lupita',
                       ),
                       validator: (value) {
                         if (value == null || value.trim().length < 2) {
-                          return 'El nombre debe tener al menos 2 caracteres';
+                          return 'Ingresa tus nombres (mín. 2 caracteres)';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Apellidos Field
+                    TextFormField(
+                      controller: _apellidoController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Apellidos',
+                        prefixIcon: Icon(Icons.badge_outlined, color: AppTheme.textMuted),
+                        hintText: 'Ej: Cardozo Mendez',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().length < 2) {
+                          return 'Ingresa tus apellidos (mín. 2 caracteres)';
                         }
                         return null;
                       },

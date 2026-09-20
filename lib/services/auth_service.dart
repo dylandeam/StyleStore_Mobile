@@ -41,6 +41,7 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> register({
     required String name,
+    String? apellido,
     required String email,
     required String password,
   }) async {
@@ -49,13 +50,18 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final Map<String, dynamic> body = {
+        'name': name,
+        'email': email,
+        'password': password,
+      };
+      if (apellido != null && apellido.trim().isNotEmpty) {
+        body['apellido'] = apellido.trim();
+      }
+
       final response = await _apiService.post(
         ApiConfig.registerUrl,
-        body: {
-          'name': name,
-          'email': email,
-          'password': password,
-        },
+        body: body,
         requireAuth: false,
       );
 
