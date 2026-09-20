@@ -19,6 +19,8 @@ class ApiConfig {
   // Catálogo y Próximamente (CU11, CU14)
   static const String catalogoUrl = '$baseUrl/catalogo';
   static const String proximamenteUrl = '$baseUrl/proximamente';
+  static const String suscribirProximamenteUrl = '$baseUrl/notificaciones/suscribir-proximamente';
+  static const String notificacionesUrl = '$baseUrl/notificaciones';
 
   // Carrito de compras (CU12)
   static const String carritoUrl = '$baseUrl/carrito';

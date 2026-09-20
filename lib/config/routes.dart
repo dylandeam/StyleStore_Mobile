@@ -20,6 +20,10 @@ class AppRoutes {
         home: (context) => const HomeScreen(),
         changePassword: (context) => const ChangePasswordScreen(),
         profile: (context) => const ProfileScreen(),
-        catalog: (context) => const CatalogScreen(),
+        catalog: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final tab = (args is int) ? args : 0;
+          return CatalogScreen(initialTab: tab);
+        },
       };
 }

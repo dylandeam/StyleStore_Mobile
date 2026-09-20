@@ -15,7 +15,8 @@ import '../../config/api_config.dart';
 import 'product_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key});
+  final int initialTab;
+  const CatalogScreen({super.key, this.initialTab = 0});
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -27,7 +28,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 4) ? widget.initialTab : 0,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CatalogService>(context, listen: false).fetchSucursales();
       Provider.of<CatalogService>(context, listen: false).fetchCatalog();
@@ -440,6 +445,83 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   // ==========================================
   // TAB 2: PRÓXIMAMENTE (CU14)
   // ==========================================
+  void _mostrarDialogoNotificacion(
+    BuildContext context,
+    String prendaNombre,
+    bool subscribed,
+    String mensaje,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: Color(0x33C5A880), width: 1.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: subscribed ? const Color(0x2610B981) : const Color(0x266366F1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    subscribed ? Icons.notifications_active : Icons.notifications_off_outlined,
+                    color: subscribed ? AppTheme.successGreen : AppTheme.accentIndigo,
+                    size: 30,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                subscribed ? '🔔 ¡Notificación Activada!' : 'Alerta Cancelada',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                subscribed
+                    ? 'Te avisaremos con una notificación emergente y correo tan pronto "$prendaNombre" sea marcada como disponible por el administrador.'
+                    : 'Ya no recibirás alertas automáticas para "$prendaNombre".',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: subscribed ? AppTheme.accentIndigo : AppTheme.bgSecondary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProximamenteTab() {
     final proxService = Provider.of<ProximamenteService>(context);
 
@@ -447,59 +529,287 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       return const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo));
     }
     if (proxService.items.isEmpty) {
-      return const Center(child: Text('No hay lanzamientos futuros programados.', style: TextStyle(color: AppTheme.textSecondary)));
+      return RefreshIndicator(
+        onRefresh: () => proxService.fetchProximamente(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Color(0x1AC5A880),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.hourglass_empty, size: 48, color: Color(0xFFC5A880)),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No hay lanzamientos futuros programados',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Pronto anunciaremos las nuevas prendas exclusivas para esta temporada.',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return RefreshIndicator(
       onRefresh: () => proxService.fetchProximamente(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: proxService.items.length,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        itemCount: proxService.items.length + 1,
         itemBuilder: (context, index) {
-          final item = proxService.items[index];
+          if (index == 0) {
+            // Header Banner informativo para el cliente
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0x336366F1), Color(0x1AC5A880)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x336366F1)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Próximos Estrenos',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Presiona "Avisarme" para recibir alerta emergente cuando el producto esté activo en tienda.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final item = proxService.items[index - 1];
           final imageUrl = _resolveImageUrl(item.foto);
+          final isSubscribed = proxService.isSubscribed(item.id);
 
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
               color: AppTheme.bgCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0x33C5A880)),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isSubscribed ? const Color(0x6610B981) : const Color(0x33C5A880),
+                width: 1.2,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (imageUrl != null)
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Image.network(imageUrl, height: 160, width: double.infinity, fit: BoxFit.cover),
-                  ),
+                // Imagen con Badges superpuestos
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildNoImagePlaceholder(),
+                            )
+                          : _buildNoImagePlaceholder(),
+                    ),
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xDD14263D),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0x66C5A880)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('✨', style: TextStyle(fontSize: 11)),
+                            SizedBox(width: 4),
+                            Text(
+                              'PRÓXIMO ESTRENO',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFC5A880),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (item.fechaEstimada != null)
+                      Positioned(
+                        bottom: 10,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xE60F172A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderGlass),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.event, size: 12, color: AppTheme.textMuted),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Llegada: ${item.fechaEstimada}',
+                                style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                // Contenido de la Prenda
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Tags
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
-                          _buildTag('✨ Próximamente', const Color(0xFFC5A880)),
-                          if (item.fechaEstimada != null)
-                            Text(
-                              'Llegada: ${item.fechaEstimada}',
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                            ),
+                          if (item.categoriaNombre != null)
+                            _buildTag(item.categoriaNombre!, const Color(0xFF6366F1)),
+                          if (item.coleccionNombre != null)
+                            _buildTag('🧵 ${item.coleccionNombre}', const Color(0xFFC5A880)),
+                          if (item.temporadaNombre != null)
+                            _buildTag('🍂 ${item.temporadaNombre}', const Color(0xFFA855F7)),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(item.nombre, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                      if (item.descripcion != null) ...[
-                        const SizedBox(height: 4),
-                        Text(item.descripcion!, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                      const SizedBox(height: 10),
+
+                      // Título
+                      Text(
+                        item.nombre,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+
+                      // Descripción
+                      if (item.descripcion != null && item.descripcion!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          item.descripcion!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                            height: 1.35,
+                          ),
+                        ),
                       ],
-                      if (item.coleccionNombre != null) ...[
-                        const SizedBox(height: 8),
-                        Text('Colección: ${item.coleccionNombre}', style: const TextStyle(fontSize: 12, color: AppTheme.accentIndigo, fontWeight: FontWeight.w600)),
-                      ],
+
+                      const SizedBox(height: 16),
+
+                      // Botón Táctil de Suscripción "Avisarme"
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final res = await proxService.toggleSuscribir(item.id);
+                            if (context.mounted) {
+                              final sub = res['subscribed'] == true;
+                              final msg = res['message'] as String? ?? '';
+                              _mostrarDialogoNotificacion(context, item.nombre, sub, msg);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(msg),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: sub ? AppTheme.successGreen : AppTheme.bgSecondary,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            isSubscribed ? Icons.check_circle : Icons.notifications_active_outlined,
+                            size: 19,
+                            color: isSubscribed ? AppTheme.successGreen : Colors.white,
+                          ),
+                          label: Text(
+                            isSubscribed
+                                ? '✓ Notificación Activada (Cancelar)'
+                                : '🔔 Avisarme cuando esté disponible',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isSubscribed ? AppTheme.successGreen : Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isSubscribed
+                                ? const Color(0x2610B981)
+                                : AppTheme.accentIndigo,
+                            foregroundColor: Colors.white,
+                            elevation: isSubscribed ? 0 : 2,
+                            side: BorderSide(
+                              color: isSubscribed ? AppTheme.successGreen : Colors.transparent,
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -507,6 +817,33 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildNoImagePlaceholder() {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.checkroom, size: 48, color: Color(0x66C5A880)),
+            SizedBox(height: 6),
+            Text(
+              'StyleStore Exclusive',
+              style: TextStyle(fontSize: 12, color: AppTheme.textMuted, letterSpacing: 0.5),
+            ),
+          ],
+        ),
       ),
     );
   }

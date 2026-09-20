@@ -107,6 +107,89 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
+                  // Accesos Rápidos para Celular (Módulos de la Tienda)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.borderGlass),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.storefront, color: AppTheme.accentIndigo, size: 20),
+                            SizedBox(width: 10),
+                            Text(
+                              'Secciones de la Tienda',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(color: AppTheme.borderGlass, height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildQuickActionCard(
+                                context: context,
+                                icon: Icons.checkroom,
+                                title: 'Catálogo',
+                                subtitle: 'Prendas y stock',
+                                color: AppTheme.accentIndigo,
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 0),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildQuickActionCard(
+                                context: context,
+                                icon: Icons.hourglass_top,
+                                title: 'Próximamente',
+                                subtitle: 'Alertas de estreno',
+                                color: const Color(0xFFC5A880),
+                                isBadge: true,
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildQuickActionCard(
+                                context: context,
+                                icon: Icons.shopping_bag_outlined,
+                                title: 'Mis Pedidos',
+                                subtitle: 'Seguimiento',
+                                color: const Color(0xFF10B981),
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildQuickActionCard(
+                                context: context,
+                                icon: Icons.shopping_cart_outlined,
+                                title: 'Mi Carrito',
+                                subtitle: 'Bolsa y pagos',
+                                color: const Color(0xFFA855F7),
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
                   // Account Details Card
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -286,6 +369,84 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+    bool isBadge = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          decoration: BoxDecoration(
+            color: AppTheme.bgSecondary,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  if (isBadge)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'NUEVO',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
