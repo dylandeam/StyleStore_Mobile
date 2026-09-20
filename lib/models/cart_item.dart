@@ -3,6 +3,8 @@ class CartItem {
   final int productoColorId;
   final int tallaId;
   final int sucursalId;
+  final String? sucursalNombre;
+  final String? sucursalCiudad;
   final String productoNombre;
   final String? colorNombre;
   final String? tallaNombre;
@@ -16,6 +18,8 @@ class CartItem {
     required this.productoColorId,
     required this.tallaId,
     required this.sucursalId,
+    this.sucursalNombre,
+    this.sucursalCiudad,
     required this.productoNombre,
     this.colorNombre,
     this.tallaNombre,
@@ -31,6 +35,8 @@ class CartItem {
       productoColorId: json['producto_color_id'] as int? ?? 0,
       tallaId: json['talla_id'] as int? ?? 0,
       sucursalId: json['sucursal_id'] as int? ?? 0,
+      sucursalNombre: json['sucursal_nombre'] as String?,
+      sucursalCiudad: json['sucursal_ciudad'] as String?,
       productoNombre: json['producto_nombre'] as String? ?? 'Prenda StyleStore',
       colorNombre: json['color_nombre'] as String?,
       tallaNombre: json['talla_nombre'] as String?,

@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
+import '../../services/catalog_service.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String codigo;
@@ -26,6 +27,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int? _selectedColorId;
   int? _selectedTallaId;
   int? _selectedStockInventarioId;
+  int? _filtroSucursalId;
   int _selectedSucursalId = 1;
   int _availableStock = 0;
   int _quantity = 1;
@@ -33,6 +35,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
+    final catService = Provider.of<CatalogService>(context, listen: false);
+    _filtroSucursalId = catService.selectedSucursalId;
     _loadProductData();
   }
 
@@ -101,11 +105,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _actualizarTallasParaColor(dynamic varianteColor) {
     final existencias = (varianteColor['existencias'] as List<dynamic>?) ?? [];
     if (existencias.isNotEmpty) {
-      final primeraTalla = existencias.first;
-      _selectedTallaId = primeraTalla['talla_id'];
-      _selectedStockInventarioId = primeraTalla['stock_inventario_id'] ?? primeraTalla['id'];
-      _selectedSucursalId = primeraTalla['sucursal_id'] ?? 1;
-      _availableStock = (primeraTalla['cantidad'] as num?)?.toInt() ?? 0;
+      dynamic seleccion;
+      if (_filtroSucursalId != null) {
+        try {
+          seleccion = existencias.firstWhere(
+            (e) => e['sucursal_id'] == _filtroSucursalId && ((e['cantidad'] as num?)?.toInt() ?? 0) > 0,
+          );
+        } catch (_) {
+          try {
+            seleccion = existencias.firstWhere((e) => e['sucursal_id'] == _filtroSucursalId);
+          } catch (_) {
+            seleccion = existencias.first;
+          }
+        }
+      } else {
+        seleccion = existencias.first;
+      }
+
+      _selectedTallaId = seleccion['talla_id'];
+      _selectedStockInventarioId = seleccion['stock_inventario_id'] ?? seleccion['id'];
+      _selectedSucursalId = seleccion['sucursal_id'] ?? 1;
+      _availableStock = (seleccion['cantidad'] as num?)?.toInt() ?? 0;
       _quantity = _availableStock > 0 ? 1 : 0;
     } else {
       _selectedTallaId = null;
@@ -230,7 +250,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       (v) => v['producto_color_id'] == _selectedColorId,
       orElse: () => variantes.isNotEmpty ? variantes.first : null,
     );
-    final existenciasActuales = (varianteActual?['existencias'] as List<dynamic>?) ?? [];
+    final todasExistencias = (varianteActual?['existencias'] as List<dynamic>?) ?? [];
+    final existenciasActuales = _filtroSucursalId == null
+        ? todasExistencias
+        : todasExistencias.where((e) => e['sucursal_id'] == _filtroSucursalId).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -376,6 +399,68 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const Divider(color: AppTheme.borderGlass, height: 32),
             ],
 
+            // Selector de Sucursal
+            Consumer<CatalogService>(
+              builder: (context, catService, _) {
+                final sucursales = catService.sucursales;
+                if (sucursales.isEmpty) return const SizedBox.shrink();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderGlass),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        '📍 Sucursal:',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int?>(
+                            isExpanded: true,
+                            value: _filtroSucursalId,
+                            dropdownColor: AppTheme.bgCard,
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('🌐 Todas las sucursales', style: TextStyle(fontSize: 13)),
+                              ),
+                              ...sucursales.map((s) {
+                                final sId = s['id'] as int;
+                                final nombre = s['nombre'] ?? 'Sucursal #$sId';
+                                return DropdownMenuItem<int?>(
+                                  value: sId,
+                                  child: Text(nombre, style: const TextStyle(fontSize: 13)),
+                                );
+                              }),
+                            ],
+                            onChanged: (val) {
+                              setState(() {
+                                _filtroSucursalId = val;
+                                if (_selectedColorId != null) {
+                                  final v = variantes.firstWhere(
+                                    (item) => item['producto_color_id'] == _selectedColorId,
+                                    orElse: () => variantes.isNotEmpty ? variantes.first : null,
+                                  );
+                                  if (v != null) _actualizarTallasParaColor(v);
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
             // Selector de Color
             if (variantes.isNotEmpty) ...[
               const Text(
@@ -437,6 +522,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const SizedBox(height: 20),
             ],
 
+            // Alerta si la sucursal filtrada no tiene existencias
+            if (todasExistencias.isNotEmpty && existenciasActuales.isEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0x1AFC2B2B),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0x66FC2B2B)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Color(0xFFFC2B2B), size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Esta prenda no tiene existencias en la sucursal seleccionada. Cambia de sucursal o selecciona "Todas las sucursales" para ver disponibilidad.',
+                        style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Selector de Talla
             if (existenciasActuales.isNotEmpty) ...[
               const Text(
@@ -489,6 +598,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   : (isOutOfStock ? AppTheme.textMuted : AppTheme.textPrimary),
                             ),
                           ),
+                          if (e['sucursal_nombre'] != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                '${e['sucursal_nombre']}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected ? Colors.white70 : AppTheme.accentIndigo,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           Text(
                             isOutOfStock ? 'Agotado' : '$stock disp.',
                             style: TextStyle(

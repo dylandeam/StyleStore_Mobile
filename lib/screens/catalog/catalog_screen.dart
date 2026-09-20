@@ -10,8 +10,6 @@ import '../../services/catalog_service.dart';
 import '../../services/proximamente_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/order_service.dart';
-import '../../services/api_service.dart';
-import '../../config/api_config.dart';
 import 'product_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -385,61 +383,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     );
   }
 
-  void _handleAddToCart(Producto p) async {
-    final cartService = Provider.of<CartService>(context, listen: false);
-    // Para demostración fluida, agregamos la prenda directamente
-    final success = await cartService.addToCart(
-      productoColorId: 1, // Fallback a combinación estándar
-      tallaId: 1,
-      sucursalId: 1,
-      cantidad: 1,
+  void _handleAddToCart(Producto p) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(codigo: p.codigo),
+      ),
     );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? '¡${p.nombre} añadida a tu carrito!' : 'Prenda agregada al carrito.'),
-          backgroundColor: AppTheme.successGreen,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
-  void _handleReserveProduct(Producto p) async {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    try {
-      final res = await apiService.post(
-        ApiConfig.reservasUrl,
-        body: {
-          'sucursal_id': 1,
-          'items': [
-            {
-              'producto_color_id': 1,
-              'talla_id': 1,
-              'cantidad': 1,
-              'precio_unitario': p.precio,
-            }
-          ],
-        },
-        requireAuth: true,
-      );
-      if (mounted) {
-        if (res.statusCode == 200 || res.statusCode == 201) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Reserva confirmada! Tienes 48 hrs para recogerla en tienda.'),
-              backgroundColor: Color(0xFF14263D),
-            ),
-          );
-          Provider.of<OrderService>(context, listen: false).fetchReservas();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudo procesar la reserva.')),
-          );
-        }
-      }
-    } catch (_) {}
+  void _handleReserveProduct(Producto p) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(codigo: p.codigo),
+      ),
+    );
   }
 
   // ==========================================
@@ -891,6 +848,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               children: [
                 const Text('Resumen del Pedido', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                 const Divider(color: AppTheme.borderGlass, height: 24),
+                if (cartService.items.isNotEmpty && cartService.items.first.sucursalNombre != null) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Despacho desde:', style: TextStyle(color: AppTheme.textSecondary)),
+                      Text(
+                        cartService.items.first.sucursalNombre!,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentIndigo),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -965,6 +935,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   'Color: ${item.colorNombre ?? "Único"} | Talla: ${item.tallaNombre ?? "Estándar"}',
                   style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
+                if (item.sucursalNombre != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '📍 ${item.sucursalNombre}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.accentIndigo),
+                    ),
+                  ),
+                const SizedBox(height: 2),
                 Text(
                   '${item.cantidad} x Bs. ${item.precioUnitario.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF14263D)),
