@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../config/api_config.dart';
@@ -405,58 +406,103 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 final sucursales = catService.sucursales;
                 if (sucursales.isEmpty) return const SizedBox.shrink();
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 18),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgCard,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.borderGlass),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        '📍 Sucursal:',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                Map<String, dynamic>? selBranch;
+                if (_filtroSucursalId != null) {
+                  for (final s in sucursales) {
+                    if (s['id'] == _filtroSucursalId) {
+                      selBranch = s;
+                      break;
+                    }
+                  }
+                }
+                final mapsUrl = selBranch != null ? (selBranch['maps_url'] ?? selBranch['ubicacion_url']) : null;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      margin: EdgeInsets.only(bottom: mapsUrl != null && mapsUrl.toString().trim().isNotEmpty ? 6 : 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.borderGlass),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int?>(
-                            isExpanded: true,
-                            value: _filtroSucursalId,
-                            dropdownColor: AppTheme.bgCard,
-                            items: [
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('🌐 Todas las sucursales', style: TextStyle(fontSize: 13)),
+                      child: Row(
+                        children: [
+                          const Text(
+                            '📍 Sucursal:',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int?>(
+                                isExpanded: true,
+                                value: _filtroSucursalId,
+                                dropdownColor: AppTheme.bgCard,
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('🌐 Todas las sucursales', style: TextStyle(fontSize: 13)),
+                                  ),
+                                  ...sucursales.map((s) {
+                                    final sId = s['id'] as int;
+                                    final nombre = s['nombre'] ?? 'Sucursal #$sId';
+                                    return DropdownMenuItem<int?>(
+                                      value: sId,
+                                      child: Text(nombre, style: const TextStyle(fontSize: 13)),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (val) {
+                                  setState(() {
+                                    _filtroSucursalId = val;
+                                    if (_selectedColorId != null) {
+                                      final v = variantes.firstWhere(
+                                        (item) => item['producto_color_id'] == _selectedColorId,
+                                        orElse: () => variantes.isNotEmpty ? variantes.first : null,
+                                      );
+                                      if (v != null) _actualizarTallasParaColor(v);
+                                    }
+                                  });
+                                },
                               ),
-                              ...sucursales.map((s) {
-                                final sId = s['id'] as int;
-                                final nombre = s['nombre'] ?? 'Sucursal #$sId';
-                                return DropdownMenuItem<int?>(
-                                  value: sId,
-                                  child: Text(nombre, style: const TextStyle(fontSize: 13)),
-                                );
-                              }),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (mapsUrl != null && mapsUrl.toString().trim().isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16, left: 4),
+                        child: InkWell(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: mapsUrl.toString()));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('📍 Enlace de Maps de ${selBranch?['nombre'] ?? 'Sucursal'} copiado'),
+                                backgroundColor: AppTheme.accentIndigo,
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 14, color: AppTheme.accentIndigo),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Ver sucursal en Google Maps (${selBranch?['nombre'] ?? 'Sucursal'}) ↗',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentIndigo, decoration: TextDecoration.underline),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
-                            onChanged: (val) {
-                              setState(() {
-                                _filtroSucursalId = val;
-                                if (_selectedColorId != null) {
-                                  final v = variantes.firstWhere(
-                                    (item) => item['producto_color_id'] == _selectedColorId,
-                                    orElse: () => variantes.isNotEmpty ? variantes.first : null,
-                                  );
-                                  if (v != null) _actualizarTallasParaColor(v);
-                                }
-                              });
-                            },
                           ),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 );
               },
             ),

@@ -869,11 +869,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Envío (Cotización Escalonada):', style: TextStyle(color: AppTheme.textSecondary)),
-                    Text('Bs. 12.00', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Delivery StyleStore (5Bs + 0.6Bs/km):', style: TextStyle(color: AppTheme.textSecondary)),
+                    Text('Bs. ${(5.0 + (4.5 * 0.60)).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                   ],
                 ),
                 const Divider(color: AppTheme.borderGlass, height: 24),
@@ -881,7 +881,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Total a Pagar:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
-                    Text('Bs. ${(cartService.total + 12).toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                    Text('Bs. ${(cartService.total + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -963,6 +963,26 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   void _showCheckoutModal(CartService cartService) {
     final addressCtrl = TextEditingController(text: 'Av. América #450');
     final mapsCtrl = TextEditingController();
+    double distanciaKm = 4.5;
+
+    final catalogService = Provider.of<CatalogService>(context, listen: false);
+    final sucursalId = cartService.items.isNotEmpty ? cartService.items.first.sucursalId : catalogService.selectedSucursalId;
+    Map<String, dynamic>? branch;
+    if (catalogService.sucursales.isNotEmpty) {
+      try {
+        branch = catalogService.sucursales.firstWhere(
+          (s) => s['id'] == sucursalId,
+          orElse: () => catalogService.sucursales.first,
+        );
+      } catch (_) {
+        branch = catalogService.sucursales.first;
+      }
+    }
+    final branchName = (cartService.items.isNotEmpty && cartService.items.first.sucursalNombre != null)
+        ? cartService.items.first.sucursalNombre!
+        : (branch != null ? (branch['nombre'] ?? branch['name'] ?? 'Sucursal Central') : 'Sucursal StyleStore');
+    final branchMapsUrl = (cartService.items.isNotEmpty ? cartService.items.first.sucursalMapsUrl : null) ??
+        (branch != null ? (branch['maps_url'] ?? branch['ubicacion_url']) : null);
 
     showModalBottomSheet(
       context: context,
@@ -972,6 +992,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final double costoEnvio = 5.0 + (distanciaKm * 0.60);
+            final double totalPagar = cartService.total + costoEnvio;
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 20,
@@ -987,7 +1010,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const Text('Finalizar Pedido Online', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 14),
 
-                    // Alerta informativa Delivery StyleStore
+                    // Alerta informativa Delivery StyleStore con Maps de Sucursal
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -995,17 +1018,58 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: const Color(0x6614263D)),
                       ),
-                      child: const Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.local_shipping_outlined, color: Color(0xFF14263D), size: 20),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Delivery StyleStore: Nuestro servicio de envío propio. La tarifa se calcula automáticamente según la distancia y podrás rastrear tu pedido en tiempo real.',
-                              style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
-                            ),
+                          const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.local_shipping_outlined, color: Color(0xFF14263D), size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Delivery StyleStore: Servicio privado de despacho. Tarifa fija de Bs. 5.00 + Bs. 0.60 por kilómetro desde la sucursal.',
+                                  style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+                                ),
+                              ),
+                            ],
                           ),
+                          if (branchMapsUrl != null && branchMapsUrl.toString().trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: branchMapsUrl.toString()));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('📍 Enlace de Maps de $branchName copiado'),
+                                    backgroundColor: AppTheme.accentIndigo,
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0x806366F1)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.location_on, size: 16, color: AppTheme.accentIndigo),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        'Ver ubicación de $branchName en Google Maps ↗',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentIndigo),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1025,14 +1089,65 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     TextField(
                       controller: mapsCtrl,
                       decoration: InputDecoration(
-                        labelText: 'Enlace de Google Maps (Opcional para ubicación exacta)',
+                        labelText: 'Enlace de Google Maps (Ubicación exacta del cliente)',
                         hintText: 'https://maps.app.goo.gl/...',
                         prefixIcon: const Icon(Icons.location_on, color: AppTheme.accentIndigo),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         filled: true,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+
+                    // Selector dinámico de distancia y desglose de tarifa
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.borderGlass),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Distancia de entrega estimada:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                              Text('${distanciaKm.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.accentIndigo)),
+                            ],
+                          ),
+                          Slider(
+                            value: distanciaKm,
+                            min: 1.0,
+                            max: 35.0,
+                            divisions: 68,
+                            activeColor: AppTheme.accentIndigo,
+                            label: '${distanciaKm.toStringAsFixed(1)} km',
+                            onChanged: (val) {
+                              setModalState(() {
+                                distanciaKm = double.parse(val.toStringAsFixed(1));
+                              });
+                            },
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Costo Delivery (5Bs + 0.6Bs/km):', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                              Text('Bs. ${costoEnvio.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total a Pagar (Prendas + Envío):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                              Text('Bs. ${totalPagar.toStringAsFixed(2)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
 
                     const Text('Método de Pago Online:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                     const SizedBox(height: 8),
@@ -1067,21 +1182,21 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       onPressed: () async {
                         final address = addressCtrl.text.trim();
                         final mapsUrl = mapsCtrl.text.trim();
-                        if (address.isEmpty) {
+                        if (address.isEmpty && mapsUrl.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Por favor ingresa la dirección de entrega.')),
+                            const SnackBar(content: Text('Por favor ingresa la dirección de entrega o enlace de Maps.')),
                           );
                           return;
                         }
 
                         Navigator.pop(ctx);
                         final direccionCompleta = mapsUrl.isNotEmpty
-                            ? '$address | Maps: $mapsUrl'
+                            ? (address.isNotEmpty ? '$address | Maps: $mapsUrl' : mapsUrl)
                             : address;
 
                         final res = await cartService.checkout(
                           metodoPago: 'paypal',
-                          distanciaKm: 4.5,
+                          distanciaKm: distanciaKm,
                           direccionEnvio: direccionCompleta,
                         );
                         if (mounted) {
@@ -1099,7 +1214,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         backgroundColor: const Color(0xFF14263D),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text('Confirmar y Pagar con PayPal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Confirmar y Pagar Bs. ${totalPagar.toStringAsFixed(2)} con PayPal', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

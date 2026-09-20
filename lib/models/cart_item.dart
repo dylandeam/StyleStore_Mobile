@@ -5,6 +5,7 @@ class CartItem {
   final int sucursalId;
   final String? sucursalNombre;
   final String? sucursalCiudad;
+  final String? sucursalMapsUrl;
   final String productoNombre;
   final String? colorNombre;
   final String? tallaNombre;
@@ -20,6 +21,7 @@ class CartItem {
     required this.sucursalId,
     this.sucursalNombre,
     this.sucursalCiudad,
+    this.sucursalMapsUrl,
     required this.productoNombre,
     this.colorNombre,
     this.tallaNombre,
@@ -37,6 +39,7 @@ class CartItem {
       sucursalId: json['sucursal_id'] as int? ?? 0,
       sucursalNombre: json['sucursal_nombre'] as String?,
       sucursalCiudad: json['sucursal_ciudad'] as String?,
+      sucursalMapsUrl: json['sucursal_maps_url'] as String? ?? json['maps_url'] as String?,
       productoNombre: json['producto_nombre'] as String? ?? 'Prenda StyleStore',
       colorNombre: json['color_nombre'] as String?,
       tallaNombre: json['talla_nombre'] as String?,
