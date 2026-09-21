@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
@@ -14,7 +15,8 @@ class VestidorVirtualScreen extends StatefulWidget {
   State<VestidorVirtualScreen> createState() => _VestidorVirtualScreenState();
 }
 
-class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
+class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
+    with SingleTickerProviderStateMixin {
   Producto? _activeTop;
   Producto? _activeBottom;
   Producto? _activeDress;
@@ -25,11 +27,45 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
   double _opacity = 1.0;
   String _selectedCategory = 'all';
 
+  // Rotación 360° interactiva y animación orgánica de tela
+  double _rotationY = 0.0; // En radianes (0..2pi)
+  bool _autoSpin = false;
+  late AnimationController _swayController;
+
   @override
   void initState() {
     super.initState();
+    _swayController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+
+    _swayController.addListener(() {
+      if (_autoSpin) {
+        setState(() {
+          _rotationY += 0.025;
+          if (_rotationY >= 2 * math.pi) _rotationY -= 2 * math.pi;
+          _updateBackViewFromRotation();
+        });
+      }
+    });
+
     if (widget.initialProduct != null) {
       _equipProduct(widget.initialProduct!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _swayController.dispose();
+    super.dispose();
+  }
+
+  void _updateBackViewFromRotation() {
+    // Cuando el modelo gira entre 90° y 270° (pi/2 y 3pi/2), se ve la espalda
+    final isBack = _rotationY > (math.pi / 2) && _rotationY < (3 * math.pi / 2);
+    if (isBack != _isBackView) {
+      _isBackView = isBack;
     }
   }
 
@@ -148,7 +184,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
-          // Selector Frente / Espalda
+          // Selector Frente / Espalda y Giro 360°
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             decoration: BoxDecoration(
@@ -160,38 +196,75 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
-                  onTap: () => setState(() => _isBackView = false),
+                  onTap: () => setState(() {
+                    _autoSpin = false;
+                    _rotationY = 0.0;
+                    _isBackView = false;
+                  }),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: !_isBackView ? const Color(0xFFC8A97E) : Colors.transparent,
+                      color: !_isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
                       'Frente',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: !_isBackView ? const Color(0xFF0F172A) : Colors.white70,
+                        color: !_isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
                       ),
                     ),
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => setState(() => _isBackView = true),
+                  onTap: () => setState(() {
+                    _autoSpin = false;
+                    _rotationY = math.pi;
+                    _isBackView = true;
+                  }),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _isBackView ? const Color(0xFFC8A97E) : Colors.transparent,
+                      color: _isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
                       'Espalda',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: _isBackView ? const Color(0xFF0F172A) : Colors.white70,
+                        color: _isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
                       ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _autoSpin = !_autoSpin),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.rotate_right,
+                          size: 14,
+                          color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '360°',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -202,106 +275,179 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
       ),
       body: Column(
         children: [
-          // 1. Maniquí / Probador Interactivo
+          // 1. Maniquí / Probador Interactivo 3D con Giro y Físicas
           Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Fondo oscuro Luxury con gradiente sutil
-                Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.85,
-                      colors: [Color(0xFF1E293B), Color(0xFF020617)],
-                    ),
-                  ),
-                ),
-
-                // Silueta / Maniquí base
-                Center(
-                  child: Opacity(
-                    opacity: 0.22,
-                    child: Icon(
-                      _isBackView ? Icons.accessibility : Icons.accessibility_new,
-                      size: 260,
-                      color: const Color(0xFFC8A97E),
-                    ),
-                  ),
-                ),
-
-                // Prenda Inferior (Pantalón / Falda)
-                if (_activeBottom != null && _activeDress == null)
-                  Positioned(
-                    top: 150 + _verticalOffset,
-                    child: _buildGarmentDisplay(
-                      _activeBottom!,
-                      width: 140 * _scaleMultiplier,
-                      height: 180 * _scaleMultiplier,
+            child: GestureDetector(
+              onHorizontalDragUpdate: (details) {
+                setState(() {
+                  _autoSpin = false;
+                  _rotationY += details.primaryDelta! * 0.012;
+                  while (_rotationY < 0) {
+                    _rotationY += 2 * math.pi;
+                  }
+                  while (_rotationY >= 2 * math.pi) {
+                    _rotationY -= 2 * math.pi;
+                  }
+                  _updateBackViewFromRotation();
+                });
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Fondo oscuro Luxury con gradiente radial
+                  Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.85,
+                        colors: [Color(0xFF1E293B), Color(0xFF020617)],
+                      ),
                     ),
                   ),
 
-                // Prenda Superior (Camisa / Polera)
-                if (_activeTop != null && _activeDress == null)
-                  Positioned(
-                    top: 50 + _verticalOffset,
-                    child: _buildGarmentDisplay(
-                      _activeTop!,
-                      width: 170 * _scaleMultiplier,
-                      height: 170 * _scaleMultiplier,
-                    ),
-                  ),
+                  // Maniquí y Prendas con Perspectiva 3D y Balanceo de Tela
+                  AnimatedBuilder(
+                    animation: _swayController,
+                    builder: (context, child) {
+                      // Balanceo orgánico sutil de tela
+                      final swayOffsetY = math.sin(_swayController.value * 2 * math.pi) * 3.0;
+                      final swayAngle = math.sin(_swayController.value * 2 * math.pi) * 0.012;
 
-                // Prenda de Cuerpo Entero (Vestido)
-                if (_activeDress != null)
-                  Positioned(
-                    top: 55 + _verticalOffset,
-                    child: _buildGarmentDisplay(
-                      _activeDress!,
-                      width: 180 * _scaleMultiplier,
-                      height: 270 * _scaleMultiplier,
-                    ),
-                  ),
-
-                // Badge de Orientación (Frente / Espalda)
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC14263D),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x66C8A97E)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      return Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0012)
+                          ..rotateY(_rotationY)
+                          ..rotateZ(swayAngle)
+                          ..translateByDouble(0.0, swayOffsetY, 0.0, 1.0),
+                        child: child,
+                      );
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Icon(
-                          _isBackView ? Icons.flip_camera_android : Icons.person_outline,
-                          size: 14,
-                          color: const Color(0xFFC8A97E),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _isBackView ? 'Vista Trasera' : 'Vista Frontal',
-                          style: const TextStyle(
-                            color: Color(0xFFF1F5F9),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                        // Silueta base Maniquí Luxury
+                        Center(
+                          child: Opacity(
+                            opacity: 0.22,
+                            child: Icon(
+                              _isBackView ? Icons.accessibility : Icons.accessibility_new,
+                              size: 260,
+                              color: const Color(0xFFC8A97E),
+                            ),
                           ),
                         ),
+
+                        // Prenda Inferior (Pantalón / Falda)
+                        if (_activeBottom != null && _activeDress == null)
+                          Positioned(
+                            top: 150 + _verticalOffset,
+                            child: _buildGarmentDisplay(
+                              _activeBottom!,
+                              width: 145 * _scaleMultiplier,
+                              height: 185 * _scaleMultiplier,
+                            ),
+                          ),
+
+                        // Prenda Superior (Camisa / Polera)
+                        if (_activeTop != null && _activeDress == null)
+                          Positioned(
+                            top: 50 + _verticalOffset,
+                            child: _buildGarmentDisplay(
+                              _activeTop!,
+                              width: 175 * _scaleMultiplier,
+                              height: 175 * _scaleMultiplier,
+                            ),
+                          ),
+
+                        // Prenda de Cuerpo Entero (Vestido / Enterizo)
+                        if (_activeDress != null)
+                          Positioned(
+                            top: 55 + _verticalOffset,
+                            child: _buildGarmentDisplay(
+                              _activeDress!,
+                              width: 185 * _scaleMultiplier,
+                              height: 275 * _scaleMultiplier,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                ),
 
-                // Controles flotantes de calibración rápida
-                Positioned(
-                  right: 12,
-                  top: 16,
+                  // Badge de Orientación 3D y Grados de Rotación
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xCC14263D),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0x66C8A97E)),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black38, blurRadius: 6),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isBackView
+                                ? Icons.flip_camera_android
+                                : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
+                                    ? Icons.transform
+                                    : Icons.person_outline,
+                            size: 14,
+                            color: const Color(0xFFC8A97E),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isBackView
+                                ? '🔄 Espalda (${((_rotationY * 180 / math.pi).round()) % 360}°)'
+                                : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
+                                    ? '📐 Perfil (${((_rotationY * 180 / math.pi).round()) % 360}°)'
+                                    : '✨ Frente (${((_rotationY * 180 / math.pi).round()) % 360}°)',
+                            style: const TextStyle(
+                              color: Color(0xFFF1F5F9),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Hint inferior de interacción
+                  Positioned(
+                    top: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0x990F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.touch_app, size: 12, color: Color(0xFFC8A97E)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Desliza para girar 360°',
+                            style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Controles flotantes de calibración rápida
+                  Positioned(
+                    right: 12,
+                    top: 16,
                   child: Column(
                     children: [
                       _buildQuickAction(
@@ -421,6 +567,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen> {
               ],
             ),
           ),
+        ),
 
           // 2. Carrusel Inferior Estilo TikTok
           Container(
