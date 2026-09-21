@@ -185,6 +185,22 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildQuickActionCard(
+                                context: context,
+                                icon: Icons.camera_front,
+                                title: 'Vestidor Virtual',
+                                subtitle: 'Probador AR en vivo',
+                                color: const Color(0xFFC8A97E),
+                                isBadge: true,
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.vestidorVirtual),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

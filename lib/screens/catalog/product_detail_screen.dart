@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../config/api_config.dart';
+import '../../config/routes.dart';
+import '../../models/producto.dart';
 import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/catalog_service.dart';
@@ -23,6 +25,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Map<String, dynamic>? _producto;
   List<dynamic> _recomendados = [];
+  bool _showBackPhoto = false;
 
   // Variantes seleccionadas
   int? _selectedColorId;
@@ -245,7 +248,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     final p = _producto!;
-    final imageUrl = _resolveImageUrl(p['foto']);
+    final fotoToUse = _showBackPhoto && p['foto_trasera'] != null ? p['foto_trasera'] : p['foto'];
+    final imageUrl = _resolveImageUrl(fotoToUse);
     final variantes = (p['variantes'] as List<dynamic>?) ?? [];
     final varianteActual = variantes.firstWhere(
       (v) => v['producto_color_id'] == _selectedColorId,
@@ -323,7 +327,125 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     : _buildPlaceholder(),
               ),
             ),
-            const SizedBox(height: 18),
+
+            // Selector de Ángulo Frontal / Trasera
+            if (p['foto_trasera'] != null && p['foto_trasera'].toString().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Frente', style: TextStyle(fontWeight: FontWeight.bold)),
+                    avatar: const Icon(Icons.accessibility_new, size: 16),
+                    selected: !_showBackPhoto,
+                    selectedColor: const Color(0xFFC8A97E),
+                    onSelected: (val) => setState(() => _showBackPhoto = false),
+                  ),
+                  const SizedBox(width: 12),
+                  ChoiceChip(
+                    label: const Text('Espalda', style: TextStyle(fontWeight: FontWeight.bold)),
+                    avatar: const Icon(Icons.flip_camera_android, size: 16),
+                    selected: _showBackPhoto,
+                    selectedColor: const Color(0xFFC8A97E),
+                    onSelected: (val) => setState(() => _showBackPhoto = true),
+                  ),
+                ],
+              ),
+            ],
+
+            // Botón Destacado: Probar en Vestidor Virtual
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF14263D), Color(0xFF1E3A5F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x66C8A97E)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x3314263D),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    final prodObj = Producto.fromJson(p);
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.vestidorVirtual,
+                      arguments: prodObj,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0x33C8A97E),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFC8A97E)),
+                          ),
+                          child: const Center(
+                            child: Text('🪞', style: TextStyle(fontSize: 22)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Probar en Vestidor Virtual',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Pruébate esta prenda en tiempo real',
+                                style: TextStyle(
+                                  color: Color(0xFFCBD5E1),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC8A97E),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Probar →',
+                            style: TextStyle(
+                              color: Color(0xFF0F172A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
 
             // Código y Precio
             Row(

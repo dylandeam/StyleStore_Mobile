@@ -3,6 +3,10 @@ class Producto {
   final String nombre;
   final String? descripcion;
   final String? foto;
+  final String? fotoTrasera;
+  final String? fotoVestidorFrontal;
+  final String? fotoVestidorTrasera;
+  final String tipoPrenda;
   final double precio;
   final int categoriaId;
   final String? categoriaNombre;
@@ -20,6 +24,10 @@ class Producto {
     required this.nombre,
     this.descripcion,
     this.foto,
+    this.fotoTrasera,
+    this.fotoVestidorFrontal,
+    this.fotoVestidorTrasera,
+    this.tipoPrenda = 'superior',
     required this.precio,
     required this.categoriaId,
     this.categoriaNombre,
@@ -47,6 +55,10 @@ class Producto {
       nombre: json['nombre'] ?? '',
       descripcion: json['descripcion'],
       foto: json['foto'],
+      fotoTrasera: json['foto_trasera'],
+      fotoVestidorFrontal: json['foto_vestidor_frontal'],
+      fotoVestidorTrasera: json['foto_vestidor_trasera'],
+      tipoPrenda: json['tipo_prenda'] ?? 'superior',
       precio: double.tryParse(json['precio']?.toString() ?? '0') ?? 0.0,
       categoriaId: json['categoria_id'] ?? 0,
       categoriaNombre: json['categoria_nombre'],
