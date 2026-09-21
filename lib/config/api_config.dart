@@ -56,4 +56,7 @@ class ApiConfig {
 
   // Chatbot Asistente IA (Punto 8 / v7)
   static const String chatbotConversarUrl = '$baseUrl/chatbot/conversar';
+
+  // QR Config Mostrador (Punto Pagos QR)
+  static const String qrConfigUrl = '$baseUrl/pagos/config-qr';
 }

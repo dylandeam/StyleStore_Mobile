@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import '../../config/api_config.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
 import '../../models/cart_item.dart';
@@ -1016,6 +1021,241 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     return null;
   }
 
+  void _showQrStoreModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FutureBuilder<http.Response>(
+        future: Provider.of<ApiService>(context, listen: false).get(ApiConfig.qrConfigUrl, requireAuth: false),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              height: 280,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          Map<String, dynamic>? data;
+          if (snapshot.hasData && snapshot.data != null) {
+            try {
+              data = jsonDecode(snapshot.data!.body) as Map<String, dynamic>?;
+            } catch (_) {}
+          }
+
+          final qrUrl = data?['qr_image_url'] as String?;
+          final banco = (data?['banco_nombre'] ?? 'Banco BNB / BCP / Unión').toString();
+          final cuenta = (data?['numero_cuenta'] ?? '10000034928123').toString();
+          final titular = (data?['titular_cuenta'] ?? 'StyleStore S.R.L.').toString();
+          final expira = (data?['fecha_expiracion'] ?? '').toString();
+
+          return Container(
+            padding: const EdgeInsets.all(22),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.qr_code_2, color: Color(0xFF0F766E), size: 26),
+                        SizedBox(width: 8),
+                        Text(
+                          'QR Simple de Cobro',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (qrUrl != null && qrUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      qrUrl.startsWith('http') ? qrUrl : '${ApiConfig.baseUrl.replaceAll('/api/v1', '')}$qrUrl',
+                      height: 210,
+                      width: 210,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 190,
+                        width: 190,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.qr_code_2, size: 90, color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    height: 190,
+                    width: 190,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.qr_code_2, size: 90, color: Color(0xFF0F766E)),
+                  ),
+                const SizedBox(height: 12),
+                Text(
+                  titular,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$banco • Cta: $cuenta',
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
+                if (expira.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Válido hasta: $expira',
+                    style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0x0D0F766E),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Escanea este código con cualquier aplicación bancaria boliviana (BNB, BCP, Banco Unión, etc.) para abonar a la tienda.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF0F766E)),
+                  ),
+                ),
+                Builder(
+                  builder: (innerContext) {
+                    final user = Provider.of<AuthService>(context, listen: false).currentUser;
+                    final isStaff = user != null && (user.role == 'admin' || user.role == 'encargado');
+                    if (!isStaff) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showUpdateQrDialog(context, data);
+                        },
+                        icon: const Icon(Icons.edit, size: 16, color: AppTheme.accentIndigo),
+                        label: const Text('Actualizar QR (Admin/Encargado)', style: TextStyle(fontSize: 12, color: AppTheme.accentIndigo, fontWeight: FontWeight.bold)),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showUpdateQrDialog(BuildContext context, Map<String, dynamic>? currentData) {
+    final bancoCtrl = TextEditingController(text: currentData?['banco_nombre'] ?? 'Banco BNB');
+    final cuentaCtrl = TextEditingController(text: currentData?['numero_cuenta'] ?? '');
+    final titularCtrl = TextEditingController(text: currentData?['titular_cuenta'] ?? 'StyleStore S.R.L.');
+    final expiraCtrl = TextEditingController(text: currentData?['fecha_expiracion'] ?? '');
+    final urlCtrl = TextEditingController(text: currentData?['qr_image_url'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code_scanner, color: AppTheme.accentIndigo),
+            SizedBox(width: 8),
+            Text('Actualizar QR Mostrador', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: urlCtrl,
+                decoration: const InputDecoration(labelText: 'URL o Path de Imagen QR', hintText: '/uploads/qr/qr.png'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: bancoCtrl,
+                decoration: const InputDecoration(labelText: 'Banco', hintText: 'Banco BNB'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: cuentaCtrl,
+                decoration: const InputDecoration(labelText: 'Número de Cuenta'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: titularCtrl,
+                decoration: const InputDecoration(labelText: 'Titular de la Cuenta'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: expiraCtrl,
+                decoration: const InputDecoration(labelText: 'Fecha de Expiración', hintText: 'YYYY-MM-DD o DD/MM/YYYY'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final apiService = Provider.of<ApiService>(context, listen: false);
+                await apiService.post(
+                  ApiConfig.qrConfigUrl,
+                  body: {
+                    'qr_image_url': urlCtrl.text.trim(),
+                    'banco_nombre': bancoCtrl.text.trim(),
+                    'numero_cuenta': cuentaCtrl.text.trim(),
+                    'titular_cuenta': titularCtrl.text.trim(),
+                    'fecha_expiracion': expiraCtrl.text.trim(),
+                  },
+                );
+                if (context.mounted) {
+                  Navigator.pop(dialogCtx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('QR actualizado exitosamente')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al actualizar QR: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showCheckoutModal(CartService cartService) {
     final addressCtrl = TextEditingController(text: 'Av. América #450');
     final mapsCtrl = TextEditingController();
@@ -1225,11 +1465,46 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                               children: [
                                 Text('PayPal v2 (Tarjeta o Saldo Digital)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                                 SizedBox(height: 2),
-                                Text('Pago seguro internacional. Para compras presenciales en efectivo visita nuestras cajas POS en tienda física.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                Text('Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
                               ],
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // QR Mostrador info
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _showQrStoreModal(context),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0x0D0F766E),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0x4414B8A6)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.qr_code_2, color: Color(0xFF0F766E), size: 24),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('📱 Pago por QR Simple en Mostrador', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F766E))),
+                                    SizedBox(height: 2),
+                                    Text('Toca aquí para ver el código QR de cobro oficial y pagar con tu banca móvil.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF0F766E)),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
