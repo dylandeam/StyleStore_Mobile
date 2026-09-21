@@ -1087,29 +1087,29 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     borderRadius: BorderRadius.circular(16),
                     child: Image.network(
                       qrUrl.startsWith('http') ? qrUrl : '${ApiConfig.baseUrl.replaceAll('/api/v1', '')}$qrUrl',
-                      height: 210,
-                      width: 210,
+                      height: 260,
+                      width: 260,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => Container(
-                        height: 190,
-                        width: 190,
+                        height: 240,
+                        width: 240,
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.qr_code_2, size: 90, color: Colors.grey),
+                        child: const Icon(Icons.qr_code_2, size: 110, color: Colors.grey),
                       ),
                     ),
                   )
                 else
                   Container(
-                    height: 190,
-                    width: 190,
+                    height: 240,
+                    width: 240,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.qr_code_2, size: 90, color: Color(0xFF0F766E)),
+                    child: const Icon(Icons.qr_code_2, size: 110, color: Color(0xFF0F766E)),
                   ),
                 const SizedBox(height: 12),
                 Text(
