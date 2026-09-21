@@ -11,6 +11,9 @@ import '../../services/proximamente_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/order_service.dart';
 import 'product_detail_screen.dart';
+import 'delivery_tracking_screen.dart';
+import 'outfits_screen.dart';
+import 'chatbot_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   final int initialTab;
@@ -27,9 +30,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 4,
+      length: 5,
       vsync: this,
-      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 4) ? widget.initialTab : 0,
+      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 5) ? widget.initialTab : 0,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CatalogService>(context, listen: false).fetchSucursales();
@@ -75,22 +78,47 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.checkroom), text: 'Catálogo'),
+            Tab(icon: Icon(Icons.style_outlined), text: 'Outfits'),
             Tab(icon: Icon(Icons.rocket_launch_outlined), text: 'Próximamente'),
             Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Mi Carrito'),
             Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Mis Pedidos'),
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatbotScreen(
+                onNavigateTab: (tabIndex) {
+                  _tabController.animateTo(tabIndex);
+                },
+              ),
+            ),
+          );
+        },
+        backgroundColor: AppTheme.accentIndigo,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.smart_toy_outlined),
+        label: const Text('Asesor IA', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
       body: TabBarView(
         controller: _tabController,
         children: [
           _buildCatalogTab(),
+          _buildOutfitsTab(),
           _buildProximamenteTab(),
           _buildCartTab(),
           _buildOrdersTab(),
         ],
       ),
     );
+  }
+
+  Widget _buildOutfitsTab() {
+    final catalogService = Provider.of<CatalogService>(context);
+    return OutfitsScreen(availableProducts: catalogService.productos);
   }
 
   // ==========================================
@@ -960,6 +988,34 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     );
   }
 
+  Map<String, double>? _extraerCoordsMaps(String input) {
+    if (input.trim().isEmpty) return null;
+    try {
+      final str = Uri.decodeComponent(input.trim());
+      final candidates = [str, input.trim()];
+      for (final t in candidates) {
+        final m1 = RegExp(r'@(-?\d+\.\d+),(-?\d+\.\d+)').firstMatch(t);
+        if (m1 != null) return {'lat': double.parse(m1.group(1)!), 'lon': double.parse(m1.group(2)!)};
+
+        final mEmbed = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(t);
+        if (mEmbed != null) return {'lat': double.parse(mEmbed.group(1)!), 'lon': double.parse(mEmbed.group(2)!)};
+
+        final m2 = RegExp(r'[?&](?:q|ll|sll|query|center|daddr|destination|saddr)=(?:loc:)?(-?\d+\.\d+),(-?\d+\.\d+)', caseSensitive: false).firstMatch(t);
+        if (m2 != null) return {'lat': double.parse(m2.group(1)!), 'lon': double.parse(m2.group(2)!)};
+
+        final m3 = RegExp(r'(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})').firstMatch(t);
+        if (m3 != null) {
+          final lat = double.parse(m3.group(1)!);
+          final lon = double.parse(m3.group(2)!);
+          if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            return {'lat': lat, 'lon': lon};
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _showCheckoutModal(CartService cartService) {
     final addressCtrl = TextEditingController(text: 'Av. América #450');
     final mapsCtrl = TextEditingController();
@@ -1194,12 +1250,29 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             ? (address.isNotEmpty ? '$address | Maps: $mapsUrl' : mapsUrl)
                             : address;
 
+                        // Extraer coordenadas GPS del enlace si existen
+                        double? latDestino;
+                        double? lonDestino;
+                        if (mapsUrl.isNotEmpty) {
+                          final coords = _extraerCoordsMaps(mapsUrl);
+                          if (coords != null) {
+                            latDestino = coords['lat'];
+                            lonDestino = coords['lon'];
+                          }
+                        }
+
                         final res = await cartService.checkout(
                           metodoPago: 'paypal',
                           distanciaKm: distanciaKm,
                           direccionEnvio: direccionCompleta,
+                          latitudDestino: latDestino,
+                          longitudDestino: lonDestino,
+                          ubicacionUrl: mapsUrl.isNotEmpty ? mapsUrl : null,
+                          ciudad: branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
+                          sucursalId: sucursalId,
                         );
                         if (mounted) {
+                          final token = res?['token_seguimiento'] as String?;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(res != null ? '¡Orden generada con éxito con PayPal!' : 'Pedido procesado.'),
@@ -1207,7 +1280,17 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             ),
                           );
                           Provider.of<OrderService>(context, listen: false).fetchOrders();
-                          _tabController.animateTo(3);
+                          _tabController.animateTo(4); // Tab de Mis Pedidos
+
+                          // Si tenemos token de rastreo, navegar directo a la pantalla de rastreo en vivo
+                          if (token != null && token.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DeliveryTrackingScreen(token: token),
+                              ),
+                            );
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -1427,10 +1510,33 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              _showTrackingDialog(order);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DeliveryTrackingScreen(
+                                    token: order.tokenSeguimiento!,
+                                    order: order,
+                                  ),
+                                ),
+                              );
                             },
                             icon: const Icon(Icons.map_outlined, size: 14),
                             label: const Text('Rastrear Envío'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.accentIndigo,
+                              side: const BorderSide(color: AppTheme.accentIndigo),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ] else if (order.trackingCode != null) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showTrackingDialog(order),
+                            icon: const Icon(Icons.local_shipping_outlined, size: 14),
+                            label: const Text('Info Envío'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.accentIndigo,
                               side: const BorderSide(color: AppTheme.accentIndigo),

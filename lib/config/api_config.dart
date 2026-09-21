@@ -47,4 +47,13 @@ class ApiConfig {
   // Delivery StyleStore - Rastreo GPS (v7)
   static String rastreoPublicoUrl(String token) => '$baseUrl/envios/rastreo/$token';
   static String conductorGpsUrl(int envioId) => '$baseUrl/envios/$envioId/gps';
+  static String webTrackerUrl(String token) => 'https://style-store-frontend-nine.vercel.app/delivery/rastreo/$token';
+
+  // Outfits Combinaciones (Punto 9 / v7)
+  static const String outfitsUrl = '$baseUrl/outfits';
+  static String outfitDetalleUrl(int id) => '$baseUrl/outfits/$id';
+  static String outfitComprarUrl(int id) => '$baseUrl/outfits/$id/comprar';
+
+  // Chatbot Asistente IA (Punto 8 / v7)
+  static const String chatbotConversarUrl = '$baseUrl/chatbot/conversar';
 }

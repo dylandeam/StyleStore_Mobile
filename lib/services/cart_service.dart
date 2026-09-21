@@ -64,22 +64,54 @@ class CartService extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> addStockItem(int stockInventarioId, {int cantidad = 1}) async {
+    try {
+      final res = await _apiService.post(
+        '${ApiConfig.baseUrl}/carrito/items',
+        body: {
+          'stock_inventario_id': stockInventarioId,
+          'cantidad': cantidad,
+        },
+        requireAuth: true,
+      );
+      if (res.statusCode == 200) {
+        await fetchCart();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<Map<String, dynamic>?> checkout({
     required String metodoPago,
     double? distanciaKm,
     String? direccionEnvio,
+    double? latitudDestino,
+    double? longitudDestino,
+    String? ubicacionUrl,
+    String? ciudad,
+    String? referencia,
+    int? sucursalId,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      final body = <String, dynamic>{
+        'metodo_pago': metodoPago,
+        if (distanciaKm != null) 'distancia_km': distanciaKm,
+        if (direccionEnvio != null && direccionEnvio.isNotEmpty) 'direccion_envio': direccionEnvio,
+        if (latitudDestino != null) 'latitud_destino': latitudDestino,
+        if (longitudDestino != null) 'longitud_destino': longitudDestino,
+        if (ubicacionUrl != null && ubicacionUrl.isNotEmpty) 'ubicacion_url': ubicacionUrl,
+        if (ciudad != null && ciudad.isNotEmpty) 'ciudad': ciudad,
+        if (referencia != null && referencia.isNotEmpty) 'referencia': referencia,
+        if (sucursalId != null) 'sucursal_id': sucursalId,
+      };
+
       final res = await _apiService.post(
         ApiConfig.carritoCheckoutUrl,
-        body: {
-          'metodo_pago': metodoPago,
-          'distancia_km': distanciaKm,
-          'direccion_envio': direccionEnvio,
-        },
+        body: body,
         requireAuth: true,
       );
       _isLoading = false;
