@@ -27,6 +27,10 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   double _opacity = 1.0;
   String _selectedCategory = 'all';
 
+  // Ajuste de Entalle al Cuerpo (Fit)
+  String _bodyFit = 'slim'; // 'slim' (pegado), 'regular', 'loose'
+  double get _fitFactor => _bodyFit == 'slim' ? 0.88 : (_bodyFit == 'regular' ? 1.0 : 1.15);
+
   // Rotación 360° interactiva y animación orgánica de tela
   double _rotationY = 0.0; // En radianes (0..2pi)
   bool _autoSpin = false;
@@ -346,7 +350,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                             top: 150 + _verticalOffset,
                             child: _buildGarmentDisplay(
                               _activeBottom!,
-                              width: 145 * _scaleMultiplier,
+                              width: 145 * _scaleMultiplier * _fitFactor,
                               height: 185 * _scaleMultiplier,
                             ),
                           ),
@@ -357,7 +361,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                             top: 50 + _verticalOffset,
                             child: _buildGarmentDisplay(
                               _activeTop!,
-                              width: 175 * _scaleMultiplier,
+                              width: 175 * _scaleMultiplier * _fitFactor,
                               height: 175 * _scaleMultiplier,
                             ),
                           ),
@@ -368,7 +372,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                             top: 55 + _verticalOffset,
                             child: _buildGarmentDisplay(
                               _activeDress!,
-                              width: 185 * _scaleMultiplier,
+                              width: 185 * _scaleMultiplier * _fitFactor,
                               height: 275 * _scaleMultiplier,
                             ),
                           ),
@@ -380,43 +384,73 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                   Positioned(
                     top: 16,
                     left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xCC14263D),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0x66C8A97E)),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black38, blurRadius: 6),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isBackView
-                                ? Icons.flip_camera_android
-                                : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
-                                    ? Icons.transform
-                                    : Icons.person_outline,
-                            size: 14,
-                            color: const Color(0xFFC8A97E),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xCC14263D),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0x66C8A97E)),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black38, blurRadius: 6),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _isBackView
-                                ? '🔄 Espalda (${((_rotationY * 180 / math.pi).round()) % 360}°)'
-                                : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
-                                    ? '📐 Perfil (${((_rotationY * 180 / math.pi).round()) % 360}°)'
-                                    : '✨ Frente (${((_rotationY * 180 / math.pi).round()) % 360}°)',
-                            style: const TextStyle(
-                              color: Color(0xFFF1F5F9),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isBackView
+                                    ? Icons.flip_camera_android
+                                    : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
+                                        ? Icons.transform
+                                        : Icons.person_outline,
+                                size: 14,
+                                color: const Color(0xFFC8A97E),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isBackView
+                                    ? '🔄 Espalda (${((_rotationY * 180 / math.pi).round()) % 360}°)'
+                                    : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
+                                        ? '📐 Perfil (${((_rotationY * 180 / math.pi).round()) % 360}°)'
+                                        : '✨ Frente (${((_rotationY * 180 / math.pi).round()) % 360}°)',
+                                style: const TextStyle(
+                                  color: Color(0xFFF1F5F9),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 5),
+                        // Badge de Sensor de Profundidad Neuronal
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xCC0369A1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0x8838BDF8)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.radar, size: 11, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                '⚡ Profundidad IA Activa',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -448,58 +482,88 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                   Positioned(
                     right: 12,
                     top: 16,
-                  child: Column(
-                    children: [
-                      _buildQuickAction(
-                        icon: Icons.zoom_in,
-                        tooltip: 'Agrandar',
-                        onTap: () {
-                          setState(() {
-                            if (_scaleMultiplier < 1.4) _scaleMultiplier += 0.05;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 6),
-                      _buildQuickAction(
-                        icon: Icons.zoom_out,
-                        tooltip: 'Reducir',
-                        onTap: () {
-                          setState(() {
-                            if (_scaleMultiplier > 0.7) _scaleMultiplier -= 0.05;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 6),
-                      _buildQuickAction(
-                        icon: Icons.arrow_upward,
-                        tooltip: 'Subir',
-                        onTap: () {
-                          setState(() => _verticalOffset -= 8);
-                        },
-                      ),
-                      const SizedBox(height: 6),
-                      _buildQuickAction(
-                        icon: Icons.arrow_downward,
-                        tooltip: 'Bajar',
-                        onTap: () {
-                          setState(() => _verticalOffset += 8);
-                        },
-                      ),
-                      const SizedBox(height: 6),
-                      _buildQuickAction(
-                        icon: Icons.restart_alt,
-                        tooltip: 'Reiniciar',
-                        onTap: () {
-                          setState(() {
-                            _scaleMultiplier = 1.0;
-                            _verticalOffset = 0.0;
-                            _opacity = 1.0;
-                          });
-                        },
-                      ),
-                    ],
+                    child: Column(
+                      children: [
+                        _buildQuickAction(
+                          icon: _bodyFit == 'slim'
+                              ? Icons.accessibility
+                              : (_bodyFit == 'regular' ? Icons.checkroom : Icons.aspect_ratio),
+                          tooltip:
+                              'Ajuste al Cuerpo (${_bodyFit == 'slim' ? 'Pegado' : _bodyFit == 'regular' ? 'Regular' : 'Holgado'})',
+                          onTap: () {
+                            setState(() {
+                              if (_bodyFit == 'slim') {
+                                _bodyFit = 'regular';
+                              } else if (_bodyFit == 'regular') {
+                                _bodyFit = 'loose';
+                              } else {
+                                _bodyFit = 'slim';
+                              }
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '✨ Entalle: ${_bodyFit == 'slim' ? 'Pegado al Cuerpo (Slim Fit)' : _bodyFit == 'regular' ? 'Corte Clásico (Regular)' : 'Holgado (Loose)'}',
+                                ),
+                                duration: const Duration(seconds: 1),
+                                backgroundColor: const Color(0xFF14263D),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        _buildQuickAction(
+                          icon: Icons.zoom_in,
+                          tooltip: 'Agrandar',
+                          onTap: () {
+                            setState(() {
+                              if (_scaleMultiplier < 1.4) _scaleMultiplier += 0.05;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        _buildQuickAction(
+                          icon: Icons.zoom_out,
+                          tooltip: 'Reducir',
+                          onTap: () {
+                            setState(() {
+                              if (_scaleMultiplier > 0.7) _scaleMultiplier -= 0.05;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        _buildQuickAction(
+                          icon: Icons.arrow_upward,
+                          tooltip: 'Subir',
+                          onTap: () {
+                            setState(() => _verticalOffset -= 8);
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        _buildQuickAction(
+                          icon: Icons.arrow_downward,
+                          tooltip: 'Bajar',
+                          onTap: () {
+                            setState(() => _verticalOffset += 8);
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        _buildQuickAction(
+                          icon: Icons.restart_alt,
+                          tooltip: 'Reiniciar',
+                          onTap: () {
+                            setState(() {
+                              _scaleMultiplier = 1.0;
+                              _verticalOffset = 0.0;
+                              _opacity = 1.0;
+                              _bodyFit = 'slim';
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
                 // Resumen de look y botón comprar
                 if (_totalPrice > 0)
