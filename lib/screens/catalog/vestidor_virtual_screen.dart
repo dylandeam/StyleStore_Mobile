@@ -50,6 +50,9 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   PoseDetector? _poseDetector;
   bool _isProcessingFrame = false;
   bool _isPersonDetected = false;
+  String _trackingStatus = "Iniciando Pose Tracking...";
+  double _manualOffsetX = 0.0;
+  double _manualOffsetY = 0.0;
 
   // Landmarks de la prenda desde el backend (Especificación v8)
   Map<String, dynamic>? _garmentLandmarks;
@@ -239,6 +242,10 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         return;
       }
 
+      final camera = _availableCameras[_selectedCameraIndex];
+      final isFront = camera.lensDirection == CameraLensDirection.front;
+      final rotation = inputImage.metadata?.rotation ?? InputImageRotation.rotation270deg;
+
       final poses = await _poseDetector!.processImage(inputImage);
       if (poses.isNotEmpty && mounted) {
         final pose = poses.first;
@@ -247,44 +254,46 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         final lh = pose.landmarks[PoseLandmarkType.leftHip];
         final rh = pose.landmarks[PoseLandmarkType.rightHip];
 
-        if (ls != null && rs != null && ls.likelihood > 0.35 && rs.likelihood > 0.35) {
-          final imgWidth = image.width.toDouble();
-          final imgHeight = image.height.toDouble();
+        if (ls != null && rs != null && (ls.likelihood > 0.10 || rs.likelihood > 0.10)) {
+          final pLs = _mapLandmarkToScreen(ls, image, rotation, isFront);
+          final pRs = _mapLandmarkToScreen(rs, image, rotation, isFront);
 
-          final isFront = _availableCameras[_selectedCameraIndex].lensDirection == CameraLensDirection.front;
+          final normLsX = pLs.dx;
+          final normLsY = pLs.dy;
+          final normRsX = pRs.dx;
+          final normRsY = pRs.dy;
 
-          double normLsX = isFront ? (1.0 - (ls.x / imgWidth)) : (ls.x / imgWidth);
-          double normLsY = ls.y / imgHeight;
+          Offset pLh = Offset(normLsX, normLsY + 0.35);
+          if (lh != null) {
+            pLh = _mapLandmarkToScreen(lh, image, rotation, isFront);
+          }
 
-          double normRsX = isFront ? (1.0 - (rs.x / imgWidth)) : (rs.x / imgWidth);
-          double normRsY = rs.y / imgHeight;
-
-          double normLhX = lh != null ? (isFront ? (1.0 - (lh.x / imgWidth)) : (lh.x / imgWidth)) : normLsX;
-          double normLhY = lh != null ? (lh.y / imgHeight) : (normLsY + 0.40);
-
-          double normRhX = rh != null ? (isFront ? (1.0 - (rh.x / imgWidth)) : (rh.x / imgWidth)) : normRsX;
-          double normRhY = rh != null ? (rh.y / imgHeight) : (normRsY + 0.40);
+          Offset pRh = Offset(normRsX, normRsY + 0.35);
+          if (rh != null) {
+            pRh = _mapLandmarkToScreen(rh, image, rotation, isFront);
+          }
 
           final targetShoulderMidX = (normLsX + normRsX) / 2.0;
           final targetShoulderMidY = (normLsY + normRsY) / 2.0;
-          final targetHipMidX = (normLhX + normRhX) / 2.0;
-          final targetHipMidY = (normLhY + normRhY) / 2.0;
+          final targetHipMidX = (pLh.dx + pRh.dx) / 2.0;
+          final targetHipMidY = (pLh.dy + pRh.dy) / 2.0;
 
           final targetShoulderWidth = math.sqrt(
             math.pow(normLsX - normRsX, 2) + math.pow(normLsY - normRsY, 2),
-          );
+          ).clamp(0.20, 0.60);
 
           final targetTorsoHeight = math.sqrt(
             math.pow(targetHipMidX - targetShoulderMidX, 2) +
             math.pow(targetHipMidY - targetShoulderMidY, 2),
-          );
+          ).clamp(0.25, 0.70);
 
           final targetAngle = math.atan2(normRsY - normLsY, normRsX - normLsX);
 
           if (mounted) {
             setState(() {
               _isPersonDetected = true;
-              const alpha = 0.30;
+              _trackingStatus = "IA Pose Tracking Activo 🟢";
+              const alpha = 0.35;
               _smoothedShoulderMidX = _smoothedShoulderMidX * (1 - alpha) + targetShoulderMidX * alpha;
               _smoothedShoulderMidY = _smoothedShoulderMidY * (1 - alpha) + targetShoulderMidY * alpha;
               _smoothedHipMidX = _smoothedHipMidX * (1 - alpha) + targetHipMidX * alpha;
@@ -295,23 +304,60 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
             });
           }
         } else {
-          if (mounted && _isPersonDetected) {
-            setState(() => _isPersonDetected = false);
-          }
+          _fallbackToCenterAnchor();
         }
       } else {
-        if (mounted && _isPersonDetected) {
-          setState(() => _isPersonDetected = false);
-        }
+        _fallbackToCenterAnchor();
       }
     } catch (_) {
+      _fallbackToCenterAnchor();
     } finally {
       _isProcessingFrame = false;
     }
   }
 
+  void _fallbackToCenterAnchor() {
+    if (mounted) {
+      setState(() {
+        _isPersonDetected = true;
+        _trackingStatus = "Anclaje Centrado en Hombros 🟡";
+        const alpha = 0.20;
+        _smoothedShoulderMidX = _smoothedShoulderMidX * (1 - alpha) + 0.50 * alpha;
+        _smoothedShoulderMidY = _smoothedShoulderMidY * (1 - alpha) + 0.28 * alpha;
+        _smoothedHipMidX = _smoothedHipMidX * (1 - alpha) + 0.50 * alpha;
+        _smoothedHipMidY = _smoothedHipMidY * (1 - alpha) + 0.65 * alpha;
+        _smoothedShoulderWidth = _smoothedShoulderWidth * (1 - alpha) + 0.32 * alpha;
+        _smoothedTorsoHeight = _smoothedTorsoHeight * (1 - alpha) + 0.40 * alpha;
+        _smoothedAngle = _smoothedAngle * (1 - alpha) + 0.0 * alpha;
+      });
+    }
+  }
+
+  Offset _mapLandmarkToScreen(PoseLandmark landmark, CameraImage image, InputImageRotation rotation, bool isFront) {
+    final double imgWidth = image.width.toDouble();
+    final double imgHeight = image.height.toDouble();
+
+    double normX;
+    double normY;
+
+    if (rotation == InputImageRotation.rotation90deg || rotation == InputImageRotation.rotation270deg) {
+      if (rotation == InputImageRotation.rotation270deg) {
+        normX = isFront ? (landmark.y / imgHeight) : (1.0 - (landmark.y / imgHeight));
+        normY = landmark.x / imgWidth;
+      } else {
+        normX = isFront ? (1.0 - (landmark.y / imgHeight)) : (landmark.y / imgHeight);
+        normY = 1.0 - (landmark.x / imgWidth);
+      }
+    } else {
+      normX = isFront ? (1.0 - (landmark.x / imgWidth)) : (landmark.x / imgWidth);
+      normY = landmark.y / imgHeight;
+    }
+
+    return Offset(normX.clamp(0.0, 1.0), normY.clamp(0.0, 1.0));
+  }
+
   InputImage? _inputImageFromCameraImage(CameraImage image) {
-    if (_cameraController == null) return null;
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return null;
 
     final camera = _availableCameras[_selectedCameraIndex];
     final sensorOrientation = camera.sensorOrientation;
@@ -320,8 +366,8 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      var rotationCompensation = _orientations[_cameraController!.value.deviceOrientation];
-      if (rotationCompensation == null) return null;
+      var deviceOrientation = _cameraController!.value.deviceOrientation;
+      var rotationCompensation = _orientations[deviceOrientation] ?? 0;
       if (camera.lensDirection == CameraLensDirection.front) {
         rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
       } else {
@@ -331,7 +377,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     } else {
       rotation = InputImageRotation.rotation0deg;
     }
-    if (rotation == null) return null;
+    rotation ??= InputImageRotation.rotation270deg;
 
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
     final inputFormat = format ?? InputImageFormat.nv21;
@@ -531,12 +577,12 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                 final screenW = constraints.maxWidth;
                 final screenH = constraints.maxHeight;
 
-                final isDynamicFit = _isCameraActive && _isPersonDetected;
+                final isDynamicFit = _isCameraActive;
 
                 // Anclaje EXACTO de la prenda superior en los HOMBROS y CUELLO (evita caer a la cintura)
-                final shoulderAnchorX = _smoothedShoulderMidX * screenW;
-                final shoulderAnchorY = _smoothedShoulderMidY * screenH;
-                final hipAnchorY = _smoothedHipMidY * screenH;
+                final shoulderAnchorX = (_smoothedShoulderMidX * screenW) + _manualOffsetX;
+                final shoulderAnchorY = (_smoothedShoulderMidY * screenH) + _manualOffsetY + _verticalOffset;
+                final hipAnchorY = (_smoothedHipMidY * screenH) + _manualOffsetY + _verticalOffset;
 
                 final garmentWidth = isDynamicFit
                     ? (_smoothedShoulderWidth * screenW * 2.3 * _scaleMultiplier * _fitFactor)
@@ -549,18 +595,25 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                 final dynamicAngle = isDynamicFit ? _smoothedAngle : 0.0;
 
                 return GestureDetector(
-                  onHorizontalDragUpdate: (details) {
-                    setState(() {
-                      _autoSpin = false;
-                      _rotationY += details.primaryDelta! * 0.012;
-                      while (_rotationY < 0) {
-                        _rotationY += 2 * math.pi;
-                      }
-                      while (_rotationY >= 2 * math.pi) {
-                        _rotationY -= 2 * math.pi;
-                      }
-                      _updateBackViewFromRotation();
-                    });
+                  onPanUpdate: (details) {
+                    if (_isCameraActive) {
+                      setState(() {
+                        _manualOffsetX += details.delta.dx;
+                        _manualOffsetY += details.delta.dy;
+                      });
+                    } else {
+                      setState(() {
+                        _autoSpin = false;
+                        _rotationY += details.delta.dx * 0.012;
+                        while (_rotationY < 0) {
+                          _rotationY += 2 * math.pi;
+                        }
+                        while (_rotationY >= 2 * math.pi) {
+                          _rotationY -= 2 * math.pi;
+                        }
+                        _updateBackViewFromRotation();
+                      });
+                    }
                   },
                   child: Stack(
                     alignment: Alignment.center,
@@ -735,26 +788,43 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                         ),
                       ],
 
-                      // Banner Guía cuando la cámara no detecta persona en cuadro
-                      if (_isCameraActive && !_isPersonDetected)
+                      // Top Chip Indicador de Estado del Tracking AR
+                      if (_isCameraActive)
                         Positioned(
-                          top: 90,
+                          top: 80,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.black87,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                              border: Border.all(color: const Color(0xFFC8A97E).withValues(alpha: 0.6)),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.info_outline, color: Colors.amber, size: 14),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Ubícate frente a la cámara de cuerpo completo',
-                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                Icon(
+                                  _trackingStatus.contains("Activo") ? Icons.center_focus_strong : Icons.accessibility_new,
+                                  color: const Color(0xFFC8A97E),
+                                  size: 14,
                                 ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _trackingStatus,
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                                if (_manualOffsetX != 0 || _manualOffsetY != 0) ...[
+                                  const SizedBox(width: 10),
+                                  GestureDetector(
+                                    onTap: () => setState(() {
+                                      _manualOffsetX = 0.0;
+                                      _manualOffsetY = 0.0;
+                                    }),
+                                    child: const Text(
+                                      '↺ Re-Centrar',
+                                      style: TextStyle(color: Color(0xFFC8A97E), fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
