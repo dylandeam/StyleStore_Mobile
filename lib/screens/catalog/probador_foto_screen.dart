@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -37,12 +38,14 @@ class _ProbadorFotoScreenState extends State<ProbadorFotoScreen> {
     // En mobile permite seleccionar o simular la carga de foto de cuerpo completo
     final status = await Permission.camera.request();
     if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ Se requiere permiso de cámara/galería.'),
-          backgroundColor: AppTheme.dangerRed,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Se requiere permiso de cámara/galería.'),
+            backgroundColor: AppTheme.dangerRed,
+          ),
+        );
+      }
     }
   }
 
@@ -67,24 +70,36 @@ class _ProbadorFotoScreenState extends State<ProbadorFotoScreen> {
     try {
       final res = await apiService.post(
         '/prueba-virtual/generar',
-        {
+        body: {
           'producto_codigo': _selectedProduct!.codigo,
         },
       );
 
-      setState(() {
-        _isProcessing = false;
-        if (res != null && res['foto_resultado_url'] != null) {
-          _resultImageUrl = ApiConfig.resolveImageUrl(res['foto_resultado_url']);
+      if (mounted) {
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          setState(() {
+            _isProcessing = false;
+            if (data['foto_resultado_url'] != null) {
+              _resultImageUrl = ApiConfig.resolveImageUrl(data['foto_resultado_url']);
+            } else {
+              _resultImageUrl = ApiConfig.resolveImageUrl(_selectedProduct!.foto);
+            }
+          });
         } else {
-          _resultImageUrl = ApiConfig.resolveImageUrl(_selectedProduct!.foto);
+          setState(() {
+            _isProcessing = false;
+            _resultImageUrl = ApiConfig.resolveImageUrl(_selectedProduct!.foto);
+          });
         }
-      });
+      }
     } catch (e) {
-      setState(() {
-        _isProcessing = false;
-        _resultImageUrl = ApiConfig.resolveImageUrl(_selectedProduct!.foto);
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _resultImageUrl = ApiConfig.resolveImageUrl(_selectedProduct!.foto);
+        });
+      }
     }
   }
 

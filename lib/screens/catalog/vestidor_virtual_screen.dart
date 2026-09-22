@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -126,8 +127,9 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   Future<void> _fetchLandmarksForProduct(String codigo) async {
     final apiService = Provider.of<ApiService>(context, listen: false);
     try {
-      final res = await apiService.get('/productos/$codigo/landmarks');
-      if (mounted && res != null) {
+      final response = await apiService.get('/productos/$codigo/landmarks');
+      if (mounted && response.statusCode == 200) {
+        final res = jsonDecode(response.body);
         setState(() {
           _tipoAr = res['tipo_ar'] ?? 'superior';
           _garmentLandmarks = res['landmarks'];
