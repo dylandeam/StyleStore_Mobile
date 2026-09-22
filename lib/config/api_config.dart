@@ -1,9 +1,7 @@
 class ApiConfig {
   /// Base API URL - default set to local network IP for physical device testing
-  static String _activeBaseUrl = 'http://192.168.0.17:8000/api/v1';
+  static String baseUrl = 'http://192.168.0.17:8000/api/v1';
 
-  static String get baseUrl => _activeBaseUrl;
-  static set baseUrl(String url) => _activeBaseUrl = url;
 
   /// Candidate URLs to attempt connection if default fails
   static List<String> get candidateUrls => [
