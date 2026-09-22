@@ -174,6 +174,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       tallaId: _selectedTallaId!,
       sucursalId: _selectedSucursalId,
       cantidad: _quantity,
+      stockInventarioId: _selectedStockInventarioId,
     );
 
     if (!mounted) return;

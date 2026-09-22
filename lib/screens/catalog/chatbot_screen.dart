@@ -316,7 +316,73 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       onSubmitted: _sendMessage,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.mic, color: AppTheme.accentIndigo),
+                    tooltip: 'Comando por Voz IA',
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: AppTheme.bgCard,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        builder: (ctx) {
+                          return Container(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x2210B981),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0xFF10B981), width: 2),
+                                  ),
+                                  child: const Icon(Icons.mic, color: Color(0xFF10B981), size: 36),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  '🎙️ Asistente de Voz IA',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Di lo que deseas consultar al Asesor de Moda:',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 20),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.center,
+                                  children: [
+                                    '💡 Recomiéndame un outfit',
+                                    '👗 ¿Qué vestidos hay?',
+                                    '🛒 Añadir prenda a bolsa',
+                                    '📍 Ver sucursales',
+                                  ].map((cmd) {
+                                    return ActionChip(
+                                      label: Text(cmd, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      backgroundColor: AppTheme.bgSecondary,
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        final clean = cmd.replaceAll(RegExp(r'[^\w\s\?]'), '').trim();
+                                        _sendMessage(clean);
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
                   Container(
                     decoration: const BoxDecoration(
                       color: AppTheme.accentIndigo,

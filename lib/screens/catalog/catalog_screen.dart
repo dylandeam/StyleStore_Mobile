@@ -220,14 +220,147 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     );
   }
 
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  void _activateVoiceSearch() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: AppTheme.accentIndigo.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.accentIndigo, width: 2),
+                ),
+                child: const Icon(Icons.mic, color: AppTheme.accentIndigo, size: 36),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '🎙️ Búsqueda por Voz IA',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Selecciona una búsqueda o habla tu comando de prenda:',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  '👕 Camisas',
+                  '👗 Vestidos',
+                  '👖 Jeans',
+                  '🔥 Ofertas',
+                  '🧥 Chaquetas',
+                ].map((sug) {
+                  return ActionChip(
+                    label: Text(sug, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    backgroundColor: AppTheme.bgSecondary,
+                    onPressed: () {
+                      final clean = sug.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+                      setState(() {
+                        _searchQuery = clean;
+                        _searchController.text = clean;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // ==========================================
   // TAB 1: CATÁLOGO
   // ==========================================
   Widget _buildCatalogTab() {
     final catalogService = Provider.of<CatalogService>(context);
 
+    final filteredProds = catalogService.productos.where((p) {
+      if (_searchQuery.trim().isEmpty) return true;
+      final q = _searchQuery.trim().toLowerCase();
+      return p.nombre.toLowerCase().contains(q) ||
+          p.codigo.toLowerCase().contains(q) ||
+          (p.categoriaNombre ?? '').toLowerCase().contains(q) ||
+          (p.descripcion ?? '').toLowerCase().contains(q);
+    }).toList();
+
     return Column(
       children: [
+        // Buscador con entrada de voz IA
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: AppTheme.bgSecondary,
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar prendas, códigos, categorías...',
+                    hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                    prefixIcon: const Icon(Icons.search, size: 20, color: AppTheme.accentIndigo),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    filled: true,
+                    fillColor: AppTheme.bgCard,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: _activateVoiceSearch,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentIndigo,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Selector de Sucursal v6
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -304,7 +437,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             children: [
                               _buildParaTiSection(),
                               if (_paraTiItems.isNotEmpty) const SizedBox(height: 16),
-                              ...catalogService.productos.map((p) => _buildProductCard(p)),
+                              if (filteredProds.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(24.0),
+                                  child: Center(
+                                    child: Text(
+                                      'No se encontraron prendas que coincidan con la búsqueda.',
+                                      style: TextStyle(color: AppTheme.textSecondary),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ...filteredProds.map((p) => _buildProductCard(p)),
                             ],
                           ),
                         ),

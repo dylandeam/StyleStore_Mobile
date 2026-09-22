@@ -28,6 +28,10 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   double _opacity = 1.0;
   String _selectedCategory = 'all';
 
+  // Permisos y modo Cámara AR en Vivo
+  bool _hasCameraPermission = false;
+  bool _isCameraActive = false;
+
   // Ajuste de Entalle al Cuerpo (Fit)
   String _bodyFit = 'slim'; // 'slim' (pegado), 'regular', 'loose'
   double get _fitFactor => _bodyFit == 'slim' ? 0.88 : (_bodyFit == 'regular' ? 1.0 : 1.15);
@@ -131,6 +135,83 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     return total;
   }
 
+  void _toggleCameraMode() {
+    if (!_hasCameraPermission) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Row(
+            children: [
+              Icon(Icons.camera_front, color: Color(0xFFC8A97E)),
+              SizedBox(width: 8),
+              Text('Permisos de Celular AR', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'StyleStore necesita acceso a la Cámara y Micrófono de tu dispositivo para:',
+                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+              ),
+              SizedBox(height: 10),
+              Row(children: [
+                Icon(Icons.check_circle_outline, color: Color(0xFFC8A97E), size: 16),
+                SizedBox(width: 6),
+                Expanded(child: Text('Superponer prendas en tiempo real sobre ti.', style: TextStyle(color: Colors.white, fontSize: 12))),
+              ]),
+              SizedBox(height: 6),
+              Row(children: [
+                Icon(Icons.check_circle_outline, color: Color(0xFFC8A97E), size: 16),
+                SizedBox(width: 6),
+                Expanded(child: Text('Escuchar comandos de voz en la probeta IA.', style: TextStyle(color: Colors.white, fontSize: 12))),
+              ]),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _hasCameraPermission = true;
+                  _isCameraActive = true;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('📷 Permisos otorgados. Modo Cámara AR activado.'),
+                    backgroundColor: AppTheme.successGreen,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC8A97E),
+                foregroundColor: const Color(0xFF0F172A),
+              ),
+              child: const Text('Otorgar Permisos', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      setState(() {
+        _isCameraActive = !_isCameraActive;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isCameraActive ? '📷 Modo Cámara en Vivo Activo' : '🪞 Modo Maniquí 3D Activo'),
+          backgroundColor: const Color(0xFF14263D),
+        ),
+      );
+    }
+  }
+
   void _addToCart() {
     final List<Producto> items = [];
     if (_activeDress != null) items.add(_activeDress!);
@@ -183,6 +264,14 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(
+              _isCameraActive ? Icons.camera : Icons.camera_alt_outlined,
+              color: _hasCameraPermission ? const Color(0xFFC8A97E) : Colors.amber,
+            ),
+            tooltip: 'Permisos de Cámara y Micrófono AR',
+            onPressed: () => _toggleCameraMode(),
+          ),
           // Selector Frente / Espalda y Giro 360°
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -293,18 +382,52 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Fondo oscuro Luxury con gradiente radial
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.center,
-                        radius: 0.85,
-                        colors: [Color(0xFF1E293B), Color(0xFF020617)],
+                  // Fondo oscuro Luxury con gradiente radial o Cámara AR en Vivo
+                  if (_isCameraActive)
+                    Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.black87,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.videocam_outlined, size: 90, color: Colors.white10),
+                          Positioned(
+                            bottom: 80,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.circle, color: Colors.white, size: 10),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'REC • Cámara AR Celular Activa',
+                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      decoration: const BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 0.85,
+                          colors: [Color(0xFF1E293B), Color(0xFF020617)],
+                        ),
                       ),
                     ),
-                  ),
 
                   // Maniquí y Prendas con Perspectiva 3D y Balanceo de Tela
                   AnimatedBuilder(

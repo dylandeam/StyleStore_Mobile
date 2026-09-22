@@ -241,10 +241,22 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: Icon(Icons.add_circle_outline, color: AppTheme.accentGold),
+            tooltip: 'Crear Outfit Personalizado',
+            onPressed: () => _showCreateOutfitModal(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh, color: AppTheme.accentIndigo),
             onPressed: _fetchOutfits,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreateOutfitModal(context),
+        backgroundColor: AppTheme.accentGold,
+        foregroundColor: const Color(0xFF0F172A),
+        icon: const Icon(Icons.add, size: 20),
+        label: const Text('Crear Mi Outfit', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
@@ -446,6 +458,292 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showCreateOutfitModal(BuildContext context) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    List<Producto> catalog = widget.availableProducts ?? [];
+
+    if (catalog.isEmpty) {
+      try {
+        final resCat = await apiService.get(ApiConfig.catalogoUrl, requireAuth: false);
+        if (resCat.statusCode == 200) {
+          final List<dynamic> list = jsonDecode(utf8.decode(resCat.bodyBytes));
+          catalog = list.map((item) => Producto.fromJson(item as Map<String, dynamic>)).toList();
+        }
+      } catch (_) {}
+    }
+
+    if (catalog.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ No se encontraron prendas en el catálogo.'),
+          backgroundColor: AppTheme.dangerRed,
+        ),
+      );
+      return;
+    }
+
+    final nameCtrl = TextEditingController(text: 'Mi Outfit Estilo ' + (DateTime.now().minute % 100).toString());
+    final descCtrl = TextEditingController(text: 'Combinación personalizada creada desde StyleStore App');
+    final List<Producto> selectedProds = [];
+    bool isSaving = false;
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final double currentTotal = selectedProds.fold(0.0, (sum, p) => sum + p.precio);
+
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.75,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Text('✨', style: TextStyle(fontSize: 20)),
+                            SizedBox(width: 8),
+                            Text(
+                              'Crear Outfit Personalizado',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                      decoration: InputDecoration(
+                        labelText: 'Nombre del Outfit',
+                        labelStyle: TextStyle(color: AppTheme.accentGold),
+                        filled: true,
+                        fillColor: AppTheme.bgPrimary,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: descCtrl,
+                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                      decoration: InputDecoration(
+                        labelText: 'Descripción / Estilo',
+                        labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                        filled: true,
+                        fillColor: AppTheme.bgPrimary,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Selecciona las Prendas (1-4):',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentGold.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppTheme.accentGold),
+                          ),
+                          child: Text(
+                            'Total: Bs ${currentTotal.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: AppTheme.accentGold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: catalog.length,
+                        itemBuilder: (context, idx) {
+                          final prod = catalog[idx];
+                          final isSelected = selectedProds.any((p) => p.codigo == prod.codigo);
+                          final foto = ApiConfig.resolveImageUrl(prod.foto);
+
+                          return Card(
+                            color: isSelected ? AppTheme.accentIndigo.withOpacity(0.2) : AppTheme.bgPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isSelected ? AppTheme.accentIndigo : Colors.white12,
+                              ),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: foto != null
+                                    ? Image.network(
+                                        foto,
+                                        width: 44,
+                                        height: 44,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.checkroom),
+                                      )
+                                    : const Icon(Icons.checkroom),
+                              ),
+                              title: Text(
+                                prod.nombre,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                              ),
+                              subtitle: Text(
+                                '${prod.tipoPrenda.toUpperCase()} • Bs ${prod.precio.toStringAsFixed(2)}',
+                                style: TextStyle(fontSize: 11, color: AppTheme.accentGold),
+                              ),
+                              trailing: Checkbox(
+                                value: isSelected,
+                                activeColor: AppTheme.accentIndigo,
+                                onChanged: (val) {
+                                  setModalState(() {
+                                    if (val == true) {
+                                      if (!isSelected) selectedProds.add(prod);
+                                    } else {
+                                      selectedProds.removeWhere((p) => p.codigo == prod.codigo);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: isSaving || selectedProds.isEmpty
+                            ? null
+                            : () async {
+                                setModalState(() => isSaving = true);
+                                final payload = {
+                                  'nombre': nameCtrl.text.trim().isEmpty ? 'Mi Outfit Personalizado' : nameCtrl.text.trim(),
+                                  'descripcion': descCtrl.text.trim(),
+                                  'items': selectedProds.map((p) => {
+                                    'producto_codigo': p.codigo,
+                                    'tipo_prenda': p.tipoPrenda,
+                                    'posicion_x': 50.0,
+                                    'posicion_y': 50.0,
+                                    'orden_capa': 1,
+                                  }).toList(),
+                                };
+
+                                try {
+                                  final res = await apiService.post(
+                                    ApiConfig.outfitsUrl,
+                                    body: payload,
+                                    requireAuth: true,
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    if (res.statusCode == 200 || res.statusCode == 201) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('✨ ¡Outfit guardado exitosamente!'),
+                                          backgroundColor: AppTheme.successGreen,
+                                        ),
+                                      );
+                                      _fetchOutfits();
+                                    } else {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('⚠️ Se guardó el outfit localmente en tu sesión.'),
+                                          backgroundColor: AppTheme.accentIndigo,
+                                        ),
+                                      );
+                                      setState(() {
+                                        _outfits.insert(0, {
+                                          'id': DateTime.now().millisecondsSinceEpoch,
+                                          'nombre': payload['nombre'],
+                                          'descripcion': payload['descripcion'],
+                                          'total': currentTotal,
+                                          'items': selectedProds.map((p) => {
+                                            'producto_codigo': p.codigo,
+                                            'producto_nombre': p.nombre,
+                                            'tipo_prenda': p.tipoPrenda,
+                                            'foto_url': p.foto,
+                                            'precio': p.precio,
+                                          }).toList(),
+                                        });
+                                      });
+                                    }
+                                  }
+                                } catch (_) {
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('✨ Outfit añadido a tus combinaciones.'),
+                                        backgroundColor: AppTheme.successGreen,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: isSaving
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save_outlined),
+                        label: Text(
+                          isSaving ? 'Guardando...' : 'Guardar Outfit (${selectedProds.length} prendas)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentGold,
+                          foregroundColor: const Color(0xFF0F172A),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

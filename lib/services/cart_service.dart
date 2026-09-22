@@ -44,19 +44,19 @@ class CartService extends ChangeNotifier {
     required int tallaId,
     required int sucursalId,
     int cantidad = 1,
+    int? stockInventarioId,
   }) async {
     try {
+      final stockId = stockInventarioId ?? 1;
       final res = await _apiService.post(
         ApiConfig.carritoAgregarUrl,
         body: {
-          'producto_color_id': productoColorId,
-          'talla_id': tallaId,
-          'sucursal_id': sucursalId,
+          'stock_inventario_id': stockId,
           'cantidad': cantidad,
         },
         requireAuth: true,
       );
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchCart();
         return true;
       }
@@ -67,14 +67,14 @@ class CartService extends ChangeNotifier {
   Future<bool> addStockItem(int stockInventarioId, {int cantidad = 1}) async {
     try {
       final res = await _apiService.post(
-        '${ApiConfig.baseUrl}/carrito/items',
+        ApiConfig.carritoAgregarUrl,
         body: {
           'stock_inventario_id': stockInventarioId,
           'cantidad': cantidad,
         },
         requireAuth: true,
       );
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchCart();
         return true;
       }

@@ -47,8 +47,8 @@ class ApiConfig {
   static String get notificacionesUrl => '$baseUrl/notificaciones';
 
   // Carrito de compras (CU12)
-  static String get carritoUrl => '$baseUrl/carrito';
-  static String get carritoAgregarUrl => '$baseUrl/carrito/agregar';
+  static String get carritoUrl => '$baseUrl/carrito/mio';
+  static String get carritoAgregarUrl => '$baseUrl/carrito/items';
   static String get carritoCheckoutUrl => '$baseUrl/carrito/checkout';
 
   // Reservas (CU13)

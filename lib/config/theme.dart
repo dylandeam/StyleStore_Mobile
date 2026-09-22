@@ -9,6 +9,7 @@ class AppTheme {
   static const Color accentIndigo = Color(0xFF14263D);   // Navy principal
   static const Color accentPurple = Color(0xFF274C77);   // Navy medio / Links
   static const Color accentPink = Color(0xFF1D3552);     // Navy oscuro
+  static const Color accentGold = Color(0xFFC8A97E);     // Dorado luxury
   static const Color successGreen = Color(0xFF16A34A);   // Verde éxito
   static const Color dangerRed = Color(0xFFDC2626);      // Rojo peligro
   static const Color textPrimary = Color(0xFF14263D);    // Texto principal

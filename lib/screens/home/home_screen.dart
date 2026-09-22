@@ -528,11 +528,27 @@ class HomeScreen extends StatelessWidget {
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.dry_cleaning, color: AppTheme.accentPurple, size: 20),
-                        title: const Text('Probador de Outfits', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.local_offer, color: Color(0xFFE63946), size: 20),
+                        title: const Text('Promociones y Descuentos', style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.dry_cleaning, color: AppTheme.accentPurple, size: 20),
+                        title: const Text('Combinaciones de Outfits', style: TextStyle(fontSize: 14)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 2);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.hourglass_top, color: Color(0xFFC5A880), size: 20),
+                        title: const Text('Próximamente', style: TextStyle(fontSize: 14)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3);
                         },
                       ),
                       ListTile(
@@ -541,14 +557,6 @@ class HomeScreen extends StatelessWidget {
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, AppRoutes.vestidorVirtual);
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.hourglass_top, color: Color(0xFFC5A880), size: 20),
-                        title: const Text('Próximamente', style: TextStyle(fontSize: 14)),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1);
                         },
                       ),
                     ],
@@ -568,7 +576,7 @@ class HomeScreen extends StatelessWidget {
                         title: const Text('Mi Carrito', style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 2);
+                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 4);
                         },
                       ),
                       ListTile(
@@ -576,7 +584,7 @@ class HomeScreen extends StatelessWidget {
                         title: const Text('Mis Pedidos y Reservas', style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3);
+                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 5);
                         },
                       ),
                     ],
