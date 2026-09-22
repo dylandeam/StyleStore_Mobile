@@ -44,7 +44,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   String? _cameraError;
 
   // ML Kit Pose Detector en Tiempo Real (IA tracking de cuerpo)
-  late PoseDetector _poseDetector;
+  PoseDetector? _poseDetector;
   bool _isProcessingFrame = false;
   bool _isPersonDetected = false;
 
@@ -91,14 +91,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       }
     });
 
-    // Inicializar ML Kit Pose Detector
-    _poseDetector = PoseDetector(
-      options: PoseDetectorOptions(
-        mode: PoseDetectionMode.stream,
-        model: PoseDetectionModel.accurate,
-      ),
-    );
-
     if (widget.initialProduct != null) {
       _equipProduct(widget.initialProduct!);
     }
@@ -112,7 +104,9 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     _swayController.dispose();
     _stopImageStream();
     _cameraController?.dispose();
-    _poseDetector.close();
+    try {
+      _poseDetector?.close();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -155,6 +149,17 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         (cam) => cam.lensDirection == CameraLensDirection.front,
       );
       _selectedCameraIndex = frontIndex != -1 ? frontIndex : 0;
+
+      try {
+        _poseDetector ??= PoseDetector(
+          options: PoseDetectorOptions(
+            mode: PoseDetectionMode.stream,
+            model: PoseDetectionModel.accurate,
+          ),
+        );
+      } catch (_) {
+        _poseDetector = null;
+      }
 
       await _setupCameraController(_availableCameras[_selectedCameraIndex]);
     } catch (e) {
@@ -205,7 +210,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    if (_isProcessingFrame || !_isCameraActive || !_isCameraInitialized) return;
+    if (_poseDetector == null || _isProcessingFrame || !_isCameraActive || !_isCameraInitialized) return;
     _isProcessingFrame = true;
 
     try {
@@ -215,7 +220,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         return;
       }
 
-      final poses = await _poseDetector.processImage(inputImage);
+      final poses = await _poseDetector!.processImage(inputImage);
       if (poses.isNotEmpty && mounted) {
         final pose = poses.first;
         final ls = pose.landmarks[PoseLandmarkType.leftShoulder];
