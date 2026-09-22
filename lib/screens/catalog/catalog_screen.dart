@@ -35,9 +35,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 5,
+      length: 6,
       vsync: this,
-      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 5) ? widget.initialTab : 0,
+      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 6) ? widget.initialTab : 0,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CatalogService>(context, listen: false).fetchSucursales();
@@ -83,6 +83,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.checkroom), text: 'Catálogo'),
+            Tab(icon: Icon(Icons.local_offer), text: 'Promociones'),
             Tab(icon: Icon(Icons.style_outlined), text: 'Outfits'),
             Tab(icon: Icon(Icons.rocket_launch_outlined), text: 'Próximamente'),
             Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Mi Carrito'),
@@ -112,6 +113,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         controller: _tabController,
         children: [
           _buildCatalogTab(),
+          _buildPromocionesTab(),
           _buildOutfitsTab(),
           _buildProximamenteTab(),
           _buildCartTab(),
@@ -124,6 +126,87 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   Widget _buildOutfitsTab() {
     final catalogService = Provider.of<CatalogService>(context);
     return OutfitsScreen(availableProducts: catalogService.productos);
+  }
+
+  // ==========================================
+  // TAB PROMO: PROMOCIONES Y DESCUENTOS
+  // ==========================================
+  Widget _buildPromocionesTab() {
+    final catalogService = Provider.of<CatalogService>(context);
+    final promos = catalogService.productos.where((p) => p.enPromocion).toList();
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF14263D), Color(0xFF2A1015)],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE63946),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  '🔥 OFERTAS EXCLUSIVAS',
+                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Descuentos de Temporada',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${promos.length} prendas con precios reducidos y promociones activas',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: catalogService.isLoading
+              ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
+              : promos.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.local_offer_outlined, color: Colors.grey, size: 54),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No hay promociones activas en este momento',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Visita el catálogo general para explorar todas nuestras prendas.',
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => catalogService.fetchCatalog(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: promos.length,
+                        itemBuilder: (context, index) {
+                          return _buildProductCard(promos[index]);
+                        },
+                      ),
+                    ),
+        ),
+      ],
+    );
   }
 
   // ==========================================
@@ -264,6 +347,34 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   )
                 else
                   _buildImagePlaceholder(p),
+                if (p.enPromocion)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE63946), Color(0xFFD62828)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x66E63946), blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.local_offer, color: Colors.white, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${p.porcentajeDescuento}% OFF',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: 10,
                   right: 10,
@@ -298,6 +409,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -310,10 +422,35 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         style: const TextStyle(color: Color(0xFF14263D), fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    Text(
-                      'Bs. ${p.precio.toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D)),
-                    ),
+                    if (p.enPromocion && p.precioDescuento != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Bs. ${p.precio.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Bs. ${p.precioDescuento!.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE63946),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        'Bs. ${p.precio.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D)),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -324,6 +461,25 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                   ),
                 ),
+                if (p.enPromocion && p.tituloPromocion != null && p.tituloPromocion!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEAEA),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0x40D62828)),
+                    ),
+                    child: Text(
+                      '✨ ${p.tituloPromocion}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD62828),
+                      ),
+                    ),
+                  ),
+                ],
                 if (p.descripcion != null && p.descripcion!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   GestureDetector(

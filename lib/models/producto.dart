@@ -17,6 +17,10 @@ class Producto {
   final String? coleccionNombre;
   final bool active;
   final bool visibleEnCatalogo;
+  final bool enPromocion;
+  final int porcentajeDescuento;
+  final double? precioDescuento;
+  final String? tituloPromocion;
   final List<String> colores;
   final int stockTotal;
 
@@ -39,6 +43,10 @@ class Producto {
     this.coleccionNombre,
     required this.active,
     this.visibleEnCatalogo = true,
+    this.enPromocion = false,
+    this.porcentajeDescuento = 0,
+    this.precioDescuento,
+    this.tituloPromocion,
     required this.colores,
     required this.stockTotal,
   });
@@ -50,6 +58,11 @@ class Producto {
           .map((c) => c['nombre']?.toString() ?? '')
           .where((s) => s.isNotEmpty)
           .toList();
+    }
+
+    double? parsedPrecioDescuento;
+    if (json['precio_descuento'] != null) {
+      parsedPrecioDescuento = double.tryParse(json['precio_descuento'].toString());
     }
 
     return Producto(
@@ -71,8 +84,13 @@ class Producto {
       coleccionNombre: json['coleccion_nombre'],
       active: json['active'] ?? true,
       visibleEnCatalogo: json['visible_en_catalogo'] ?? true,
+      enPromocion: json['en_promocion'] ?? false,
+      porcentajeDescuento: json['porcentaje_descuento'] ?? 0,
+      precioDescuento: parsedPrecioDescuento,
+      tituloPromocion: json['titulo_promocion'],
       colores: parsedColores,
       stockTotal: json['stock_total'] ?? 0,
     );
   }
 }
+
