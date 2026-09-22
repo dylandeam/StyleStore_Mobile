@@ -9,8 +9,10 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
+import '../../services/api_service.dart';
 import '../../services/catalog_service.dart';
 import 'product_detail_screen.dart';
+import 'probador_foto_screen.dart';
 
 class VestidorVirtualScreen extends StatefulWidget {
   final Producto? initialProduct;
@@ -48,21 +50,25 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   bool _isProcessingFrame = false;
   bool _isPersonDetected = false;
 
-  // Coordenadas suavizadas (EMA anti-temblor)
+  // Landmarks de la prenda desde el backend (Especificación v8)
+  Map<String, dynamic>? _garmentLandmarks;
+  String _tipoAr = 'superior';
+
+  // Coordenadas suavizadas ancladas al cuerpo (EMA anti-temblor)
   double _smoothedShoulderMidX = 0.5;
-  double _smoothedShoulderMidY = 0.3;
+  double _smoothedShoulderMidY = 0.25; // Anclaje superior (Hombros real)
   double _smoothedHipMidX = 0.5;
-  double _smoothedHipMidY = 0.6;
-  double _smoothedShoulderWidth = 0.25;
-  double _smoothedTorsoHeight = 0.35;
+  double _smoothedHipMidY = 0.65; // Anclaje inferior (Cintura real)
+  double _smoothedShoulderWidth = 0.30;
+  double _smoothedTorsoHeight = 0.40;
   double _smoothedAngle = 0.0;
 
   // Ajuste de Entalle al Cuerpo (Fit)
-  String _bodyFit = 'slim'; // 'slim' (pegado), 'regular', 'loose'
-  double get _fitFactor => _bodyFit == 'slim' ? 0.88 : (_bodyFit == 'regular' ? 1.0 : 1.15);
+  String _bodyFit = 'slim';
+  double get _fitFactor => _bodyFit == 'slim' ? 0.90 : (_bodyFit == 'regular' ? 1.05 : 1.20);
 
   // Rotación 360° interactiva y animación orgánica de tela
-  double _rotationY = 0.0; // En radianes (0..2pi)
+  double _rotationY = 0.0;
   bool _autoSpin = false;
   late AnimationController _swayController;
 
@@ -95,7 +101,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       _equipProduct(widget.initialProduct!);
     }
 
-    // Inicializar Cámara AR con Pose Tracking IA al entrar a la pantalla
     _initHardwareCamera();
   }
 
@@ -116,6 +121,19 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         await _cameraController!.stopImageStream();
       } catch (_) {}
     }
+  }
+
+  Future<void> _fetchLandmarksForProduct(String codigo) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    try {
+      final res = await apiService.get('/productos/$codigo/landmarks');
+      if (mounted && res != null) {
+        setState(() {
+          _tipoAr = res['tipo_ar'] ?? 'superior';
+          _garmentLandmarks = res['landmarks'];
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _initHardwareCamera() async {
@@ -194,7 +212,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
           _isCameraLoading = false;
         });
 
-        // Iniciar procesamiento IA en tiempo real de los frames
         _cameraController!.startImageStream(_processCameraImage);
       }
     } catch (e) {
@@ -241,10 +258,10 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
           double normRsY = rs.y / imgHeight;
 
           double normLhX = lh != null ? (isFront ? (1.0 - (lh.x / imgWidth)) : (lh.x / imgWidth)) : normLsX;
-          double normLhY = lh != null ? (lh.y / imgHeight) : (normLsY + 0.35);
+          double normLhY = lh != null ? (lh.y / imgHeight) : (normLsY + 0.40);
 
           double normRhX = rh != null ? (isFront ? (1.0 - (rh.x / imgWidth)) : (rh.x / imgWidth)) : normRsX;
-          double normRhY = rh != null ? (rh.y / imgHeight) : (normRsY + 0.35);
+          double normRhY = rh != null ? (rh.y / imgHeight) : (normRsY + 0.40);
 
           final targetShoulderMidX = (normLsX + normRsX) / 2.0;
           final targetShoulderMidY = (normLsY + normRsY) / 2.0;
@@ -265,7 +282,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
           if (mounted) {
             setState(() {
               _isPersonDetected = true;
-              // EMA Smoothing para evitar saltos o temblores de cámara
               const alpha = 0.30;
               _smoothedShoulderMidX = _smoothedShoulderMidX * (1 - alpha) + targetShoulderMidX * alpha;
               _smoothedShoulderMidY = _smoothedShoulderMidY * (1 - alpha) + targetShoulderMidY * alpha;
@@ -383,6 +399,8 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       }
     });
 
+    _fetchLandmarksForProduct(p.codigo);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('✨ Te estás probando: ${p.nombre}'),
@@ -465,14 +483,28 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
             Text('🪞', style: TextStyle(fontSize: 20)),
             SizedBox(width: 8),
             Text(
-              'Vestidor Virtual AR',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              'Vestidor Virtual AR v8',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
           ],
         ),
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_camera_back, color: Color(0xFFC8A97E)),
+            tooltip: 'Probador por Foto IA',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProbadorFotoScreen(
+                    initialProduct: _activeTop ?? _activeDress ?? _activeBottom,
+                  ),
+                ),
+              );
+            },
+          ),
           if (_availableCameras.length > 1 && _isCameraActive && _isCameraInitialized)
             IconButton(
               icon: const Icon(Icons.flip_camera_ios, color: Color(0xFFC8A97E)),
@@ -491,30 +523,25 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       ),
       body: Column(
         children: [
-          // 1. Maniquí / Probador Interactivo 3D con Vista de Cámara Real y Tracking IA
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final screenW = constraints.maxWidth;
                 final screenH = constraints.maxHeight;
 
-                // Dimensiones dinámicas ancladas al cuerpo detectado por la IA ML Kit
                 final isDynamicFit = _isCameraActive && _isPersonDetected;
 
-                // Coordenadas calculadas por la IA
-                final anchorX = isDynamicFit
-                    ? (_smoothedShoulderMidX * screenW)
-                    : (screenW / 2);
-                final anchorY = isDynamicFit
-                    ? (_smoothedShoulderMidY * screenH)
-                    : (screenH * 0.28);
+                // Anclaje EXACTO de la prenda superior en los HOMBROS y CUELLO (evita caer a la cintura)
+                final shoulderAnchorX = _smoothedShoulderMidX * screenW;
+                final shoulderAnchorY = _smoothedShoulderMidY * screenH;
+                final hipAnchorY = _smoothedHipMidY * screenH;
 
-                final dynamicGarmentWidth = isDynamicFit
-                    ? (_smoothedShoulderWidth * screenW * 2.1 * _scaleMultiplier * _fitFactor)
+                final garmentWidth = isDynamicFit
+                    ? (_smoothedShoulderWidth * screenW * 2.3 * _scaleMultiplier * _fitFactor)
                     : (175 * _scaleMultiplier * _fitFactor);
 
-                final dynamicGarmentHeight = isDynamicFit
-                    ? (_smoothedTorsoHeight * screenH * 1.45 * _scaleMultiplier)
+                final garmentHeight = isDynamicFit
+                    ? (math.max(120.0, (hipAnchorY - shoulderAnchorY) * 1.35 * _scaleMultiplier))
                     : (175 * _scaleMultiplier);
 
                 final dynamicAngle = isDynamicFit ? _smoothedAngle : 0.0;
@@ -536,7 +563,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Capa 0: Stream de Cámara en Vivo o Fondo Radial Luxury
+                      // Capa 0: Stream de Cámara en Vivo
                       if (_isCameraActive &&
                           _isCameraInitialized &&
                           _cameraController != null &&
@@ -581,15 +608,14 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                           ),
                         ),
 
-                      // Overlay semitransparente sobre la cámara para máxima nitidez AR
                       if (_isCameraActive && _isCameraInitialized)
                         Container(
                           width: double.infinity,
                           height: double.infinity,
-                          color: Colors.black.withOpacity(0.12),
+                          color: Colors.black.withOpacity(0.10),
                         ),
 
-                      // Silueta elegante Maniquí (Solo cuando la cámara está apagada o buscando persona)
+                      // Silueta Maniquí cuando no hay cámara activa
                       if (!_isCameraActive || !_isPersonDetected)
                         Center(
                           child: Opacity(
@@ -609,54 +635,53 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                           ),
                         ),
 
-                      // Capa Ropa Adaptativa 3D: Anclada dinámicamente al cuerpo por IA Pose Tracking
+                      // Capa Ropa 3D Adaptativa Anclada a los Hombros (Mesh Alignment)
                       if (isDynamicFit) ...[
-                        // Prenda Inferior (Pantalón / Falda)
+                        // Prenda Inferior (Pantalón / Falda) anclada a la cintura y cadera
                         if (_activeBottom != null && _activeDress == null)
                           Positioned(
-                            left: (_smoothedHipMidX * screenW) - (dynamicGarmentWidth * 0.88 / 2),
-                            top: (_smoothedHipMidY * screenH) - (dynamicGarmentHeight * 0.15) + _verticalOffset,
+                            left: (_smoothedHipMidX * screenW) - (garmentWidth * 0.88 / 2),
+                            top: hipAnchorY - (garmentHeight * 0.05) + _verticalOffset,
                             child: Transform.rotate(
                               angle: dynamicAngle,
                               child: _buildGarmentDisplay(
                                 _activeBottom!,
-                                width: dynamicGarmentWidth * 0.88,
-                                height: dynamicGarmentHeight * 1.15,
+                                width: garmentWidth * 0.88,
+                                height: garmentHeight * 1.15,
                               ),
                             ),
                           ),
 
-                        // Prenda Superior (Camisa / Polera)
+                        // Prenda Superior (Camisa / Polera) anclada EXACTAMENTE a los Hombros
                         if (_activeTop != null && _activeDress == null)
                           Positioned(
-                            left: anchorX - (dynamicGarmentWidth / 2),
-                            top: anchorY - (dynamicGarmentHeight * 0.18) + _verticalOffset,
+                            left: shoulderAnchorX - (garmentWidth / 2),
+                            top: shoulderAnchorY - (garmentHeight * 0.08) + _verticalOffset,
                             child: Transform.rotate(
                               angle: dynamicAngle,
                               child: _buildGarmentDisplay(
                                 _activeTop!,
-                                width: dynamicGarmentWidth,
-                                height: dynamicGarmentHeight,
+                                width: garmentWidth,
+                                height: garmentHeight,
                               ),
                             ),
                           ),
 
-                        // Prenda de Cuerpo Entero (Vestido / Enterizo)
+                        // Prenda de Cuerpo Entero (Vestido / Enterizo) anclada a los Hombros
                         if (_activeDress != null)
                           Positioned(
-                            left: anchorX - (dynamicGarmentWidth * 1.05 / 2),
-                            top: anchorY - (dynamicGarmentHeight * 0.15) + _verticalOffset,
+                            left: shoulderAnchorX - (garmentWidth * 1.05 / 2),
+                            top: shoulderAnchorY - (garmentHeight * 0.08) + _verticalOffset,
                             child: Transform.rotate(
                               angle: dynamicAngle,
                               child: _buildGarmentDisplay(
                                 _activeDress!,
-                                width: dynamicGarmentWidth * 1.05,
-                                height: dynamicGarmentHeight * 1.6,
+                                width: garmentWidth * 1.05,
+                                height: garmentHeight * 1.6,
                               ),
                             ),
                           ),
                       ] else ...[
-                        // Modo Maniquí Estático o Búsqueda de Persona
                         AnimatedBuilder(
                           animation: _swayController,
                           builder: (context, child) {
@@ -707,6 +732,31 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                           ),
                         ),
                       ],
+
+                      // Banner Guía cuando la cámara no detecta persona en cuadro
+                      if (_isCameraActive && !_isPersonDetected)
+                        Positioned(
+                          top: 90,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.amber, size: 14),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Ubícate frente a la cámara de cuerpo completo',
+                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
                       // Top Pill Centrado: Selector Frente / Espalda y Giro 360°
                       Positioned(
@@ -857,7 +907,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                                   const SizedBox(width: 3),
                                   Text(
                                     _isPersonDetected
-                                        ? '🤖 IA Tracking: Cuerpo Detectado'
+                                        ? '🤖 IA Tracking: Hombros Anclados'
                                         : (_isCameraActive ? '🤖 IA Tracking: Buscando cuerpo...' : '⚡ Profundidad IA Activa'),
                                     style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                                   ),
@@ -1015,7 +1065,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
             ),
           ),
 
-          // 2. Carrusel Inferior Estilo TikTok
+          // Carrusel Inferior Estilo TikTok
           Container(
             color: const Color(0xFF0B1322),
             padding: const EdgeInsets.symmetric(vertical: 10),
