@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../config/api_config.dart';
@@ -2186,38 +2187,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         );
 
                         if (res != null) {
-                          final ordenId = res['orden_id'] ?? res['id'];
-                          if (ordenId != null) {
-                            try {
-                              final apiService = Provider.of<ApiService>(context, listen: false);
-                              await apiService.post(
-                                '${ApiConfig.baseUrl}/pagos/confirmar-online/$ordenId',
-                                body: {},
-                                requireAuth: true,
-                              );
-                            } catch (_) {}
-                          }
-                        }
-
-                        if (mounted) {
-                          final token = res?['token_seguimiento'] as String?;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(res != null ? '¡Orden pagada con éxito con PayPal!' : 'Pedido procesado.'),
-                              backgroundColor: AppTheme.successGreen,
-                            ),
-                          );
-                          Provider.of<OrderService>(context, listen: false).fetchOrders();
-                          _tabController.animateTo(4); // Tab de Mis Pedidos
-
-                          // Si tenemos token de rastreo, navegar directo a la pantalla de rastreo en vivo
-                          if (token != null && token.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DeliveryTrackingScreen(token: token),
-                              ),
-                            );
+                          final ordenId = (res['orden_id'] ?? res['id']) as int?;
+                          final trackingToken = res['token_seguimiento'] as String?;
+                          if (ordenId != null && mounted) {
+                            _procesarPagoPayPalSandbox(context, ordenId, totalPagar, trackingToken);
                           }
                         }
                       },
@@ -2969,6 +2942,232 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _procesarPagoPayPalSandbox(
+    BuildContext context,
+    int ordenId,
+    double totalPagar,
+    String? trackingToken,
+  ) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    String? paypalOrderId;
+    String? approveUrl;
+
+    try {
+      final res = await apiService.post(
+        '${ApiConfig.baseUrl}/pagos/paypal/crear-orden',
+        body: {
+          'orden_venta_id': ordenId,
+          'return_url': 'https://style-store-frontend-nine.vercel.app/paypal-return',
+          'cancel_url': 'https://style-store-frontend-nine.vercel.app/carrito',
+        },
+        requireAuth: true,
+      );
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(res.bodyBytes));
+        paypalOrderId = data['id'] as String?;
+        if (data['links'] != null && data['links'] is List) {
+          for (final link in data['links']) {
+            if (link['rel'] == 'approve' || link['rel'] == 'payer-action') {
+              approveUrl = link['href'] as String?;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (approveUrl != null && approveUrl.isNotEmpty) {
+      await launchUrl(Uri.parse(approveUrl), mode: LaunchMode.externalApplication);
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (bCtx) {
+        bool capturando = false;
+        String? errorMsg;
+
+        return StatefulBuilder(
+          builder: (bCtx, setBState) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.payment, color: Color(0xFFC8A97E), size: 28),
+                      SizedBox(width: 10),
+                      Text(
+                        'Pago PayPal Sandbox',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Se ha abierto el entorno de pagos de PayPal en tu navegador. Por favor inicia sesión con tu cuenta Sandbox y completa la aprobación del pago.',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFC8A97E).withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Orden de Venta:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                            Text('#$ordenId', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Monto Total BOB:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                            Text('Bs. ${totalPagar.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFC8A97E), fontWeight: FontWeight.bold, fontSize: 14)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Equivalente USD:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                            Text('\$${(totalPagar / 6.96).toStringAsFixed(2)} USD', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        if (paypalOrderId != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('PayPal Token:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                              Text(paypalOrderId.length > 15 ? '${paypalOrderId.substring(0, 15)}...' : paypalOrderId, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  if (errorMsg != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0x33EF4444),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0x66EF4444)),
+                      ),
+                      child: Text(
+                        '⚠️ $errorMsg',
+                        style: const TextStyle(color: Color(0xFFF87171), fontSize: 12),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton.icon(
+                    onPressed: capturando
+                        ? null
+                        : () async {
+                            setBState(() {
+                              capturando = true;
+                              errorMsg = null;
+                            });
+
+                            try {
+                              final tokenAUsar = paypalOrderId ?? 'MOCK_TOKEN_$ordenId';
+                              final capRes = await apiService.post(
+                                '${ApiConfig.baseUrl}/pagos/paypal/capturar-orden',
+                                body: {
+                                  'paypal_order_id': tokenAUsar,
+                                  'orden_venta_id': ordenId,
+                                },
+                                requireAuth: true,
+                              );
+
+                              if (capRes.statusCode == 200 || capRes.statusCode == 201) {
+                                Navigator.pop(bCtx);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('🎉 ¡Pago verificado y capturado con éxito en PayPal!'),
+                                      backgroundColor: AppTheme.successGreen,
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                  Provider.of<OrderService>(context, listen: false).fetchOrders();
+                                  _tabController.animateTo(4);
+
+                                  if (trackingToken != null && trackingToken.isNotEmpty) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DeliveryTrackingScreen(token: trackingToken),
+                                      ),
+                                    );
+                                  }
+                                }
+                              } else {
+                                final capData = jsonDecode(utf8.decode(capRes.bodyBytes));
+                                setBState(() {
+                                  capturando = false;
+                                  errorMsg = capData['detail'] ?? 'El pago aún está pendiente en PayPal. Complétalo en tu navegador e intenta de nuevo.';
+                                });
+                              }
+                            } catch (e) {
+                              setBState(() {
+                                capturando = false;
+                                errorMsg = 'No se pudo capturar el pago. Asegúrate de aprobar en la ventana de PayPal.';
+                              });
+                            }
+                          },
+                    icon: capturando
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF0F172A), strokeWidth: 2))
+                        : const Icon(Icons.check_circle_outline),
+                    label: Text(capturando ? 'Verificando con PayPal...' : '✅ Verificar y Confirmar Pago en PayPal'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC8A97E),
+                      foregroundColor: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  if (approveUrl != null && approveUrl.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () => launchUrl(Uri.parse(approveUrl!), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.open_in_new, size: 16, color: Color(0xFFC8A97E)),
+                      label: const Text('Re-abrir PayPal Sandbox en Navegador', style: TextStyle(color: Color(0xFFC8A97E), fontSize: 12)),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
