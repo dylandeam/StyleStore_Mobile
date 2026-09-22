@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
@@ -177,18 +178,27 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
               child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx);
+                Map<Permission, PermissionStatus> statuses = await [
+                  Permission.camera,
+                  Permission.microphone,
+                ].request();
+
+                final bool camGranted = statuses[Permission.camera]?.isGranted ?? false;
                 setState(() {
-                  _hasCameraPermission = true;
-                  _isCameraActive = true;
+                  _hasCameraPermission = camGranted;
+                  _isCameraActive = camGranted;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('📷 Permisos otorgados. Modo Cámara AR activado.'),
-                    backgroundColor: AppTheme.successGreen,
-                  ),
-                );
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(camGranted ? '📷 Permisos otorgados. Modo Cámara AR activado.' : 'No se otorgaron los permisos de cámara.'),
+                      backgroundColor: camGranted ? AppTheme.successGreen : Colors.redAccent,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFC8A97E),

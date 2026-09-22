@@ -71,7 +71,7 @@ class OrderService extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> solicitarCambio({
+  Future<Map<String, dynamic>> solicitarCambio({
     required int ordenVentaId,
     required int detalleVentaId,
     required String tipo,
@@ -94,9 +94,21 @@ class OrderService extends ChangeNotifier {
         },
         requireAuth: true,
       );
-      return res.statusCode == 200 || res.statusCode == 201;
-    } catch (_) {
-      return false;
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(res.bodyBytes));
+        return {'ok': true, 'msg': data['mensaje'] ?? 'Solicitud registrada exitosamente.'};
+      } else {
+        String msg = 'No se pudo registrar la solicitud.';
+        try {
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
+          if (data['detail'] != null) {
+            msg = data['detail'].toString();
+          }
+        } catch (_) {}
+        return {'ok': false, 'msg': msg};
+      }
+    } catch (e) {
+      return {'ok': false, 'msg': 'Error de conexión: $e'};
     }
   }
 }

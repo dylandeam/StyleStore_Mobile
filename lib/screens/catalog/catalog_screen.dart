@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -223,71 +225,107 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  void _activateVoiceSearch() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: AppTheme.accentIndigo.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.accentIndigo, width: 2),
-                ),
-                child: const Icon(Icons.mic, color: AppTheme.accentIndigo, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '🎙️ Búsqueda por Voz IA',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Selecciona una búsqueda o habla tu comando de prenda:',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  '👕 Camisas',
-                  '👗 Vestidos',
-                  '👖 Jeans',
-                  '🔥 Ofertas',
-                  '🧥 Chaquetas',
-                ].map((sug) {
-                  return ActionChip(
-                    label: Text(sug, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    backgroundColor: AppTheme.bgSecondary,
-                    onPressed: () {
-                      final clean = sug.replaceAll(RegExp(r'[^\w\s]'), '').trim();
-                      setState(() {
-                        _searchQuery = clean;
-                        _searchController.text = clean;
-                      });
-                      Navigator.pop(ctx);
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+  void _activateVoiceSearch() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se requieren permisos de micrófono para la búsqueda por voz.')),
         );
-      },
-    );
+      }
+      return;
+    }
+
+    final stt.SpeechToText speech = stt.SpeechToText();
+    bool available = false;
+    try {
+      available = await speech.initialize();
+    } catch (_) {}
+
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: AppTheme.bgCard,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setModalState) {
+              if (available && !speech.isListening) {
+                speech.listen(
+                  onResult: (val) {
+                    if (val.recognizedWords.isNotEmpty) {
+                      setState(() {
+                        _searchQuery = val.recognizedWords;
+                        _searchController.text = val.recognizedWords;
+                      });
+                    }
+                  },
+                );
+              }
+
+              return Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentIndigo.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.accentIndigo, width: 2),
+                      ),
+                      child: const Icon(Icons.mic, color: AppTheme.accentIndigo, size: 36),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '🎙️ Búsqueda por Voz IA',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      available ? 'Escuchando tu voz... Habla para buscar prendas.' : 'Selecciona una categoría o escribe tu búsqueda:',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        '👕 Camisas',
+                        '👗 Vestidos',
+                        '👖 Jeans',
+                        '🔥 Ofertas',
+                        '🧥 Chaquetas',
+                      ].map((sug) {
+                        return ActionChip(
+                          label: Text(sug, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          backgroundColor: AppTheme.bgSecondary,
+                          onPressed: () {
+                            final clean = sug.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+                            setState(() {
+                              _searchQuery = clean;
+                              _searchController.text = clean;
+                            });
+                            speech.stop();
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
   }
 
   // ==========================================
@@ -1878,6 +1916,30 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
 
                     TextField(
                       controller: mapsCtrl,
+                      onChanged: (val) async {
+                        if (val.trim().isNotEmpty && (val.contains('http') || val.contains('maps') || val.contains('goo.gl'))) {
+                          try {
+                            final apiService = Provider.of<ApiService>(context, listen: false);
+                            final resQuote = await apiService.post(
+                              '${ApiConfig.baseUrl}/envios/cotizar-distancia',
+                              body: {
+                                'sucursal_id': sucursalId,
+                                'ubicacion_url': val.trim(),
+                                'direccion': addressCtrl.text.trim(),
+                              },
+                              requireAuth: false,
+                            );
+                            if (resQuote.statusCode == 200) {
+                              final qData = jsonDecode(utf8.decode(resQuote.bodyBytes));
+                              if (qData['distancia_km'] != null) {
+                                setModalState(() {
+                                  distanciaKm = (qData['distancia_km'] as num).toDouble();
+                                });
+                              }
+                            }
+                          } catch (_) {}
+                        }
+                      },
                       decoration: InputDecoration(
                         labelText: 'Enlace de Google Maps (Ubicación exacta del cliente)',
                         hintText: 'https://maps.app.goo.gl/...',
@@ -1907,7 +1969,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             ],
                           ),
                           Slider(
-                            value: distanciaKm,
+                            value: distanciaKm.clamp(1.0, 35.0),
                             min: 1.0,
                             max: 35.0,
                             divisions: 68,
@@ -2040,11 +2102,26 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           ciudad: branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
                           sucursalId: sucursalId,
                         );
+
+                        if (res != null) {
+                          final ordenId = res['orden_id'] ?? res['id'];
+                          if (ordenId != null) {
+                            try {
+                              final apiService = Provider.of<ApiService>(context, listen: false);
+                              await apiService.post(
+                                '${ApiConfig.baseUrl}/pagos/confirmar-online/$ordenId',
+                                body: {},
+                                requireAuth: true,
+                              );
+                            } catch (_) {}
+                          }
+                        }
+
                         if (mounted) {
                           final token = res?['token_seguimiento'] as String?;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(res != null ? '¡Orden generada con éxito con PayPal!' : 'Pedido procesado.'),
+                              content: Text(res != null ? '¡Orden pagada con éxito con PayPal!' : 'Pedido procesado.'),
                               backgroundColor: AppTheme.successGreen,
                             ),
                           );
@@ -2508,7 +2585,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       onPressed: () async {
                         Navigator.pop(ctx);
                         final desc = descCtrl.text.trim().isEmpty ? 'Solicitud desde app móvil' : descCtrl.text.trim();
-                        final ok = await service.solicitarCambio(
+                        final result = await service.solicitarCambio(
                           ordenVentaId: order.id,
                           detalleVentaId: selectedDetalleId,
                           tipo: tipo,
@@ -2519,20 +2596,16 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         );
 
                         if (mounted) {
-                          if (ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('¡Solicitud registrada! Preséntate en la sucursal asignada con tu prenda y comprobante.'),
-                                backgroundColor: AppTheme.successGreen,
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No se pudo registrar la solicitud. Comprueba que no supere los 7 días de compra.'),
-                                backgroundColor: AppTheme.dangerRed,
-                              ),
-                            );
+                          final bool isOk = result['ok'] == true;
+                          final String msg = result['msg'] as String;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isOk ? '¡Solicitud registrada! Preséntate en la sucursal asignada con tu prenda y comprobante.' : msg),
+                              backgroundColor: isOk ? AppTheme.successGreen : AppTheme.dangerRed,
+                            ),
+                          );
+                          if (isOk) {
+                            service.fetchOrders();
                           }
                         }
                       },

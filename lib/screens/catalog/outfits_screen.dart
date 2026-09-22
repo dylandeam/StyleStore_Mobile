@@ -251,13 +251,6 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateOutfitModal(context),
-        backgroundColor: AppTheme.accentGold,
-        foregroundColor: const Color(0xFF0F172A),
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text('Crear Mi Outfit', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
           : _errorMessage != null && _outfits.isEmpty

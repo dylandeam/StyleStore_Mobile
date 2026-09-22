@@ -22,7 +22,7 @@ class CatalogService extends ChangeNotifier {
 
   Future<void> fetchSucursales() async {
     try {
-      final res = await _apiService.get(ApiConfig.sucursalesUrl, requireAuth: true);
+      final res = await _apiService.get(ApiConfig.sucursalesUrl, requireAuth: false);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         _sucursales = data.map((e) => e as Map<String, dynamic>).toList();
@@ -42,12 +42,12 @@ class CatalogService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String url = '${ApiConfig.baseUrl}/productos';
+      String url = ApiConfig.catalogoUrl;
       if (_selectedSucursalId != null) {
         url += '?sucursal_id=$_selectedSucursalId';
       }
 
-      final response = await _apiService.get(url, requireAuth: true);
+      final response = await _apiService.get(url, requireAuth: false);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
