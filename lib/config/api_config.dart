@@ -1,48 +1,58 @@
 class ApiConfig {
-  /// Base API URL pointing directly to the deployed Railway Production Backend
-  static const String baseUrl =
-      'https://stylestorebackend-production.up.railway.app/api/v1';
+  /// Base API URL - default set to local network IP for physical device testing
+  static String _activeBaseUrl = 'http://192.168.0.17:8000/api/v1';
+
+  static String get baseUrl => _activeBaseUrl;
+  static set baseUrl(String url) => _activeBaseUrl = url;
+
+  /// Candidate URLs to attempt connection if default fails
+  static List<String> get candidateUrls => [
+        'http://192.168.0.17:8000/api/v1',
+        'http://10.0.2.2:8000/api/v1',
+        'http://localhost:8000/api/v1',
+        'https://stylestorebackend-production.up.railway.app/api/v1',
+      ];
 
   // Auth endpoints
-  static const String registerUrl = '$baseUrl/auth/register';
-  static const String loginUrl = '$baseUrl/auth/login';
-  static const String logoutUrl = '$baseUrl/auth/logout';
-  static const String refreshUrl = '$baseUrl/auth/refresh';
+  static String get registerUrl => '$baseUrl/auth/register';
+  static String get loginUrl => '$baseUrl/auth/login';
+  static String get logoutUrl => '$baseUrl/auth/logout';
+  static String get refreshUrl => '$baseUrl/auth/refresh';
 
   // Password endpoints (CU4)
-  static const String requestPasswordChangeUrl = '$baseUrl/password/request-change';
-  static const String confirmPasswordChangeUrl = '$baseUrl/password/confirm';
+  static String get requestPasswordChangeUrl => '$baseUrl/password/request-change';
+  static String get confirmPasswordChangeUrl => '$baseUrl/password/confirm';
 
   // User & Profile endpoints (CU6)
-  static const String meUrl = '$baseUrl/users/me';
+  static String get meUrl => '$baseUrl/users/me';
 
   // Catálogo y Próximamente (CU11, CU14)
-  static const String catalogoUrl = '$baseUrl/catalogo';
-  static const String proximamenteUrl = '$baseUrl/proximamente';
-  static const String suscribirProximamenteUrl = '$baseUrl/notificaciones/suscribir-proximamente';
-  static const String notificacionesUrl = '$baseUrl/notificaciones';
+  static String get catalogoUrl => '$baseUrl/catalogo';
+  static String get proximamenteUrl => '$baseUrl/proximamente';
+  static String get suscribirProximamenteUrl => '$baseUrl/notificaciones/suscribir-proximamente';
+  static String get notificacionesUrl => '$baseUrl/notificaciones';
 
   // Carrito de compras (CU12)
-  static const String carritoUrl = '$baseUrl/carrito';
-  static const String carritoAgregarUrl = '$baseUrl/carrito/agregar';
-  static const String carritoCheckoutUrl = '$baseUrl/carrito/checkout';
+  static String get carritoUrl => '$baseUrl/carrito';
+  static String get carritoAgregarUrl => '$baseUrl/carrito/agregar';
+  static String get carritoCheckoutUrl => '$baseUrl/carrito/checkout';
 
   // Reservas (CU13)
-  static const String reservasUrl = '$baseUrl/reservas';
-  static const String reservasElegibilidadUrl = '$baseUrl/reservas/elegibilidad';
+  static String get reservasUrl => '$baseUrl/reservas';
+  static String get reservasElegibilidadUrl => '$baseUrl/reservas/elegibilidad';
 
   // Cambios y Devoluciones (v6 Punto 9)
-  static const String cambiosUrl = '$baseUrl/cambios';
+  static String get cambiosUrl => '$baseUrl/cambios';
 
   // Sucursales
-  static const String sucursalesUrl = '$baseUrl/sucursales';
+  static String get sucursalesUrl => '$baseUrl/sucursales';
 
   // Ventas y Pedidos
-  static const String misComprasUrl = '$baseUrl/ventas/mis-compras';
+  static String get misComprasUrl => '$baseUrl/ventas/mis-compras';
 
   // Envíos (CU19)
-  static const String cotizarEnvioUrl = '$baseUrl/envios/cotizar';
-  static const String enviosUrl = '$baseUrl/envios';
+  static String get cotizarEnvioUrl => '$baseUrl/envios/cotizar';
+  static String get enviosUrl => '$baseUrl/envios';
 
   // Delivery StyleStore - Rastreo GPS (v7)
   static String rastreoPublicoUrl(String token) => '$baseUrl/envios/rastreo/$token';
@@ -50,13 +60,13 @@ class ApiConfig {
   static String webTrackerUrl(String token) => 'https://style-store-frontend-nine.vercel.app/delivery/rastreo/$token';
 
   // Outfits Combinaciones (Punto 9 / v7)
-  static const String outfitsUrl = '$baseUrl/outfits';
+  static String get outfitsUrl => '$baseUrl/outfits';
   static String outfitDetalleUrl(int id) => '$baseUrl/outfits/$id';
   static String outfitComprarUrl(int id) => '$baseUrl/outfits/$id/comprar';
 
   // Chatbot Asistente IA (Punto 8 / v7)
-  static const String chatbotConversarUrl = '$baseUrl/chatbot/conversar';
+  static String get chatbotConversarUrl => '$baseUrl/chatbot/conversar';
 
   // QR Config Mostrador (Punto Pagos QR)
-  static const String qrConfigUrl = '$baseUrl/pagos/config-qr';
+  static String get qrConfigUrl => '$baseUrl/pagos/config-qr';
 }

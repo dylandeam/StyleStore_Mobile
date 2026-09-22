@@ -67,26 +67,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Official Brand Logo Image
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.borderGlass, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.accentIndigo.withValues(alpha: 0.12),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            height: 76,
+                            width: 76,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.storefront,
+                              size: 56,
+                              color: AppTheme.accentIndigo,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
                     // Brand Badge
                     Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0x1AEC4899),
-                          border: Border.all(color: const Color(0x4DEC4899)),
+                          color: AppTheme.accentIndigo.withValues(alpha: 0.08),
+                          border: Border.all(color: AppTheme.accentIndigo.withValues(alpha: 0.25)),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.stars, color: AppTheme.accentPink, size: 16),
+                            Icon(Icons.stars, color: AppTheme.accentIndigo, size: 16),
                             SizedBox(width: 6),
                             Text(
                               'StyleStore Auth',
                               style: TextStyle(
-                                color: Color(0xFFF472B6),
+                                color: AppTheme.accentIndigo,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],

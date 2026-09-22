@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -22,9 +25,52 @@ class ApiService {
     return headers;
   }
 
+  Future<http.Response> _executeWithFallback(
+    Future<http.Response> Function(String url) requestFn,
+    String endpointUrl,
+  ) async {
+    try {
+      return await requestFn(endpointUrl).timeout(const Duration(seconds: 8));
+    } catch (e) {
+      // Extract path to try candidate base URLs
+      final path = _extractPath(endpointUrl);
+      if (path.isNotEmpty) {
+        for (final candidateBase in ApiConfig.candidateUrls) {
+          if (candidateBase == ApiConfig.baseUrl) continue;
+          try {
+            final testUrl = candidateBase + path;
+            final response = await requestFn(testUrl).timeout(const Duration(seconds: 4));
+            // Found working host! Switch baseUrl globally
+            ApiConfig.baseUrl = candidateBase;
+            return response;
+          } catch (_) {
+            continue;
+          }
+        }
+      }
+      rethrow;
+    }
+  }
+
+  String _extractPath(String fullUrl) {
+    for (final base in ApiConfig.candidateUrls) {
+      if (fullUrl.startsWith(base)) {
+        return fullUrl.substring(base.length);
+      }
+    }
+    final index = fullUrl.indexOf('/api/v1');
+    if (index != -1) {
+      return fullUrl.substring(index + 7);
+    }
+    return '';
+  }
+
   Future<http.Response> get(String url, {bool requireAuth = true}) async {
     final headers = await _getHeaders(requireAuth: requireAuth);
-    return await http.get(Uri.parse(url), headers: headers);
+    return await _executeWithFallback(
+      (targetUrl) => http.get(Uri.parse(targetUrl), headers: headers),
+      url,
+    );
   }
 
   Future<http.Response> post(
@@ -33,10 +79,14 @@ class ApiService {
     bool requireAuth = true,
   }) async {
     final headers = await _getHeaders(requireAuth: requireAuth);
-    return await http.post(
-      Uri.parse(url),
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
+    final encodedBody = body != null ? jsonEncode(body) : null;
+    return await _executeWithFallback(
+      (targetUrl) => http.post(
+        Uri.parse(targetUrl),
+        headers: headers,
+        body: encodedBody,
+      ),
+      url,
     );
   }
 
@@ -46,10 +96,14 @@ class ApiService {
     bool requireAuth = true,
   }) async {
     final headers = await _getHeaders(requireAuth: requireAuth);
-    return await http.put(
-      Uri.parse(url),
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
+    final encodedBody = body != null ? jsonEncode(body) : null;
+    return await _executeWithFallback(
+      (targetUrl) => http.put(
+        Uri.parse(targetUrl),
+        headers: headers,
+        body: encodedBody,
+      ),
+      url,
     );
   }
 
@@ -59,15 +113,22 @@ class ApiService {
     bool requireAuth = true,
   }) async {
     final headers = await _getHeaders(requireAuth: requireAuth);
-    return await http.patch(
-      Uri.parse(url),
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
+    final encodedBody = body != null ? jsonEncode(body) : null;
+    return await _executeWithFallback(
+      (targetUrl) => http.patch(
+        Uri.parse(targetUrl),
+        headers: headers,
+        body: encodedBody,
+      ),
+      url,
     );
   }
 
   Future<http.Response> delete(String url, {bool requireAuth = true}) async {
     final headers = await _getHeaders(requireAuth: requireAuth);
-    return await http.delete(Uri.parse(url), headers: headers);
+    return await _executeWithFallback(
+      (targetUrl) => http.delete(Uri.parse(targetUrl), headers: headers),
+      url,
+    );
   }
 }
