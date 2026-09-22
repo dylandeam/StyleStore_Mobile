@@ -121,10 +121,32 @@ class CartService extends ChangeNotifier {
         await fetchCart();
         return jsonDecode(res.body);
       }
-    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+    } catch (_) {
       _isLoading = false;
       notifyListeners();
     }
     return null;
+  }
+
+  Future<bool> removeItem(int itemId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final res = await _apiService.delete('${ApiConfig.carritoAgregarUrl}/$itemId', requireAuth: true);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List<dynamic> rawItems = data['items'] ?? [];
+        _items = rawItems.map((j) => CartItem.fromJson(j)).toList();
+        _total = double.tryParse(data['total']?.toString() ?? '0') ?? 0.0;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+    } catch (_) {}
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
 }

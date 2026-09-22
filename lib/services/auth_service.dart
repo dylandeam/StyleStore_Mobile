@@ -35,7 +35,10 @@ class AuthService extends ChangeNotifier {
       return;
     }
 
-    // Try fetching user profile
+    _status = AuthStatus.authenticated;
+    notifyListeners();
+
+    // Try fetching user profile without logging out on failure
     await fetchProfile();
   }
 
@@ -131,6 +134,13 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> fetchProfile() async {
+    final hasToken = await _storageService.hasToken();
+    if (!hasToken) {
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return;
+    }
+
     try {
       final response = await _apiService.get(ApiConfig.meUrl);
       if (response.statusCode == 200) {
@@ -138,10 +148,12 @@ class AuthService extends ChangeNotifier {
         _currentUser = User.fromJson(data);
         _status = AuthStatus.authenticated;
       } else {
-        await logout();
+        // Keep session active even if profile fetch has a temporary issue
+        _status = AuthStatus.authenticated;
       }
     } catch (_) {
-      await logout();
+      // Keep session active on network lag/offline
+      _status = AuthStatus.authenticated;
     }
     notifyListeners();
   }
