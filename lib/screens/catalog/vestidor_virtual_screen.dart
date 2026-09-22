@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:camera/camera.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
@@ -29,9 +30,15 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   double _opacity = 1.0;
   String _selectedCategory = 'all';
 
-  // Permisos y modo Cámara AR en Vivo
+  // Permisos y Controlador de Cámara Hardware Real
+  CameraController? _cameraController;
+  List<CameraDescription> _availableCameras = [];
+  int _selectedCameraIndex = 0;
   bool _hasCameraPermission = false;
   bool _isCameraActive = false;
+  bool _isCameraInitialized = false;
+  bool _isCameraLoading = false;
+  String? _cameraError;
 
   // Ajuste de Entalle al Cuerpo (Fit)
   String _bodyFit = 'slim'; // 'slim' (pegado), 'regular', 'loose'
@@ -63,16 +70,112 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     if (widget.initialProduct != null) {
       _equipProduct(widget.initialProduct!);
     }
+
+    // Inicializar Cámara AR automáticamente al entrar a la pantalla (Paridad con Web)
+    _initHardwareCamera();
   }
 
   @override
   void dispose() {
     _swayController.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
+  // Inicializa la cámara física solicitando permisos de forma nativa e invisible al usuario
+  Future<void> _initHardwareCamera() async {
+    setState(() {
+      _isCameraLoading = true;
+      _cameraError = null;
+    });
+
+    try {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        setState(() {
+          _hasCameraPermission = false;
+          _isCameraActive = false;
+          _isCameraLoading = false;
+          _cameraError = 'Permiso de cámara no concedido.';
+        });
+        return;
+      }
+
+      _availableCameras = await availableCameras();
+      if (_availableCameras.isEmpty) {
+        setState(() {
+          _isCameraLoading = false;
+          _cameraError = 'No se encontró cámara disponible en el dispositivo.';
+        });
+        return;
+      }
+
+      // Buscar cámara frontal por defecto para el vestidor probador
+      int frontIndex = _availableCameras.indexWhere(
+        (cam) => cam.lensDirection == CameraLensDirection.front,
+      );
+      _selectedCameraIndex = frontIndex != -1 ? frontIndex : 0;
+
+      await _setupCameraController(_availableCameras[_selectedCameraIndex]);
+    } catch (e) {
+      setState(() {
+        _isCameraLoading = false;
+        _isCameraActive = false;
+        _cameraError = 'Error al iniciar la cámara: $e';
+      });
+    }
+  }
+
+  Future<void> _setupCameraController(CameraDescription camera) async {
+    await _cameraController?.dispose();
+    _cameraController = CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+
+    try {
+      await _cameraController!.initialize();
+      if (mounted) {
+        setState(() {
+          _hasCameraPermission = true;
+          _isCameraActive = true;
+          _isCameraInitialized = true;
+          _isCameraLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCameraLoading = false;
+          _isCameraActive = false;
+          _isCameraInitialized = false;
+          _cameraError = 'Error configurando la cámara: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _switchCameraLens() async {
+    if (_availableCameras.length < 2) return;
+    _selectedCameraIndex = (_selectedCameraIndex + 1) % _availableCameras.length;
+    setState(() => _isCameraLoading = true);
+    await _setupCameraController(_availableCameras[_selectedCameraIndex]);
+  }
+
+  void _toggleCameraMode() {
+    if (!_isCameraActive) {
+      if (!_isCameraInitialized) {
+        _initHardwareCamera();
+      } else {
+        setState(() => _isCameraActive = true);
+      }
+    } else {
+      setState(() => _isCameraActive = false);
+    }
+  }
+
   void _updateBackViewFromRotation() {
-    // Cuando el modelo gira entre 90° y 270° (pi/2 y 3pi/2), se ve la espalda
     final isBack = _rotationY > (math.pi / 2) && _rotationY < (3 * math.pi / 2);
     if (isBack != _isBackView) {
       _isBackView = isBack;
@@ -136,92 +239,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     return total;
   }
 
-  void _toggleCameraMode() {
-    if (!_hasCameraPermission) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Row(
-            children: [
-              Icon(Icons.camera_front, color: Color(0xFFC8A97E)),
-              SizedBox(width: 8),
-              Text('Permisos de Celular AR', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'StyleStore necesita acceso a la Cámara y Micrófono de tu dispositivo para:',
-                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
-              ),
-              SizedBox(height: 10),
-              Row(children: [
-                Icon(Icons.check_circle_outline, color: Color(0xFFC8A97E), size: 16),
-                SizedBox(width: 6),
-                Expanded(child: Text('Superponer prendas en tiempo real sobre ti.', style: TextStyle(color: Colors.white, fontSize: 12))),
-              ]),
-              SizedBox(height: 6),
-              Row(children: [
-                Icon(Icons.check_circle_outline, color: Color(0xFFC8A97E), size: 16),
-                SizedBox(width: 6),
-                Expanded(child: Text('Escuchar comandos de voz en la probeta IA.', style: TextStyle(color: Colors.white, fontSize: 12))),
-              ]),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                Map<Permission, PermissionStatus> statuses = await [
-                  Permission.camera,
-                  Permission.microphone,
-                ].request();
-
-                final bool camGranted = statuses[Permission.camera]?.isGranted ?? false;
-                setState(() {
-                  _hasCameraPermission = camGranted;
-                  _isCameraActive = camGranted;
-                });
-
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(camGranted ? '📷 Permisos otorgados. Modo Cámara AR activado.' : 'No se otorgaron los permisos de cámara.'),
-                      backgroundColor: camGranted ? AppTheme.successGreen : Colors.redAccent,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC8A97E),
-                foregroundColor: const Color(0xFF0F172A),
-              ),
-              child: const Text('Otorgar Permisos', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
-    } else {
-      setState(() {
-        _isCameraActive = !_isCameraActive;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isCameraActive ? '📷 Modo Cámara en Vivo Activo' : '🪞 Modo Maniquí 3D Activo'),
-          backgroundColor: const Color(0xFF14263D),
-        ),
-      );
-    }
-  }
-
   void _addToCart() {
     final List<Producto> items = [];
     if (_activeDress != null) items.add(_activeDress!);
@@ -238,7 +255,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       return;
     }
 
-    // Abrir ficha del producto principal para elegir talla y sucursal
     final p = items.first;
     Navigator.push(
       context,
@@ -266,7 +282,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
             Text('🪞', style: TextStyle(fontSize: 20)),
             SizedBox(width: 8),
             Text(
-              'Vestidor Virtual',
+              'Vestidor Virtual AR',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
@@ -274,19 +290,25 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
+          if (_availableCameras.length > 1 && _isCameraActive && _isCameraInitialized)
+            IconButton(
+              icon: const Icon(Icons.flip_camera_ios, color: Color(0xFFC8A97E)),
+              tooltip: 'Cambiar Cámara',
+              onPressed: _switchCameraLens,
+            ),
           IconButton(
             icon: Icon(
               _isCameraActive ? Icons.camera : Icons.camera_alt_outlined,
-              color: _hasCameraPermission ? const Color(0xFFC8A97E) : Colors.amber,
+              color: _isCameraActive ? const Color(0xFFC8A97E) : Colors.white60,
             ),
-            tooltip: 'Cámara AR',
-            onPressed: () => _toggleCameraMode(),
+            tooltip: _isCameraActive ? 'Desactivar Cámara AR' : 'Activar Cámara AR',
+            onPressed: _toggleCameraMode,
           ),
         ],
       ),
       body: Column(
         children: [
-          // 1. Maniquí / Probador Interactivo 3D con Giro y Físicas
+          // 1. Maniquí / Probador Interactivo 3D con Vista de Cámara Real y Físicas
           Expanded(
             child: GestureDetector(
               onHorizontalDragUpdate: (details) {
@@ -305,38 +327,36 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Fondo oscuro Luxury con gradiente radial o Cámara AR en Vivo
-                  if (_isCameraActive)
+                  // Capa 0: Vista previa de Cámara Real Hardware o Fondo Radial Luxury
+                  if (_isCameraActive &&
+                      _isCameraInitialized &&
+                      _cameraController != null &&
+                      _cameraController!.value.isInitialized)
+                    SizedBox.expand(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _cameraController!.value.previewSize!.height,
+                          height: _cameraController!.value.previewSize!.width,
+                          child: CameraPreview(_cameraController!),
+                        ),
+                      ),
+                    )
+                  else if (_isCameraLoading)
                     Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      color: Colors.black87,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.videocam_outlined, size: 90, color: Colors.white10),
-                          Positioned(
-                            bottom: 80,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent.withOpacity(0.85),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.circle, color: Colors.white, size: 10),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'REC • Cámara AR Celular Activa',
-                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
+                      color: Colors.black,
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(color: Color(0xFFC8A97E)),
+                            SizedBox(height: 12),
+                            Text(
+                              'Iniciando cámara AR...',
+                              style: TextStyle(color: Colors.white70, fontSize: 13),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     )
                   else
@@ -352,11 +372,18 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                       ),
                     ),
 
+                  // Overlay oscuro semitransparente sobre la cámara para legibilidad y elegancia AR
+                  if (_isCameraActive && _isCameraInitialized)
+                    Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.black.withOpacity(0.18),
+                    ),
+
                   // Maniquí y Prendas con Perspectiva 3D y Balanceo de Tela
                   AnimatedBuilder(
                     animation: _swayController,
                     builder: (context, child) {
-                      // Balanceo orgánico sutil de tela
                       final swayOffsetY = math.sin(_swayController.value * 2 * math.pi) * 3.0;
                       final swayAngle = math.sin(_swayController.value * 2 * math.pi) * 0.012;
 
@@ -376,17 +403,17 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                         // Silueta elegante Maniquí
                         Center(
                           child: Opacity(
-                            opacity: 0.15,
+                            opacity: 0.20,
                             child: Container(
                               width: 170 * _scaleMultiplier,
                               height: 280 * _scaleMultiplier,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFC8A97E).withOpacity(0.06),
+                                color: const Color(0xFFC8A97E).withOpacity(0.08),
                                 borderRadius: BorderRadius.vertical(
                                   top: Radius.elliptical(85 * _scaleMultiplier, 55 * _scaleMultiplier),
                                   bottom: Radius.circular(35 * _scaleMultiplier),
                                 ),
-                                border: Border.all(color: const Color(0xFFC8A97E).withOpacity(0.3), width: 1.5),
+                                border: Border.all(color: const Color(0xFFC8A97E).withOpacity(0.4), width: 1.5),
                               ),
                             ),
                           ),
@@ -520,7 +547,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                     ),
                   ),
 
-                  // Badges de Estado (Esquina Superior Izquierda debajo del Pill Centrado)
+                  // Badges de Estado (Esquina Superior Izquierda)
                   Positioned(
                     top: 54,
                     left: 14,
@@ -556,18 +583,18 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xCC0369A1),
+                            color: _isCameraActive ? const Color(0xCC059669) : const Color(0xCC0369A1),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0x8838BDF8)),
+                            border: Border.all(color: _isCameraActive ? const Color(0x8834D399) : const Color(0x8838BDF8)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.radar, size: 10, color: Colors.white),
-                              SizedBox(width: 3),
+                              Icon(_isCameraActive ? Icons.videocam : Icons.radar, size: 10, color: Colors.white),
+                              const SizedBox(width: 3),
                               Text(
-                                '⚡ Profundidad IA Activa',
-                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                _isCameraActive ? 'REC • Cámara AR Celular Activa' : '⚡ Profundidad IA Activa',
+                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -598,16 +625,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                                 _bodyFit = 'slim';
                               }
                             });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '✨ Entalle: ${_bodyFit == 'slim' ? 'Pegado al Cuerpo (Slim Fit)' : _bodyFit == 'regular' ? 'Corte Clásico (Regular)' : 'Holgado (Loose)'}',
-                                ),
-                                duration: const Duration(seconds: 1),
-                                backgroundColor: const Color(0xFF14263D),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                           },
                         ),
                         const SizedBox(height: 6),
@@ -663,73 +680,73 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                     ),
                   ),
 
-                // Resumen de look y botón comprar
-                if (_totalPrice > 0)
-                  Positioned(
-                    bottom: 12,
-                    left: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xE60F172A),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0x66C8A97E)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black45,
-                            blurRadius: 12,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'TOTAL DEL LOOK',
-                                style: TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
+                  // Resumen de look y botón comprar
+                  if (_totalPrice > 0)
+                    Positioned(
+                      bottom: 12,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xE60F172A),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0x66C8A97E)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black45,
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'TOTAL DEL LOOK',
+                                  style: TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'Bs. ${_totalPrice.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  color: Color(0xFFC8A97E),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
+                                Text(
+                                  'Bs. ${_totalPrice.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFC8A97E),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _addToCart,
-                            icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                            label: const Text('Comprar Look'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFC8A97E),
-                              foregroundColor: const Color(0xFF0F172A),
-                              textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              ],
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _addToCart,
+                              icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                              label: const Text('Comprar Look'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFC8A97E),
+                                foregroundColor: const Color(0xFF0F172A),
+                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
           // 2. Carrusel Inferior Estilo TikTok
           Container(
@@ -738,7 +755,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Pestañas de categorías
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -755,7 +771,6 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                 ),
                 const SizedBox(height: 10),
 
-                // Lista horizontal de prendas
                 SizedBox(
                   height: 115,
                   child: filteredProducts.isEmpty

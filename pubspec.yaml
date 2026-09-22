@@ -17,6 +17,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   permission_handler: ^11.3.1
   speech_to_text: ^7.0.0
+  camera: ^0.10.5+9
 
 dev_dependencies:
   flutter_test:
