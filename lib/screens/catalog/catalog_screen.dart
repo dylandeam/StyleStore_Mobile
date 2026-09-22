@@ -29,6 +29,7 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<dynamic> _paraTiItems = [];
 
   @override

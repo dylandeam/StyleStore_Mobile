@@ -357,10 +357,12 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, i) {
+                  final it = items[i] as Map<String, dynamic>;
+                  final prodNom = it['producto_nombre'] ?? 'Prenda';
                   final prodFotoRaw = (it['producto_foto'] ?? it['foto_url']) as String?;
                   final prodFoto = ApiConfig.resolveImageUrl(prodFotoRaw);
                   final tipo = (it['tipo_prenda'] ?? 'Prenda').toString().toUpperCase();
-                  final precio = (it['producto_precio'] as num?)?.toDouble() ?? 0.0;
+                  final precio = (it['producto_precio'] as num?)?.toDouble() ?? (it['precio'] as num?)?.toDouble() ?? 0.0;
 
                   return Container(
                     width: 105,
