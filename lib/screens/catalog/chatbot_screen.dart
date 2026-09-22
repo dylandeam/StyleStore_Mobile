@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
@@ -35,6 +37,60 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
+  bool _isListening = false;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
+  Future<void> _toggleVoiceRecording() async {
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se requieren permisos de micrófono para dictar tus consultas por voz.')),
+        );
+      }
+      return;
+    }
+
+    bool available = false;
+    try {
+      available = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (_) {
+          if (mounted) setState(() => _isListening = false);
+        },
+      );
+    } catch (_) {}
+
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (val) {
+          if (mounted && val.recognizedWords.isNotEmpty) {
+            setState(() {
+              _textController.text = val.recognizedWords;
+              _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+            });
+          }
+        },
+      );
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('El reconocimiento de voz no está disponible en este dispositivo.')),
+        );
+      }
+    }
+  }
 
   final List<ChatMessage> _messages = [];
 
@@ -296,102 +352,77 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               border: Border(top: BorderSide(color: Colors.white10)),
             ),
             child: SafeArea(
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Pregunta sobre moda, tallas, pedidos...',
-                        hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        filled: true,
-                        fillColor: AppTheme.bgPrimary,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                  if (_isListening) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0x3310B981),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF10B981)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mic, color: Color(0xFF10B981), size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            '🎙️ Escuchando tu voz... Transcribiendo en tiempo real',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _textController,
+                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Pregunta sobre moda, tallas, pedidos...',
+                            hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            filled: true,
+                            fillColor: AppTheme.bgPrimary,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onSubmitted: (text) {
+                            if (_isListening) _speech.stop();
+                            _sendMessage(text);
+                          },
                         ),
                       ),
-                      onSubmitted: _sendMessage,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.mic, color: AppTheme.accentIndigo),
-                    tooltip: 'Comando por Voz IA',
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: AppTheme.bgCard,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      IconButton(
+                        icon: Icon(
+                          _isListening ? Icons.mic : Icons.mic_none,
+                          color: _isListening ? const Color(0xFFEF4444) : AppTheme.accentIndigo,
                         ),
-                        builder: (ctx) {
-                          return Container(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 70,
-                                  height: 70,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0x2210B981),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFF10B981), width: 2),
-                                  ),
-                                  child: const Icon(Icons.mic, color: Color(0xFF10B981), size: 36),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  '🎙️ Asistente de Voz IA',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Di lo que deseas consultar al Asesor de Moda:',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                                ),
-                                const SizedBox(height: 20),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  alignment: WrapAlignment.center,
-                                  children: [
-                                    '💡 Recomiéndame un outfit',
-                                    '👗 ¿Qué vestidos hay?',
-                                    '🛒 Añadir prenda a bolsa',
-                                    '📍 Ver sucursales',
-                                  ].map((cmd) {
-                                    return ActionChip(
-                                      label: Text(cmd, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      backgroundColor: AppTheme.bgSecondary,
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        final clean = cmd.replaceAll(RegExp(r'[^\w\s\?]'), '').trim();
-                                        _sendMessage(clean);
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: AppTheme.accentIndigo,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                      onPressed: () => _sendMessage(_textController.text),
-                    ),
+                        tooltip: _isListening ? 'Detener Micrófono' : 'Dictar por Voz IA',
+                        onPressed: _toggleVoiceRecording,
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: AppTheme.accentIndigo,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                          onPressed: () {
+                            if (_isListening) _speech.stop();
+                            _sendMessage(_textController.text);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

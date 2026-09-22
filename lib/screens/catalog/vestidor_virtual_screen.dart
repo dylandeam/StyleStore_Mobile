@@ -279,95 +279,8 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
               _isCameraActive ? Icons.camera : Icons.camera_alt_outlined,
               color: _hasCameraPermission ? const Color(0xFFC8A97E) : Colors.amber,
             ),
-            tooltip: 'Permisos de Cámara y Micrófono AR',
+            tooltip: 'Cámara AR',
             onPressed: () => _toggleCameraMode(),
-          ),
-          // Selector Frente / Espalda y Giro 360°
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x33C8A97E)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _autoSpin = false;
-                    _rotationY = 0.0;
-                    _isBackView = false;
-                  }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: !_isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Frente',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: !_isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
-                      ),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _autoSpin = false;
-                    _rotationY = math.pi;
-                    _isBackView = true;
-                  }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Espalda',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: _isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
-                      ),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _autoSpin = !_autoSpin),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.rotate_right,
-                          size: 14,
-                          color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '360°',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -460,14 +373,21 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Silueta base Maniquí Luxury
+                        // Silueta elegante Maniquí
                         Center(
                           child: Opacity(
-                            opacity: 0.22,
-                            child: Icon(
-                              _isBackView ? Icons.accessibility : Icons.accessibility_new,
-                              size: 260,
-                              color: const Color(0xFFC8A97E),
+                            opacity: 0.15,
+                            child: Container(
+                              width: 170 * _scaleMultiplier,
+                              height: 280 * _scaleMultiplier,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC8A97E).withOpacity(0.06),
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.elliptical(85 * _scaleMultiplier, 55 * _scaleMultiplier),
+                                  bottom: Radius.circular(35 * _scaleMultiplier),
+                                ),
+                                border: Border.all(color: const Color(0xFFC8A97E).withOpacity(0.3), width: 1.5),
+                              ),
                             ),
                           ),
                         ),
@@ -508,55 +428,133 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                     ),
                   ),
 
-                  // Badge de Orientación 3D y Grados de Rotación
+                  // Top Pill Centrado: Selector Frente / Espalda y Giro 360°
                   Positioned(
-                    top: 16,
-                    left: 16,
+                    top: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xDD1E293B),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0x44C8A97E)),
+                        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8)],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _autoSpin = false;
+                              _rotationY = 0.0;
+                              _isBackView = false;
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: !_isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                'Frente',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: !_isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _autoSpin = false;
+                              _rotationY = math.pi;
+                              _isBackView = true;
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: _isBackView && !_autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                'Espalda',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isBackView && !_autoSpin ? const Color(0xFF0F172A) : Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() => _autoSpin = !_autoSpin),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: _autoSpin ? const Color(0xFFC8A97E) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.rotate_right,
+                                    size: 14,
+                                    color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '360°',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _autoSpin ? const Color(0xFF0F172A) : const Color(0xFFC8A97E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Badges de Estado (Esquina Superior Izquierda debajo del Pill Centrado)
+                  Positioned(
+                    top: 54,
+                    left: 14,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xCC14263D),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0x66C8A97E)),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black38, blurRadius: 6),
-                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _isBackView
-                                    ? Icons.flip_camera_android
-                                    : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
-                                        ? Icons.transform
-                                        : Icons.person_outline,
-                                size: 14,
+                                _isBackView ? Icons.flip_camera_android : Icons.person_outline,
+                                size: 12,
                                 color: const Color(0xFFC8A97E),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 5),
                               Text(
                                 _isBackView
                                     ? '🔄 Espalda (${((_rotationY * 180 / math.pi).round()) % 360}°)'
-                                    : (_rotationY > 1.0 && _rotationY < 2.1) || (_rotationY > 4.2 && _rotationY < 5.3)
-                                        ? '📐 Perfil (${((_rotationY * 180 / math.pi).round()) % 360}°)'
-                                        : '✨ Frente (${((_rotationY * 180 / math.pi).round()) % 360}°)',
-                                style: const TextStyle(
-                                  color: Color(0xFFF1F5F9),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                    : '✨ Frente (${((_rotationY * 180 / math.pi).round()) % 360}°)',
+                                style: const TextStyle(color: Color(0xFFF1F5F9), fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        // Badge de Sensor de Profundidad Neuronal
+                        const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
                             color: const Color(0xCC0369A1),
                             borderRadius: BorderRadius.circular(10),
@@ -565,44 +563,16 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.radar, size: 11, color: Colors.white),
-                              SizedBox(width: 4),
+                              Icon(Icons.radar, size: 10, color: Colors.white),
+                              SizedBox(width: 3),
                               Text(
                                 '⚡ Profundidad IA Activa',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  // Hint inferior de interacción
-                  Positioned(
-                    top: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0x990F172A),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.touch_app, size: 12, color: Color(0xFFC8A97E)),
-                          SizedBox(width: 4),
-                          Text(
-                            'Desliza para girar 360°',
-                            style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 10),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 

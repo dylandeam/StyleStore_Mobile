@@ -225,6 +225,69 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  bool _productoMatchesQuery(Producto p, String searchQuery) {
+    if (searchQuery.trim().isEmpty) return true;
+
+    final queryNorm = searchQuery.trim().toLowerCase();
+    
+    // Exact string match fast path
+    if (p.nombre.toLowerCase().contains(queryNorm) ||
+        p.codigo.toLowerCase().contains(queryNorm) ||
+        (p.categoriaNombre ?? '').toLowerCase().contains(queryNorm) ||
+        (p.tipoPrenda ?? '').toLowerCase().contains(queryNorm) ||
+        (p.descripcion ?? '').toLowerCase().contains(queryNorm)) {
+      return true;
+    }
+
+    // Helper dictionary for plural -> singular & Spanish color root matching
+    String normalizeToken(String t) {
+      String word = t.toLowerCase().trim();
+      if (word.endsWith('es')) {
+        word = word.substring(0, word.length - 2);
+      } else if (word.endsWith('s')) {
+        word = word.substring(0, word.length - 1);
+      }
+      
+      if (word == 'blanca' || word == 'blanco') return 'blanc';
+      if (word == 'roja' || word == 'rojo') return 'roj';
+      if (word == 'negra' || word == 'negro') return 'negr';
+      if (word == 'amarilla' || word == 'amarillo') return 'amarill';
+      if (word == 'azul' || word == 'azules') return 'azul';
+      if (word == 'verde' || word == 'verdes') return 'verd';
+      return word;
+    }
+
+    final tokens = queryNorm.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    if (tokens.isEmpty) return true;
+
+    final List<String> pTargets = [
+      p.nombre.toLowerCase(),
+      p.codigo.toLowerCase(),
+      (p.categoriaNombre ?? '').toLowerCase(),
+      (p.tipoPrenda ?? '').toLowerCase(),
+      (p.descripcion ?? '').toLowerCase(),
+      ...p.colores.map((c) => c.toLowerCase()),
+    ];
+
+    for (final token in tokens) {
+      final normT = normalizeToken(token);
+      bool tokenMatched = false;
+
+      for (final target in pTargets) {
+        if (target.contains(token) || (normT.length >= 3 && target.contains(normT))) {
+          tokenMatched = true;
+          break;
+        }
+      }
+
+      if (!tokenMatched) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   void _activateVoiceSearch() async {
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
@@ -335,12 +398,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     final catalogService = Provider.of<CatalogService>(context);
 
     final filteredProds = catalogService.productos.where((p) {
-      if (_searchQuery.trim().isEmpty) return true;
-      final q = _searchQuery.trim().toLowerCase();
-      return p.nombre.toLowerCase().contains(q) ||
-          p.codigo.toLowerCase().contains(q) ||
-          (p.categoriaNombre ?? '').toLowerCase().contains(q) ||
-          (p.descripcion ?? '').toLowerCase().contains(q);
+      return _productoMatchesQuery(p, _searchQuery);
     }).toList();
 
     return Column(
@@ -1905,27 +1963,17 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
 
                     TextField(
                       controller: addressCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Dirección o Referencia de Entrega',
-                        hintText: 'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: mapsCtrl,
                       onChanged: (val) async {
-                        if (val.trim().isNotEmpty && (val.contains('http') || val.contains('maps') || val.contains('goo.gl'))) {
+                        if (val.trim().isNotEmpty) {
                           try {
                             final apiService = Provider.of<ApiService>(context, listen: false);
                             final resQuote = await apiService.post(
                               '${ApiConfig.baseUrl}/envios/cotizar-distancia',
                               body: {
                                 'sucursal_id': sucursalId,
-                                'ubicacion_url': val.trim(),
-                                'direccion': addressCtrl.text.trim(),
+                                'ubicacion_url': mapsCtrl.text.trim().isNotEmpty ? mapsCtrl.text.trim() : null,
+                                'direccion': val.trim(),
+                                'ciudad': branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
                               },
                               requireAuth: false,
                             );
@@ -1939,6 +1987,40 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             }
                           } catch (_) {}
                         }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Dirección o Referencia de Entrega',
+                        hintText: 'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: mapsCtrl,
+                      onChanged: (val) async {
+                        try {
+                          final apiService = Provider.of<ApiService>(context, listen: false);
+                          final resQuote = await apiService.post(
+                            '${ApiConfig.baseUrl}/envios/cotizar-distancia',
+                            body: {
+                              'sucursal_id': sucursalId,
+                              'ubicacion_url': val.trim().isNotEmpty ? val.trim() : null,
+                              'direccion': addressCtrl.text.trim().isNotEmpty ? addressCtrl.text.trim() : 'Santa Cruz',
+                              'ciudad': branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
+                            },
+                            requireAuth: false,
+                          );
+                          if (resQuote.statusCode == 200) {
+                            final qData = jsonDecode(utf8.decode(resQuote.bodyBytes));
+                            if (qData['distancia_km'] != null) {
+                              setModalState(() {
+                                distanciaKm = (qData['distancia_km'] as num).toDouble();
+                              });
+                            }
+                          }
+                        } catch (_) {}
                       },
                       decoration: InputDecoration(
                         labelText: 'Enlace de Google Maps (Ubicación exacta del cliente)',
