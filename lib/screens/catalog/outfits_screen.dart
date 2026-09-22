@@ -36,23 +36,36 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       _errorMessage = null;
     });
 
+    final apiService = Provider.of<ApiService>(context, listen: false);
+
     try {
-      final apiService = Provider.of<ApiService>(context, listen: false);
-      final res = await apiService.get(ApiConfig.outfitsUrl, requireAuth: true);
+      final res = await apiService.get(ApiConfig.outfitsUrl, requireAuth: false);
       if (res.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(res.body);
+        final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         _outfits = data.map((e) => e as Map<String, dynamic>).toList();
-      } else {
-        _errorMessage = 'No se pudieron cargar los outfits.';
       }
-    } catch (e) {
-      _errorMessage = 'Error de conexión al cargar outfits.';
-    }
+    } catch (_) {}
 
     // Fallback con combinaciones generadas dinámicamente si no hay guardados
-    if (_outfits.isEmpty && widget.availableProducts != null && widget.availableProducts!.isNotEmpty) {
-      _outfits = _generatePresetOutfits(widget.availableProducts!);
-      _errorMessage = null;
+    if (_outfits.isEmpty) {
+      try {
+        List<Producto> prods = widget.availableProducts ?? [];
+        if (prods.isEmpty) {
+          final resCat = await apiService.get(ApiConfig.catalogoUrl, requireAuth: false);
+          if (resCat.statusCode == 200) {
+            final List<dynamic> list = jsonDecode(utf8.decode(resCat.bodyBytes));
+            prods = list.map((item) => Producto.fromJson(item as Map<String, dynamic>)).toList();
+          }
+        }
+        if (prods.isNotEmpty) {
+          _outfits = _generatePresetOutfits(prods);
+          _errorMessage = null;
+        } else {
+          _errorMessage = 'No hay prendas disponibles para armar outfits.';
+        }
+      } catch (e) {
+        _errorMessage = 'Error al generar combinaciones de outfits.';
+      }
     }
 
     if (mounted) {
@@ -344,9 +357,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, i) {
-                  final it = items[i] as Map<String, dynamic>;
-                  final prodNom = it['producto_nombre'] ?? 'Prenda';
-                  final prodFoto = it['producto_foto'] as String?;
+                  final prodFotoRaw = (it['producto_foto'] ?? it['foto_url']) as String?;
+                  final prodFoto = ApiConfig.resolveImageUrl(prodFotoRaw);
                   final tipo = (it['tipo_prenda'] ?? 'Prenda').toString().toUpperCase();
                   final precio = (it['producto_precio'] as num?)?.toDouble() ?? 0.0;
 

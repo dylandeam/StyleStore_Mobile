@@ -29,7 +29,7 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  List<dynamic> _paraTiItems = [];
 
   @override
   void initState() {
@@ -46,7 +46,23 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       Provider.of<CartService>(context, listen: false).fetchCart();
       Provider.of<OrderService>(context, listen: false).fetchOrders();
       Provider.of<OrderService>(context, listen: false).fetchReservas();
+      _fetchParaTi();
     });
+  }
+
+  Future<void> _fetchParaTi() async {
+    try {
+      final api = Provider.of<ApiService>(context, listen: false);
+      final res = await api.get(ApiConfig.catalogoParaTiUrl, requireAuth: false);
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
+        if (mounted) {
+          setState(() {
+            _paraTiItems = data;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -56,13 +72,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   }
 
   String? _resolveImageUrl(String? foto) {
-    if (foto == null || foto.trim().isEmpty) return null;
-    final trimmed = foto.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    const origin = 'https://stylestorebackend-production.up.railway.app';
-    return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+    return ApiConfig.resolveImageUrl(foto);
   }
 
   @override
@@ -284,18 +294,201 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   : catalogService.productos.isEmpty
                       ? const Center(child: Text('No hay productos disponibles para esta sucursal.', style: TextStyle(color: AppTheme.textSecondary)))
                       : RefreshIndicator(
-                          onRefresh: () => catalogService.fetchCatalog(),
-                          child: ListView.builder(
+                          onRefresh: () async {
+                            await catalogService.fetchCatalog();
+                            await _fetchParaTi();
+                          },
+                          child: ListView(
                             padding: const EdgeInsets.all(16),
-                            itemCount: catalogService.productos.length,
-                            itemBuilder: (context, index) {
-                              final p = catalogService.productos[index];
-                              return _buildProductCard(p);
-                            },
+                            children: [
+                              _buildParaTiSection(),
+                              if (_paraTiItems.isNotEmpty) const SizedBox(height: 16),
+                              ...catalogService.productos.map((p) => _buildProductCard(p)),
+                            ],
                           ),
                         ),
         ),
       ],
+    );
+  }
+
+  Widget _buildParaTiSection() {
+    if (_paraTiItems.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF14263D), Color(0xFF1E3A5F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x66C8A97E)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC8A97E),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('✨', style: TextStyle(fontSize: 12)),
+                    SizedBox(width: 4),
+                    Text(
+                      'IA LOCAL | PARA TI',
+                      style: TextStyle(color: Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: _fetchParaTi,
+                child: const Text('Actualizar 🔄', style: TextStyle(color: Color(0xFFC8A97E), fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Para Ti — Selección de Moda IA',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Recomendaciones personalizadas según tu perfil e historia de estilos',
+            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _paraTiItems.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
+                final item = _paraTiItems[i] as Map<String, dynamic>;
+                final nombre = item['nombre'] ?? 'Prenda';
+                final codigo = item['codigo'] ?? '';
+                final fotoUrl = _resolveImageUrl(item['foto'] as String?);
+                final precio = (item['precio'] as num?)?.toDouble() ?? 0.0;
+                final tagIncentivo = item['tag_incentivo'] ?? '🌟 Recomendado';
+                final razon = item['razon_recomendacion'] ?? 'Selección de estilo';
+                final catNom = item['categoria_nombre'] ?? 'Exclusivo';
+
+                return GestureDetector(
+                  onTap: () {
+                    final pObj = Producto.fromJson(item);
+                    _openProductDetail(pObj);
+                  },
+                  child: Container(
+                    width: 155,
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.borderGlass),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x1414263D), blurRadius: 8, offset: Offset(0, 3)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                              child: Container(
+                                height: 105,
+                                width: double.infinity,
+                                color: AppTheme.bgSecondary,
+                                child: fotoUrl != null
+                                    ? Image.network(
+                                        fotoUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Center(
+                                          child: Icon(Icons.checkroom, color: AppTheme.textMuted, size: 36),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Icon(Icons.checkroom, color: AppTheme.textMuted, size: 36),
+                                      ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 6,
+                              left: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xEE14263D),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0x66C8A97E)),
+                                ),
+                                child: Text(
+                                  tagIncentivo,
+                                  style: const TextStyle(color: Color(0xFFC8A97E), fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$codigo • $catNom',
+                                style: const TextStyle(fontSize: 9, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                nombre,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                razon,
+                                style: const TextStyle(fontSize: 9.5, color: AppTheme.textSecondary, height: 1.2),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Bs. ${precio.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.accentIndigo),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios, size: 10, color: AppTheme.accentIndigo),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -309,7 +502,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     if (goToCart == true) {
       if (mounted) {
         Provider.of<CartService>(context, listen: false).fetchCart();
-        _tabController.animateTo(2); // Pestaña de Carrito
+        _tabController.animateTo(4); // Pestaña de Carrito (índice 4)
       }
     }
   }

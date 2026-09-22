@@ -2,7 +2,6 @@ class ApiConfig {
   /// Base API URL - default set to local network IP for physical device testing
   static String baseUrl = 'http://192.168.0.17:8000/api/v1';
 
-
   /// Candidate URLs to attempt connection if default fails
   static List<String> get candidateUrls => [
         'http://192.168.0.17:8000/api/v1',
@@ -10,6 +9,22 @@ class ApiConfig {
         'http://localhost:8000/api/v1',
         'https://stylestorebackend-production.up.railway.app/api/v1',
       ];
+
+  /// Resolves relative image paths to full HTTP URLs using active baseUrl
+  static String? resolveImageUrl(String? foto) {
+    if (foto == null || foto.trim().isEmpty) return null;
+    final trimmed = foto.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    try {
+      final uri = Uri.parse(baseUrl);
+      final origin = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+      return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+    } catch (_) {
+      return 'http://192.168.0.17:8000${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+    }
+  }
 
   // Auth endpoints
   static String get registerUrl => '$baseUrl/auth/register';
@@ -26,6 +41,7 @@ class ApiConfig {
 
   // Catálogo y Próximamente (CU11, CU14)
   static String get catalogoUrl => '$baseUrl/catalogo';
+  static String get catalogoParaTiUrl => '$baseUrl/catalogo/para-ti';
   static String get proximamenteUrl => '$baseUrl/proximamente';
   static String get suscribirProximamenteUrl => '$baseUrl/notificaciones/suscribir-proximamente';
   static String get notificacionesUrl => '$baseUrl/notificaciones';

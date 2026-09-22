@@ -70,7 +70,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         List<dynamic> recData = [];
         if (resRec.statusCode == 200) {
           final recJson = jsonDecode(utf8.decode(resRec.bodyBytes));
-          recData = recJson['recomendaciones'] ?? [];
+          if (recJson is List) {
+            recData = recJson;
+          } else if (recJson is Map) {
+            recData = recJson['recomendaciones'] ?? recJson['items'] ?? [];
+          }
         }
 
         if (mounted) {
@@ -99,7 +103,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error de conexión: $e';
+          _errorMessage = 'Error al cargar detalle de prenda: $e';
           _isLoading = false;
         });
       }
@@ -140,13 +144,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   String? _resolveImageUrl(String? foto) {
-    if (foto == null || foto.trim().isEmpty) return null;
-    final trimmed = foto.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    const origin = 'https://stylestorebackend-production.up.railway.app';
-    return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+    return ApiConfig.resolveImageUrl(foto);
   }
 
   Color _parseHex(String? hexString) {

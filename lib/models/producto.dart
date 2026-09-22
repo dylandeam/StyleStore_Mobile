@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class Producto {
   final String codigo;
   final String nombre;
@@ -23,6 +25,11 @@ class Producto {
   final String? tituloPromocion;
   final List<String> colores;
   final int stockTotal;
+
+  String? get fotoUrl => ApiConfig.resolveImageUrl(foto);
+  String? get fotoTraseraUrl => ApiConfig.resolveImageUrl(fotoTrasera);
+  String? get fotoVestidorFrontalUrl => ApiConfig.resolveImageUrl(fotoVestidorFrontal);
+  String? get fotoVestidorTraseraUrl => ApiConfig.resolveImageUrl(fotoVestidorTrasera);
 
   Producto({
     required this.codigo,
@@ -93,4 +100,3 @@ class Producto {
     );
   }
 }
-

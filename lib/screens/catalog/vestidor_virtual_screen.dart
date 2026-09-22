@@ -102,13 +102,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   }
 
   String? _resolveImageUrl(String? foto) {
-    if (foto == null || foto.trim().isEmpty) return null;
-    final trimmed = foto.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    const origin = 'https://stylestorebackend-production.up.railway.app';
-    return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+    return ApiConfig.resolveImageUrl(foto);
   }
 
   String? _getGarmentImage(Producto p) {
