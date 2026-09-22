@@ -466,6 +466,10 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildNavigationDrawer(BuildContext context, AuthService authService, dynamic user) {
+    final role = (user?.role ?? '').toString().toLowerCase();
+    final isStaff = role.contains('admin') || role.contains('encargado') || role.contains('cajero');
+    final canManageStore = role.contains('admin') || role.contains('encargado');
+
     return Drawer(
       backgroundColor: AppTheme.bgSecondary,
       child: Column(
@@ -489,7 +493,7 @@ class HomeScreen extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 16),
             ),
             accountEmail: Text(
-              '${user?.email ?? ""} • ${user?.role ?? "cliente"}',
+              '${user?.email ?? ""} • ${(user?.role ?? "cliente").toString().toUpperCase()}',
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
           ),
@@ -559,7 +563,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       ListTile(
                         leading: const Icon(Icons.receipt_long_outlined, color: AppTheme.successGreen, size: 20),
-                        title: const Text('Mis Pedidos', style: TextStyle(fontSize: 14)),
+                        title: const Text('Mis Pedidos y Reservas', style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3);
@@ -569,11 +573,49 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
 
-                // Categoria 3: MI CUENTA Y AJUSTES
+                // Categoria 3: GESTIÓN DE TIENDA Y OPERACIONES (Solo Staff/Admin)
+                if (isStaff)
+                  Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      initiallyExpanded: true,
+                      leading: const Icon(Icons.admin_panel_settings, color: Color(0xFFF59E0B)),
+                      title: const Text('VENTAS Y OPERACIONES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.point_of_sale, color: AppTheme.accentIndigo, size: 20),
+                          title: const Text('Gestión de Ventas & POS', style: TextStyle(fontSize: 14)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, AppRoutes.catalog);
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.people_alt_outlined, color: Color(0xFF10B981), size: 20),
+                          title: const Text('Directorio de Clientes', style: TextStyle(fontSize: 14)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, AppRoutes.profile);
+                          },
+                        ),
+                        if (canManageStore)
+                          ListTile(
+                            leading: const Icon(Icons.badge_outlined, color: Color(0xFF8B5CF6), size: 20),
+                            title: const Text('Empleados & Permisos', style: TextStyle(fontSize: 14)),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.pushNamed(context, AppRoutes.profile);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+
+                // Categoria 4: MI CUENTA Y SEGURIDAD
                 Theme(
                   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
-                    initiallyExpanded: true,
+                    initiallyExpanded: false,
                     leading: const Icon(Icons.person_outline, color: AppTheme.accentPink),
                     title: const Text('MI CUENTA Y SEGURIDAD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
                     children: [
