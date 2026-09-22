@@ -450,6 +450,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             // Código y Precio
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -466,14 +467,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 ),
-                Text(
-                  'Bs. ${(p['precio'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF14263D),
+                if (p['en_promocion'] == true && p['precio_descuento'] != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Bs. ${(p['precio'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Bs. ${(p['precio_descuento'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFE63946),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    'Bs. ${(p['precio'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF14263D),
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -487,6 +513,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 color: AppTheme.textPrimary,
               ),
             ),
+            if (p['en_promocion'] == true) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEAEA),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0x40D62828)),
+                ),
+                child: Text(
+                  '🔥 ${p['titulo_promocion'] ?? "Promoción Especial"} (${p['porcentaje_descuento'] ?? 0}% OFF)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD62828),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
 
             // Chips / Categoría, Temporada, Colección

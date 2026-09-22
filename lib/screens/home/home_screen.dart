@@ -148,10 +148,10 @@ class HomeScreen extends StatelessWidget {
                               Expanded(
                                 child: _buildQuickActionCard(
                                   context: context,
-                                  icon: Icons.hourglass_top,
-                                  title: 'Próximamente',
-                                  subtitle: 'Alertas de estreno',
-                                  color: const Color(0xFFC5A880),
+                                  icon: Icons.local_offer,
+                                  title: 'Promociones',
+                                  subtitle: 'Hasta 90% OFF',
+                                  color: const Color(0xFFE63946),
                                   isBadge: true,
                                   onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1),
                                 ),
@@ -164,10 +164,10 @@ class HomeScreen extends StatelessWidget {
                               Expanded(
                                 child: _buildQuickActionCard(
                                   context: context,
-                                  icon: Icons.shopping_bag_outlined,
-                                  title: 'Mis Pedidos',
-                                  subtitle: 'Seguimiento',
-                                  color: const Color(0xFF10B981),
+                                  icon: Icons.hourglass_top,
+                                  title: 'Próximamente',
+                                  subtitle: 'Alertas de estreno',
+                                  color: const Color(0xFFC5A880),
                                   onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3),
                                 ),
                               ),
@@ -179,7 +179,7 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Mi Carrito',
                                   subtitle: 'Bolsa y pagos',
                                   color: const Color(0xFFA855F7),
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 2),
+                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 4),
                                 ),
                               ),
                             ],
@@ -190,11 +190,21 @@ class HomeScreen extends StatelessWidget {
                               Expanded(
                                 child: _buildQuickActionCard(
                                   context: context,
+                                  icon: Icons.shopping_bag_outlined,
+                                  title: 'Mis Pedidos',
+                                  subtitle: 'Seguimiento Yango',
+                                  color: const Color(0xFF10B981),
+                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 5),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildQuickActionCard(
+                                  context: context,
                                   icon: Icons.camera_front,
                                   title: 'Vestidor Virtual',
                                   subtitle: 'Probador AR en vivo',
                                   color: const Color(0xFFC8A97E),
-                                  isBadge: true,
                                   onTap: () => Navigator.pushNamed(context, AppRoutes.vestidorVirtual),
                                 ),
                               ),
