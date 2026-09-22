@@ -46,6 +46,10 @@ class CartService extends ChangeNotifier {
     int cantidad = 1,
     int? stockInventarioId,
   }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
       final stockId = stockInventarioId ?? 1;
       final res = await _apiService.post(
@@ -58,13 +62,31 @@ class CartService extends ChangeNotifier {
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchCart();
+        _isLoading = false;
+        notifyListeners();
         return true;
+      } else {
+        try {
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
+          _errorMessage = data['detail'] ?? 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+        } catch (_) {
+          _errorMessage = 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      _errorMessage = 'Error de conexión: $e';
+    }
+
+    _isLoading = false;
+    notifyListeners();
     return false;
   }
 
   Future<bool> addStockItem(int stockInventarioId, {int cantidad = 1}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
       final res = await _apiService.post(
         ApiConfig.carritoAgregarUrl,
@@ -76,9 +98,23 @@ class CartService extends ChangeNotifier {
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchCart();
+        _isLoading = false;
+        notifyListeners();
         return true;
+      } else {
+        try {
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
+          _errorMessage = data['detail'] ?? 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+        } catch (_) {
+          _errorMessage = 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      _errorMessage = 'Error de conexión: $e';
+    }
+
+    _isLoading = false;
+    notifyListeners();
     return false;
   }
 

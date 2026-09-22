@@ -64,12 +64,54 @@ class ApiService {
     return '';
   }
 
+  Future<bool> _tryRefreshToken() async {
+    try {
+      final refreshToken = await _storageService.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) return false;
+
+      final res = await http.post(
+        Uri.parse(ApiConfig.refreshUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'refresh_token': refreshToken}),
+      ).timeout(const Duration(seconds: 6));
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        final newAccess = data['access_token'] as String?;
+        final newRefresh = data['refresh_token'] as String? ?? refreshToken;
+
+        if (newAccess != null && newAccess.isNotEmpty) {
+          await _storageService.saveTokens(
+            accessToken: newAccess,
+            refreshToken: newRefresh,
+          );
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<http.Response> get(String url, {bool requireAuth = true}) async {
-    final headers = await _getHeaders(requireAuth: requireAuth);
-    return await _executeWithFallback(
+    Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
+    var res = await _executeWithFallback(
       (targetUrl) => http.get(Uri.parse(targetUrl), headers: headers),
       url,
     );
+    if (res.statusCode == 401 && requireAuth) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        headers = await _getHeaders(requireAuth: requireAuth);
+        res = await _executeWithFallback(
+          (targetUrl) => http.get(Uri.parse(targetUrl), headers: headers),
+          url,
+        );
+      }
+    }
+    return res;
   }
 
   Future<http.Response> post(
@@ -77,9 +119,9 @@ class ApiService {
     Map<String, dynamic>? body,
     bool requireAuth = true,
   }) async {
-    final headers = await _getHeaders(requireAuth: requireAuth);
+    Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
     final encodedBody = body != null ? jsonEncode(body) : null;
-    return await _executeWithFallback(
+    var res = await _executeWithFallback(
       (targetUrl) => http.post(
         Uri.parse(targetUrl),
         headers: headers,
@@ -87,6 +129,21 @@ class ApiService {
       ),
       url,
     );
+    if (res.statusCode == 401 && requireAuth) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        headers = await _getHeaders(requireAuth: requireAuth);
+        res = await _executeWithFallback(
+          (targetUrl) => http.post(
+            Uri.parse(targetUrl),
+            headers: headers,
+            body: encodedBody,
+          ),
+          url,
+        );
+      }
+    }
+    return res;
   }
 
   Future<http.Response> put(
@@ -94,9 +151,9 @@ class ApiService {
     Map<String, dynamic>? body,
     bool requireAuth = true,
   }) async {
-    final headers = await _getHeaders(requireAuth: requireAuth);
+    Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
     final encodedBody = body != null ? jsonEncode(body) : null;
-    return await _executeWithFallback(
+    var res = await _executeWithFallback(
       (targetUrl) => http.put(
         Uri.parse(targetUrl),
         headers: headers,
@@ -104,6 +161,21 @@ class ApiService {
       ),
       url,
     );
+    if (res.statusCode == 401 && requireAuth) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        headers = await _getHeaders(requireAuth: requireAuth);
+        res = await _executeWithFallback(
+          (targetUrl) => http.put(
+            Uri.parse(targetUrl),
+            headers: headers,
+            body: encodedBody,
+          ),
+          url,
+        );
+      }
+    }
+    return res;
   }
 
   Future<http.Response> patch(
@@ -111,9 +183,9 @@ class ApiService {
     Map<String, dynamic>? body,
     bool requireAuth = true,
   }) async {
-    final headers = await _getHeaders(requireAuth: requireAuth);
+    Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
     final encodedBody = body != null ? jsonEncode(body) : null;
-    return await _executeWithFallback(
+    var res = await _executeWithFallback(
       (targetUrl) => http.patch(
         Uri.parse(targetUrl),
         headers: headers,
@@ -121,13 +193,39 @@ class ApiService {
       ),
       url,
     );
+    if (res.statusCode == 401 && requireAuth) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        headers = await _getHeaders(requireAuth: requireAuth);
+        res = await _executeWithFallback(
+          (targetUrl) => http.patch(
+            Uri.parse(targetUrl),
+            headers: headers,
+            body: encodedBody,
+          ),
+          url,
+        );
+      }
+    }
+    return res;
   }
 
   Future<http.Response> delete(String url, {bool requireAuth = true}) async {
-    final headers = await _getHeaders(requireAuth: requireAuth);
-    return await _executeWithFallback(
+    Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
+    var res = await _executeWithFallback(
       (targetUrl) => http.delete(Uri.parse(targetUrl), headers: headers),
       url,
     );
+    if (res.statusCode == 401 && requireAuth) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed) {
+        headers = await _getHeaders(requireAuth: requireAuth);
+        res = await _executeWithFallback(
+          (targetUrl) => http.delete(Uri.parse(targetUrl), headers: headers),
+          url,
+        );
+      }
+    }
+    return res;
   }
 }

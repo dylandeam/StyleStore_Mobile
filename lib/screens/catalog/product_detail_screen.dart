@@ -192,9 +192,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         Navigator.pop(context, true); // Regresa e indica que debe ir al carrito
       }
     } else {
+      final msg = cartService.errorMessage ?? 'No se pudo añadir la prenda al carrito.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo añadir la prenda al carrito.'),
+        SnackBar(
+          content: Text(msg),
           backgroundColor: AppTheme.dangerRed,
         ),
       );
