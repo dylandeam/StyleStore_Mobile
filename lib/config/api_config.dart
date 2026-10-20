@@ -67,6 +67,7 @@ class ApiConfig {
 
   // Ventas y Pedidos
   static String get misComprasUrl => '$baseUrl/ventas/mis-compras';
+  static String get ventasPresencialUrl => '$baseUrl/ventas/presencial';
 
   // Envíos (CU19)
   static String get cotizarEnvioUrl => '$baseUrl/envios/cotizar';

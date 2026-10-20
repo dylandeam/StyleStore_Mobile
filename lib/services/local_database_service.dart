@@ -35,6 +35,11 @@ class LocalDatabaseService {
     return _instance!;
   }
 
+  Future<void> close() async {
+    await _instance?.close();
+    _instance = null;
+  }
+
   Future<void> saveCatalog(
       String scope, int? branchId, List<dynamic> payload) async {
     await (await database).insert(
@@ -86,6 +91,38 @@ class LocalDatabaseService {
         .toList();
   }
 
+  Future<List<Map<String, dynamic>>> stockOptions(String scope) async {
+    final rows = await (await database).query('catalog_snapshots',
+        where: 'scope = ?', whereArgs: [scope], orderBy: 'synced_at DESC');
+    final options = <int, Map<String, dynamic>>{};
+    for (final row in rows) {
+      for (final product in (jsonDecode(row['payload'] as String) as List)
+          .cast<Map<String, dynamic>>()) {
+        for (final variant in (product['variantes'] as List? ?? const [])
+            .cast<Map<String, dynamic>>()) {
+          for (final stock in (variant['existencias'] as List? ?? const [])
+              .cast<Map<String, dynamic>>()) {
+            final id = stock['stock_inventario_id'] as int?;
+            if (id == null || options.containsKey(id)) continue;
+            options[id] = {
+              'stock_inventario_id': id,
+              'producto': product['nombre'] ?? product['codigo'],
+              'precio': double.tryParse(product['precio'].toString()) ?? 0,
+              'color': variant['color_nombre'] ?? '',
+              'talla': stock['talla_nombre'] ?? '',
+              'sucursal_id': stock['sucursal_id'],
+              'sucursal': stock['sucursal_nombre'] ?? '',
+              'cantidad': stock['cantidad'] ?? 0,
+            };
+          }
+        }
+      }
+    }
+    return options.values
+        .where((item) => (item['cantidad'] as num) > 0)
+        .toList();
+  }
+
   Future<void> queueReservation({
     required String operationUuid,
     required String scope,
@@ -117,6 +154,49 @@ class LocalDatabaseService {
         'operation_type': 'reserva',
         'payload_version': 1,
         'payload': jsonEncode(payload),
+        'client_created_at': createdAt,
+        'status': 'pendiente',
+      });
+    });
+  }
+
+  Future<void> queueCashSale({
+    required String operationUuid,
+    required String scope,
+    required Map<String, dynamic> payload,
+    required double total,
+    required List<Map<String, dynamic>> details,
+  }) async {
+    final createdAt = DateTime.now().toUtc().toIso8601String();
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('local_sales', {
+        'operation_uuid': operationUuid,
+        'scope': scope,
+        'branch_id': payload['sucursal_id'],
+        'total': total,
+        'status': 'pendiente',
+        'created_at': createdAt,
+      });
+      for (final item in details) {
+        await txn.insert('local_sale_details', {
+          'operation_uuid': operationUuid,
+          'stock_id': item['stock_inventario_id'],
+          'quantity': item['cantidad'],
+          'unit_price': item['precio_unitario'],
+          'subtotal': item['subtotal'],
+          'payload': jsonEncode(item),
+        });
+      }
+      await txn.insert('sync_queue', {
+        'operation_uuid': operationUuid,
+        'scope': scope,
+        'operation_type': 'venta_efectivo',
+        'payload_version': 1,
+        'payload': jsonEncode({
+          ...payload,
+          'snapshot': {'total': total, 'items': details}
+        }),
         'client_created_at': createdAt,
         'status': 'pendiente',
       });

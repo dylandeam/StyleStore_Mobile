@@ -81,6 +81,57 @@ class OfflineSyncService extends ChangeNotifier {
     );
   }
 
+  Future<OfflineSubmitResult> submitCashSale({
+    required Map<String, dynamic> payload,
+    required double total,
+    required List<Map<String, dynamic>> details,
+  }) async {
+    if ((payload['metodo_pago'] ?? 'efectivo').toString().toLowerCase() !=
+        'efectivo') {
+      return const OfflineSubmitResult(
+          confirmed: false,
+          queued: false,
+          operationUuid: '',
+          message: 'Sin conexión solo se permiten ventas en efectivo.');
+    }
+    final connectivity = await Connectivity().checkConnectivity();
+    if (!connectivity.contains(ConnectivityResult.none)) {
+      try {
+        final response = await _api.post(ApiConfig.ventasPresencialUrl,
+            body: payload, requireAuth: true);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return const OfflineSubmitResult(
+              confirmed: true,
+              queued: false,
+              operationUuid: '',
+              message: 'Venta confirmada.');
+        }
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        return OfflineSubmitResult(
+            confirmed: false,
+            queued: false,
+            operationUuid: '',
+            message: body['detail']?.toString() ?? 'La venta fue rechazada.');
+      } catch (_) {}
+    }
+    final operationUuid = const Uuid().v4();
+    await _database.queueCashSale(
+      operationUuid: operationUuid,
+      scope: await _storage.getOfflineScope(),
+      payload: payload,
+      total: total,
+      details: details,
+    );
+    await refreshPendingCount();
+    return OfflineSubmitResult(
+      confirmed: false,
+      queued: true,
+      operationUuid: operationUuid,
+      message:
+          'Venta cobrada y guardada provisionalmente. Se validará el stock al reconectar.',
+    );
+  }
+
   Future<void> syncPending() async {
     if (_syncing) return;
     _syncing = true;

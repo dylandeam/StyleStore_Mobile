@@ -722,6 +722,19 @@ class HomeScreen extends StatelessWidget {
                           },
                         ),
                         ListTile(
+                          leading: const Icon(Icons.payments_outlined,
+                              color: Color(0xFFF59E0B), size: 20),
+                          title: const Text('Venta de contado offline',
+                              style: TextStyle(fontSize: 14)),
+                          subtitle: const Text('Solo efectivo',
+                              style: TextStyle(fontSize: 11)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(
+                                context, AppRoutes.offlineCashSale);
+                          },
+                        ),
+                        ListTile(
                           leading: const Icon(Icons.people_alt_outlined,
                               color: Color(0xFF10B981), size: 20),
                           title: const Text('Directorio de Clientes',
