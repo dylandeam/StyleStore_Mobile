@@ -36,6 +36,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedSucursalId = 1;
   int _availableStock = 0;
   int _quantity = 1;
+  double? _selectedVariantPrice;
+  Map<String, dynamic> _selectedMeasurements = {};
 
   @override
   void initState() {
@@ -141,11 +143,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           seleccion['stock_inventario_id'] ?? seleccion['id'];
       _selectedSucursalId = seleccion['sucursal_id'] ?? 1;
       _availableStock = (seleccion['cantidad'] as num?)?.toInt() ?? 0;
+      _selectedVariantPrice = (seleccion['precio_variante'] as num?)?.toDouble();
+      _selectedMeasurements = Map<String, dynamic>.from(seleccion['medidas'] ?? const {});
       _quantity = _availableStock > 0 ? 1 : 0;
     } else {
       _selectedTallaId = null;
       _selectedStockInventarioId = null;
       _availableStock = 0;
+      _selectedVariantPrice = null;
+      _selectedMeasurements = {};
       _quantity = 0;
     }
   }
@@ -490,7 +496,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 ),
-                if (p['en_promocion'] == true && p['precio_descuento'] != null)
+                if (_selectedVariantPrice != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Bs. ${_selectedVariantPrice!.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF14263D)),
+                      ),
+                      const Text('Precio de talla', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                    ],
+                  )
+                else if (p['en_promocion'] == true && p['precio_descuento'] != null)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -861,6 +878,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   e['stock_inventario_id'] ?? e['id'];
                               _selectedSucursalId = e['sucursal_id'] ?? 1;
                               _availableStock = stock;
+                              _selectedVariantPrice = (e['precio_variante'] as num?)?.toDouble();
+                              _selectedMeasurements = Map<String, dynamic>.from(e['medidas'] ?? const {});
                               _quantity = 1;
                             });
                           },
@@ -930,6 +949,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 20),
+            ],
+
+            if (_selectedMeasurements.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderGlass),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Medidas de la prenda', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedMeasurements.entries.map((entry) => Chip(
+                        label: Text('${entry.key.replaceAll('_', ' ')}: ${entry.value} cm'),
+                        backgroundColor: AppTheme.bgSecondary,
+                        side: const BorderSide(color: AppTheme.borderGlass),
+                      )).toList(),
+                    ),
+                  ],
+                ),
+              ),
             ],
 
             // Selector de Cantidad
