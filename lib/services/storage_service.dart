@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class StorageService {
@@ -30,5 +31,18 @@ class StorageService {
   Future<bool> hasToken() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  Future<String> getOfflineScope() async {
+    final token = await getAccessToken();
+    if (token == null) return 'public';
+    try {
+      final parts = token.split('.');
+      final payload = jsonDecode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+      return 'empresa-${payload['empresa_id'] ?? 'none'}:usuario-${payload['sub'] ?? 'unknown'}';
+    } catch (_) {
+      return 'session-unknown';
+    }
   }
 }

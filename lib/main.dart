@@ -12,6 +12,7 @@ import 'services/proximamente_service.dart';
 import 'services/cart_service.dart';
 import 'services/order_service.dart';
 import 'services/storage_service.dart';
+import 'services/local_database_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,16 +26,19 @@ class StyleStoreApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final storageService = StorageService();
     final apiService = ApiService(storageService);
+    final localDatabase = LocalDatabaseService();
 
     return MultiProvider(
       providers: [
         Provider<StorageService>.value(value: storageService),
         Provider<ApiService>.value(value: apiService),
+        Provider<LocalDatabaseService>.value(value: localDatabase),
         ChangeNotifierProvider<AuthService>(
           create: (_) => AuthService(apiService, storageService),
         ),
         ChangeNotifierProvider<CatalogService>(
-          create: (_) => CatalogService(apiService),
+          create: (_) =>
+              CatalogService(apiService, localDatabase, storageService),
         ),
         ChangeNotifierProvider<ProximamenteService>(
           create: (_) => ProximamenteService(apiService),

@@ -1,0 +1,88 @@
+import 'dart:convert';
+import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
+
+class LocalDatabaseService {
+  Database? _instance;
+
+  Future<Database> get database async {
+    if (_instance != null) return _instance!;
+    _instance = await openDatabase(
+      path.join(await getDatabasesPath(), 'stylestore_offline.db'),
+      version: 1,
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+      onCreate: (db, _) async {
+        await db.execute(
+            'CREATE TABLE catalog_snapshots (scope TEXT NOT NULL, branch_key TEXT NOT NULL, payload TEXT NOT NULL, synced_at TEXT NOT NULL, PRIMARY KEY(scope, branch_key))');
+        await db.execute(
+            'CREATE TABLE authorized_branches (scope TEXT NOT NULL, server_id INTEGER NOT NULL, payload TEXT NOT NULL, synced_at TEXT NOT NULL, PRIMARY KEY(scope, server_id))');
+        await db.execute(
+            'CREATE TABLE local_clients (id INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, server_code TEXT, payload TEXT NOT NULL, UNIQUE(scope, server_code))');
+        await db.execute(
+            'CREATE TABLE local_sales (operation_uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, branch_id INTEGER NOT NULL, total REAL NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, reason TEXT)');
+        await db.execute(
+            'CREATE TABLE local_sale_details (id INTEGER PRIMARY KEY AUTOINCREMENT, operation_uuid TEXT NOT NULL, stock_id INTEGER NOT NULL, quantity INTEGER NOT NULL, unit_price REAL NOT NULL, subtotal REAL NOT NULL, payload TEXT NOT NULL, FOREIGN KEY(operation_uuid) REFERENCES local_sales(operation_uuid) ON DELETE CASCADE)');
+        await db.execute(
+            'CREATE TABLE local_reservations (operation_uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, branch_id INTEGER NOT NULL, pickup_date TEXT NOT NULL, pickup_time TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, reason TEXT)');
+        await db.execute(
+            'CREATE TABLE local_reservation_details (id INTEGER PRIMARY KEY AUTOINCREMENT, operation_uuid TEXT NOT NULL, stock_id INTEGER NOT NULL, quantity INTEGER NOT NULL, FOREIGN KEY(operation_uuid) REFERENCES local_reservations(operation_uuid) ON DELETE CASCADE)');
+        await db.execute(
+            'CREATE TABLE sync_queue (operation_uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, operation_type TEXT NOT NULL, payload_version INTEGER NOT NULL, payload TEXT NOT NULL, client_created_at TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, result_id INTEGER)');
+        await db.execute(
+            'CREATE INDEX ix_sync_queue_scope_status ON sync_queue(scope, status)');
+      },
+    );
+    return _instance!;
+  }
+
+  Future<void> saveCatalog(
+      String scope, int? branchId, List<dynamic> payload) async {
+    await (await database).insert(
+        'catalog_snapshots',
+        {
+          'scope': scope,
+          'branch_key': branchId?.toString() ?? 'all',
+          'payload': jsonEncode(payload),
+          'synced_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<({List<dynamic> payload, DateTime syncedAt})?> loadCatalog(
+      String scope, int? branchId) async {
+    final rows = await (await database).query('catalog_snapshots',
+        where: 'scope = ? AND branch_key = ?',
+        whereArgs: [scope, branchId?.toString() ?? 'all'],
+        limit: 1);
+    if (rows.isEmpty) return null;
+    return (
+      payload: jsonDecode(rows.first['payload'] as String) as List<dynamic>,
+      syncedAt: DateTime.parse(rows.first['synced_at'] as String)
+    );
+  }
+
+  Future<void> saveBranches(String scope, List<dynamic> branches) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('authorized_branches',
+          where: 'scope = ?', whereArgs: [scope]);
+      for (final item in branches.cast<Map<String, dynamic>>()) {
+        await txn.insert('authorized_branches', {
+          'scope': scope,
+          'server_id': item['id'],
+          'payload': jsonEncode(item),
+          'synced_at': DateTime.now().toUtc().toIso8601String()
+        });
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> loadBranches(String scope) async {
+    final rows = await (await database)
+        .query('authorized_branches', where: 'scope = ?', whereArgs: [scope]);
+    return rows
+        .map((row) =>
+            jsonDecode(row['payload'] as String) as Map<String, dynamic>)
+        .toList();
+  }
+}
