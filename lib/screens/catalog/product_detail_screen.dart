@@ -1026,6 +1026,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _abrirModalReserva(Map<String, dynamic> p) async {
     final api = Provider.of<ApiService>(context, listen: false);
+    final catalogService = Provider.of<CatalogService>(context, listen: false);
 
     showDialog(
       context: context,
@@ -1076,6 +1077,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     int diasReserva = 2;
     int sucursalSeleccionada = _selectedSucursalId;
+    final selectedBranch = catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
+      (branch) => branch?['id'] == sucursalSeleccionada,
+      orElse: () => null,
+    );
+    final aperturaTexto = (selectedBranch?['hora_apertura'] ?? '09:00').toString();
+    final cierreTexto = (selectedBranch?['hora_cierre'] ?? '18:00').toString();
+    final aperturaPartes = aperturaTexto.split(':');
+    final cierrePartes = cierreTexto.split(':');
+    final apertura = TimeOfDay(hour: int.tryParse(aperturaPartes[0]) ?? 9, minute: int.tryParse(aperturaPartes[1]) ?? 0);
+    final cierre = TimeOfDay(hour: int.tryParse(cierrePartes[0]) ?? 18, minute: int.tryParse(cierrePartes[1]) ?? 0);
+    TimeOfDay horaRetiro = apertura;
 
     if (!mounted) return;
     showModalBottomSheet(
@@ -1102,11 +1114,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Text('Prenda: ${p['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF14263D))),
                   const SizedBox(height: 12),
-                  const Text('Plazo de reserva (hasta 7 días):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Text('Fecha de recogida (hasta 3 días):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
-                    children: [1, 2, 3, 5, 7].map((d) {
+                    children: [1, 2, 3].map((d) {
                       final sel = diasReserva == d;
                       return ChoiceChip(
                         label: Text('$d días'),
@@ -1120,6 +1132,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Text(
                     'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
                     style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.schedule),
+                    label: Text('Hora de recogida: ${horaRetiro.format(ctx)}'),
+                    onPressed: () async {
+                      final seleccion = await showTimePicker(context: ctx, initialTime: horaRetiro);
+                      if (seleccion == null) return;
+                      final minutos = seleccion.hour * 60 + seleccion.minute;
+                      final inicio = apertura.hour * 60 + apertura.minute;
+                      final fin = cierre.hour * 60 + cierre.minute;
+                      if (minutos < inicio || minutos > fin) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Selecciona una hora entre $aperturaTexto y $cierreTexto.')),
+                          );
+                        }
+                        return;
+                      }
+                      setModalState(() => horaRetiro = seleccion);
+                    },
+                  ),
+                  Text(
+                    'Horario de atención: $aperturaTexto – $cierreTexto',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -1138,7 +1175,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         body: {
                           'sucursal_id': sucursalSeleccionada,
                           'fecha_limite': fechaLimite.toIso8601String(),
-                          'detalles': [
+                          'hora_retiro': '${horaRetiro.hour.toString().padLeft(2, '0')}:${horaRetiro.minute.toString().padLeft(2, '0')}:00',
+                          'items': [
                             {
                               'stock_inventario_id': stockId,
                               'cantidad': _quantity,
