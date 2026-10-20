@@ -65,7 +65,8 @@ class HomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0x336366F1),
                             borderRadius: BorderRadius.circular(12),
@@ -73,7 +74,8 @@ class HomeScreen extends StatelessWidget {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified_user, color: Color(0xFFA5B4FC), size: 14),
+                              Icon(Icons.verified_user,
+                                  color: Color(0xFFA5B4FC), size: 14),
                               SizedBox(width: 6),
                               Text(
                                 'Sesión Segura',
@@ -110,7 +112,8 @@ class HomeScreen extends StatelessWidget {
 
                   // Accesos Rápidos para Celular (Módulos de la Tienda - Colapsable)
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppTheme.bgCard,
@@ -119,9 +122,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: ExpansionTile(
                         initiallyExpanded: true,
-                        tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        childrenPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                        leading: const Icon(Icons.storefront, color: AppTheme.accentIndigo, size: 22),
+                        tilePadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        childrenPadding: const EdgeInsets.only(
+                            left: 20, right: 20, bottom: 20),
+                        leading: const Icon(Icons.storefront,
+                            color: AppTheme.accentIndigo, size: 22),
                         title: const Text(
                           'Secciones de la Tienda',
                           style: TextStyle(
@@ -131,7 +137,8 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         children: [
-                          const Divider(color: AppTheme.borderGlass, height: 16),
+                          const Divider(
+                              color: AppTheme.borderGlass, height: 16),
                           Row(
                             children: [
                               Expanded(
@@ -141,7 +148,9 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Catálogo',
                                   subtitle: 'Prendas y stock',
                                   color: AppTheme.accentIndigo,
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 0),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.catalog,
+                                      arguments: 0),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -153,7 +162,9 @@ class HomeScreen extends StatelessWidget {
                                   subtitle: 'Hasta 90% OFF',
                                   color: const Color(0xFFE63946),
                                   isBadge: true,
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.catalog,
+                                      arguments: 1),
                                 ),
                               ),
                             ],
@@ -168,7 +179,9 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Próximamente',
                                   subtitle: 'Alertas de estreno',
                                   color: const Color(0xFFC5A880),
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.catalog,
+                                      arguments: 3),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -179,7 +192,9 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Mi Carrito',
                                   subtitle: 'Bolsa y pagos',
                                   color: const Color(0xFFA855F7),
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 4),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.catalog,
+                                      arguments: 4),
                                 ),
                               ),
                             ],
@@ -194,7 +209,9 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Mis Pedidos',
                                   subtitle: 'Seguimiento Yango',
                                   color: const Color(0xFF10B981),
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.catalog, arguments: 5),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.catalog,
+                                      arguments: 5),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -205,7 +222,8 @@ class HomeScreen extends StatelessWidget {
                                   title: 'Vestidor Virtual',
                                   subtitle: 'Probador AR en vivo',
                                   color: const Color(0xFFC8A97E),
-                                  onTap: () => Navigator.pushNamed(context, AppRoutes.vestidorVirtual),
+                                  onTap: () => Navigator.pushNamed(
+                                      context, AppRoutes.vestidorVirtual),
                                 ),
                               ),
                             ],
@@ -218,7 +236,8 @@ class HomeScreen extends StatelessWidget {
 
                   // Account Details Card (Colapsable)
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppTheme.bgCard,
@@ -227,9 +246,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: ExpansionTile(
                         initiallyExpanded: true,
-                        tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        childrenPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                        leading: const Icon(Icons.person, color: AppTheme.accentIndigo, size: 22),
+                        tilePadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        childrenPadding: const EdgeInsets.only(
+                            left: 20, right: 20, bottom: 20),
+                        leading: const Icon(Icons.person,
+                            color: AppTheme.accentIndigo, size: 22),
                         title: const Text(
                           'Detalles del Perfil',
                           style: TextStyle(
@@ -239,10 +261,12 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         children: [
-                          const Divider(color: AppTheme.borderGlass, height: 16),
+                          const Divider(
+                              color: AppTheme.borderGlass, height: 16),
                           _buildDataRow('ID de Usuario', '#${user?.id ?? "-"}'),
                           _buildDataRow('Nombre', user?.name ?? '-'),
-                          _buildDataRow('Correo Electrónico', user?.email ?? '-'),
+                          _buildDataRow(
+                              'Correo Electrónico', user?.email ?? '-'),
                           _buildDataRow('Rol', user?.role ?? 'cliente'),
                           _buildDataRow(
                             'Estado',
@@ -255,7 +279,8 @@ class HomeScreen extends StatelessWidget {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    Navigator.pushNamed(context, AppRoutes.catalog);
+                                    Navigator.pushNamed(
+                                        context, AppRoutes.catalog);
                                   },
                                   icon: const Icon(Icons.checkroom, size: 18),
                                   label: const Text('Catálogo & Pedidos'),
@@ -271,13 +296,16 @@ class HomeScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: () {
-                                  Navigator.pushNamed(context, AppRoutes.profile);
+                                  Navigator.pushNamed(
+                                      context, AppRoutes.profile);
                                 },
-                                icon: const Icon(Icons.person_outline, size: 16),
+                                icon:
+                                    const Icon(Icons.person_outline, size: 16),
                                 label: const Text('Perfil'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppTheme.accentIndigo,
-                                  side: const BorderSide(color: AppTheme.accentIndigo),
+                                  side: const BorderSide(
+                                      color: AppTheme.accentIndigo),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -286,13 +314,15 @@ class HomeScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: () {
-                                  Navigator.pushNamed(context, AppRoutes.changePassword);
+                                  Navigator.pushNamed(
+                                      context, AppRoutes.changePassword);
                                 },
                                 icon: const Icon(Icons.lock_outline, size: 16),
                                 label: const Text('Clave'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppTheme.accentIndigo,
-                                  side: const BorderSide(color: AppTheme.accentIndigo),
+                                  side: const BorderSide(
+                                      color: AppTheme.accentIndigo),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -308,7 +338,8 @@ class HomeScreen extends StatelessWidget {
 
                   // System Information Card (Colapsable)
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppTheme.bgCard,
@@ -317,9 +348,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: const ExpansionTile(
                         initiallyExpanded: false,
-                        tilePadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        childrenPadding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                        leading: Icon(Icons.security, color: AppTheme.successGreen, size: 22),
+                        tilePadding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        childrenPadding:
+                            EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                        leading: Icon(Icons.security,
+                            color: AppTheme.successGreen, size: 22),
                         title: Text(
                           'Arquitectura y Seguridad',
                           style: TextStyle(
@@ -332,19 +366,22 @@ class HomeScreen extends StatelessWidget {
                           Divider(color: AppTheme.borderGlass, height: 16),
                           _SecurityBullet(
                             title: 'FastAPI REST Backend',
-                            subtitle: 'Conexión HTTPS y serialización rápida con Pydantic',
+                            subtitle:
+                                'Conexión HTTPS y serialización rápida con Pydantic',
                             color: AppTheme.accentIndigo,
                           ),
                           SizedBox(height: 12),
                           _SecurityBullet(
                             title: 'Tokens Cifrados',
-                            subtitle: 'Almacenamiento seguro con flutter_secure_storage',
+                            subtitle:
+                                'Almacenamiento seguro con flutter_secure_storage',
                             color: AppTheme.accentPurple,
                           ),
                           SizedBox(height: 12),
                           _SecurityBullet(
                             title: 'Gestión de Estado Centralizada',
-                            subtitle: 'Arquitectura Provider con actualización reactiva',
+                            subtitle:
+                                'Arquitectura Provider con actualización reactiva',
                             color: AppTheme.accentPink,
                           ),
                         ],
@@ -434,7 +471,8 @@ class HomeScreen extends StatelessWidget {
                   ),
                   if (isBadge)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
@@ -475,9 +513,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigationDrawer(BuildContext context, AuthService authService, dynamic user) {
+  Widget _buildNavigationDrawer(
+      BuildContext context, AuthService authService, dynamic user) {
     final role = (user?.role ?? '').toString().toLowerCase();
-    final isStaff = role.contains('admin') || role.contains('encargado') || role.contains('cajero');
+    final isStaff = role.contains('admin') ||
+        role.contains('encargado') ||
+        role.contains('cajero');
     final canManageStore = role.contains('admin') || role.contains('encargado');
 
     return Drawer(
@@ -495,16 +536,23 @@ class HomeScreen extends StatelessWidget {
                 user?.name != null && user!.name.toString().isNotEmpty
                     ? user.name.toString()[0].toUpperCase()
                     : 'U',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
               ),
             ),
             accountName: Text(
               user?.name ?? 'Usuario',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 16),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                  fontSize: 16),
             ),
             accountEmail: Text(
               '${user?.email ?? ""} • ${(user?.role ?? "cliente").toString().toUpperCase()}',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              style:
+                  const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
@@ -513,50 +561,82 @@ class HomeScreen extends StatelessWidget {
               children: [
                 // Categoria 1: CATÁLOGO Y MODA
                 Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  data: Theme.of(context)
+                      .copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     initiallyExpanded: true,
-                    leading: const Icon(Icons.style, color: AppTheme.accentIndigo),
-                    title: const Text('CATÁLOGO Y MODA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
+                    leading:
+                        const Icon(Icons.style, color: AppTheme.accentIndigo),
+                    title: const Text('CATÁLOGO Y MODA',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: 0.5)),
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.checkroom, color: AppTheme.accentIndigo, size: 20),
-                        title: const Text('Catálogo de Prendas', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.checkroom,
+                            color: AppTheme.accentIndigo, size: 20),
+                        title: const Text('Catálogo de Prendas',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 0);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 0);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.local_offer, color: Color(0xFFE63946), size: 20),
-                        title: const Text('Promociones y Descuentos', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.local_offer,
+                            color: Color(0xFFE63946), size: 20),
+                        title: const Text('Promociones y Descuentos',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 1);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 1);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.dry_cleaning, color: AppTheme.accentPurple, size: 20),
-                        title: const Text('Combinaciones de Outfits', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.diamond_outlined,
+                            color: Color(0xFF7C3AED), size: 20),
+                        title: const Text('Planes de Suscripción',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 2);
+                          Navigator.pushNamed(context, AppRoutes.plans);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.hourglass_top, color: Color(0xFFC5A880), size: 20),
-                        title: const Text('Próximamente', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.dry_cleaning,
+                            color: AppTheme.accentPurple, size: 20),
+                        title: const Text('Combinaciones de Outfits',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 3);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 2);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.camera_front, color: Color(0xFFC8A97E), size: 20),
-                        title: const Text('Vestidor Virtual AR', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.hourglass_top,
+                            color: Color(0xFFC5A880), size: 20),
+                        title: const Text('Próximamente',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.vestidorVirtual);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 3);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.camera_front,
+                            color: Color(0xFFC8A97E), size: 20),
+                        title: const Text('Vestidor Virtual AR',
+                            style: TextStyle(fontSize: 14)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(
+                              context, AppRoutes.vestidorVirtual);
                         },
                       ),
                     ],
@@ -565,26 +645,39 @@ class HomeScreen extends StatelessWidget {
 
                 // Categoria 2: COMPRAS Y PEDIDOS
                 Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  data: Theme.of(context)
+                      .copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     initiallyExpanded: true,
-                    leading: const Icon(Icons.shopping_bag_outlined, color: AppTheme.successGreen),
-                    title: const Text('COMPRAS Y PEDIDOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
+                    leading: const Icon(Icons.shopping_bag_outlined,
+                        color: AppTheme.successGreen),
+                    title: const Text('COMPRAS Y PEDIDOS',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: 0.5)),
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.shopping_cart_outlined, color: AppTheme.accentPurple, size: 20),
-                        title: const Text('Mi Carrito', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.shopping_cart_outlined,
+                            color: AppTheme.accentPurple, size: 20),
+                        title: const Text('Mi Carrito',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 4);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 4);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.receipt_long_outlined, color: AppTheme.successGreen, size: 20),
-                        title: const Text('Mis Pedidos y Reservas', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.receipt_long_outlined,
+                            color: AppTheme.successGreen, size: 20),
+                        title: const Text('Mis Pedidos y Reservas',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.catalog, arguments: 5);
+                          Navigator.pushNamed(context, AppRoutes.catalog,
+                              arguments: 5);
                         },
                       ),
                     ],
@@ -594,23 +687,34 @@ class HomeScreen extends StatelessWidget {
                 // Categoria 3: GESTIÓN DE TIENDA Y OPERACIONES (Solo Staff/Admin)
                 if (isStaff)
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       initiallyExpanded: true,
-                      leading: const Icon(Icons.admin_panel_settings, color: Color(0xFFF59E0B)),
-                      title: const Text('VENTAS Y OPERACIONES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
+                      leading: const Icon(Icons.admin_panel_settings,
+                          color: Color(0xFFF59E0B)),
+                      title: const Text('VENTAS Y OPERACIONES',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: 0.5)),
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.point_of_sale, color: AppTheme.accentIndigo, size: 20),
-                          title: const Text('Gestión de Ventas & POS', style: TextStyle(fontSize: 14)),
+                          leading: const Icon(Icons.point_of_sale,
+                              color: AppTheme.accentIndigo, size: 20),
+                          title: const Text('Gestión de Ventas & POS',
+                              style: TextStyle(fontSize: 14)),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.pushNamed(context, AppRoutes.catalog);
                           },
                         ),
                         ListTile(
-                          leading: const Icon(Icons.people_alt_outlined, color: Color(0xFF10B981), size: 20),
-                          title: const Text('Directorio de Clientes', style: TextStyle(fontSize: 14)),
+                          leading: const Icon(Icons.people_alt_outlined,
+                              color: Color(0xFF10B981), size: 20),
+                          title: const Text('Directorio de Clientes',
+                              style: TextStyle(fontSize: 14)),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.pushNamed(context, AppRoutes.profile);
@@ -618,8 +722,10 @@ class HomeScreen extends StatelessWidget {
                         ),
                         if (canManageStore)
                           ListTile(
-                            leading: const Icon(Icons.badge_outlined, color: Color(0xFF8B5CF6), size: 20),
-                            title: const Text('Empleados & Permisos', style: TextStyle(fontSize: 14)),
+                            leading: const Icon(Icons.badge_outlined,
+                                color: Color(0xFF8B5CF6), size: 20),
+                            title: const Text('Empleados & Permisos',
+                                style: TextStyle(fontSize: 14)),
                             onTap: () {
                               Navigator.pop(context);
                               Navigator.pushNamed(context, AppRoutes.profile);
@@ -631,26 +737,38 @@ class HomeScreen extends StatelessWidget {
 
                 // Categoria 4: MI CUENTA Y SEGURIDAD
                 Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  data: Theme.of(context)
+                      .copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     initiallyExpanded: false,
-                    leading: const Icon(Icons.person_outline, color: AppTheme.accentPink),
-                    title: const Text('MI CUENTA Y SEGURIDAD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary, letterSpacing: 0.5)),
+                    leading: const Icon(Icons.person_outline,
+                        color: AppTheme.accentPink),
+                    title: const Text('MI CUENTA Y SEGURIDAD',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: 0.5)),
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.person, color: AppTheme.accentIndigo, size: 20),
-                        title: const Text('Mi Perfil', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.person,
+                            color: AppTheme.accentIndigo, size: 20),
+                        title: const Text('Mi Perfil',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, AppRoutes.profile);
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.lock_outline, color: AppTheme.accentPink, size: 20),
-                        title: const Text('Cambiar Contraseña', style: TextStyle(fontSize: 14)),
+                        leading: const Icon(Icons.lock_outline,
+                            color: AppTheme.accentPink, size: 20),
+                        title: const Text('Cambiar Contraseña',
+                            style: TextStyle(fontSize: 14)),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, AppRoutes.changePassword);
+                          Navigator.pushNamed(
+                              context, AppRoutes.changePassword);
                         },
                       ),
                     ],
@@ -662,7 +780,9 @@ class HomeScreen extends StatelessWidget {
           const Divider(color: AppTheme.borderGlass),
           ListTile(
             leading: const Icon(Icons.logout, color: AppTheme.dangerRed),
-            title: const Text('Cerrar Sesión', style: TextStyle(color: AppTheme.dangerRed, fontWeight: FontWeight.bold)),
+            title: const Text('Cerrar Sesión',
+                style: TextStyle(
+                    color: AppTheme.dangerRed, fontWeight: FontWeight.bold)),
             onTap: () async {
               Navigator.pop(context);
               await authService.logout();

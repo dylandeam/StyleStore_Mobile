@@ -6,6 +6,7 @@ import '../screens/account/change_password_screen.dart';
 import '../screens/account/profile_screen.dart';
 import '../screens/catalog/catalog_screen.dart';
 import '../screens/catalog/vestidor_virtual_screen.dart';
+import '../screens/plans/plans_screen.dart';
 import '../models/producto.dart';
 
 class AppRoutes {
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String catalog = '/catalog';
   static const String vestidorVirtual = '/vestidor-virtual';
+  static const String plans = '/plans';
 
   static Map<String, WidgetBuilder> get routes => {
         login: (context) => const LoginScreen(),
@@ -33,5 +35,6 @@ class AppRoutes {
           final prod = (args is Producto) ? args : null;
           return VestidorVirtualScreen(initialProduct: prod);
         },
+        plans: (context) => const PlansScreen(),
       };
 }
