@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../models/producto.dart';
@@ -21,31 +19,14 @@ class ProbadorFotoScreen extends StatefulWidget {
 
 class _ProbadorFotoScreenState extends State<ProbadorFotoScreen> {
   Producto? _selectedProduct;
-  File? _userPhoto;
   bool _isProcessing = false;
   String? _resultImageUrl;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialProduct != null) {
       _selectedProduct = widget.initialProduct;
-    }
-  }
-
-  Future<void> _pickPhoto() async {
-    // En mobile permite seleccionar o simular la carga de foto de cuerpo completo
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('⚠️ Se requiere permiso de cámara/galería.'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
-        );
-      }
     }
   }
 
@@ -62,7 +43,6 @@ class _ProbadorFotoScreenState extends State<ProbadorFotoScreen> {
 
     setState(() {
       _isProcessing = true;
-      _errorMessage = null;
     });
 
     final apiService = Provider.of<ApiService>(context, listen: false);
@@ -137,7 +117,7 @@ class _ProbadorFotoScreenState extends State<ProbadorFotoScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFC8A97E).withOpacity(0.4)),
+                  border: Border.all(color: const Color(0xFFC8A97E).withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [

@@ -108,7 +108,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Mensaje de bienvenida inicial
     _messages.add(
       ChatMessage(
-        text: '¡Hola! 👋 Soy tu Asesor de Moda e Imagen con Inteligencia Artificial de StyleStore.\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme sobre combinaciones de prendas, sucursales, o pedirme que agregue ropa a tu bolsa de compra.',
+        text:
+            '¡Hola! 👋 Soy tu Asesor de Moda e Imagen con Inteligencia Artificial de StyleStore.\n\n¿En qué puedo ayudarte hoy? Puedes preguntarme sobre combinaciones de prendas, sucursales, o pedirme que agregue ropa a tu bolsa de compra.',
         isUser: false,
         time: DateTime.now(),
         isIa: true,
@@ -168,9 +169,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final respText = data['respuesta'] ?? 'Entendido.';
-        final chipsList = (data['chips'] as List<dynamic>?)
-            ?.map((e) => e as Map<String, dynamic>)
-            .toList();
+        final chipsList = (data['chips'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList();
 
         if (mounted) {
           setState(() {
@@ -304,16 +303,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
           // 2. INDICADOR DE ESCRIBIENDO
           if (_isTyping)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: Row(
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentIndigo),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Asistente IA pensando...',
                     style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
@@ -335,7 +334,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 return ActionChip(
                   label: Text(sug, style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
                   backgroundColor: AppTheme.bgSecondary,
-                  side: BorderSide(color: AppTheme.accentIndigo.withOpacity(0.3)),
+                  side: BorderSide(color: AppTheme.accentIndigo.withValues(alpha: 0.3)),
                   onPressed: () => _sendMessage(sug),
                 );
               },
@@ -481,7 +480,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         color: isAddCart ? Colors.white : AppTheme.accentIndigo,
                       ),
                     ),
-                    backgroundColor: isAddCart ? const Color(0xFF10B981) : AppTheme.accentIndigo.withOpacity(0.15),
+                    backgroundColor: isAddCart ? const Color(0xFF10B981) : AppTheme.accentIndigo.withValues(alpha: 0.15),
                     side: BorderSide(
                       color: isAddCart ? const Color(0xFF10B981) : AppTheme.accentIndigo,
                     ),

@@ -190,18 +190,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           child: catalogService.isLoading
               ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
               : promos.isEmpty
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.local_offer_outlined, color: Colors.grey, size: 54),
-                          const SizedBox(height: 12),
-                          const Text(
+                          Icon(Icons.local_offer_outlined, color: Colors.grey, size: 54),
+                          SizedBox(height: 12),
+                          Text(
                             'No hay promociones activas en este momento',
                             style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
+                          SizedBox(height: 4),
+                          Text(
                             'Visita el catálogo general para explorar todas nuestras prendas.',
                             style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                           ),
@@ -230,12 +230,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     if (searchQuery.trim().isEmpty) return true;
 
     final queryNorm = searchQuery.trim().toLowerCase();
-    
+
     // Exact string match fast path
     if (p.nombre.toLowerCase().contains(queryNorm) ||
         p.codigo.toLowerCase().contains(queryNorm) ||
         (p.categoriaNombre ?? '').toLowerCase().contains(queryNorm) ||
-        (p.tipoPrenda ?? '').toLowerCase().contains(queryNorm) ||
+        p.tipoPrenda.toLowerCase().contains(queryNorm) ||
         (p.descripcion ?? '').toLowerCase().contains(queryNorm)) {
       return true;
     }
@@ -248,7 +248,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       } else if (word.endsWith('s')) {
         word = word.substring(0, word.length - 1);
       }
-      
+
       if (word == 'blanca' || word == 'blanco') return 'blanc';
       if (word == 'roja' || word == 'rojo') return 'roj';
       if (word == 'negra' || word == 'negro') return 'negr';
@@ -265,7 +265,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       p.nombre.toLowerCase(),
       p.codigo.toLowerCase(),
       (p.categoriaNombre ?? '').toLowerCase(),
-      (p.tipoPrenda ?? '').toLowerCase(),
+      p.tipoPrenda.toLowerCase(),
       (p.descripcion ?? '').toLowerCase(),
       ...p.colores.map((c) => c.toLowerCase()),
     ];
@@ -836,7 +836,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -932,12 +931,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    if (p.coleccionNombre != null)
-                      _buildTag('🧵 ${p.coleccionNombre}', Colors.indigoAccent),
-                    if (p.categoriaNombre != null)
-                      _buildTag('📁 ${p.categoriaNombre}', Colors.blueGrey),
-                    if (p.temporadaNombre != null)
-                      _buildTag('🗓️ ${p.temporadaNombre}', Colors.orangeAccent),
+                    if (p.coleccionNombre != null) _buildTag('🧵 ${p.coleccionNombre}', Colors.indigoAccent),
+                    if (p.categoriaNombre != null) _buildTag('📁 ${p.categoriaNombre}', Colors.blueGrey),
+                    if (p.temporadaNombre != null) _buildTag('🗓️ ${p.temporadaNombre}', Colors.orangeAccent),
                     _buildTag(
                       '📦 ${p.stockTotal} uds.',
                       p.stockTotal > 0 ? AppTheme.successGreen : AppTheme.dangerRed,
@@ -968,9 +964,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: p.stockTotal <= 0
-                            ? null
-                            : () => _handleAddToCart(p),
+                        onPressed: p.stockTotal <= 0 ? null : () => _handleAddToCart(p),
                         icon: const Icon(Icons.shopping_cart_outlined, size: 16),
                         label: const Text('Al Carrito'),
                         style: ElevatedButton.styleFrom(
@@ -984,9 +978,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: p.stockTotal <= 0
-                            ? null
-                            : () => _handleReserveProduct(p),
+                        onPressed: p.stockTotal <= 0 ? null : () => _handleReserveProduct(p),
                         icon: const Icon(Icons.bookmark_border, size: 16),
                         label: const Text('Reservar (48h)'),
                         style: OutlinedButton.styleFrom(
@@ -1302,12 +1294,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (item.categoriaNombre != null)
-                            _buildTag(item.categoriaNombre!, const Color(0xFF6366F1)),
-                          if (item.coleccionNombre != null)
-                            _buildTag('🧵 ${item.coleccionNombre}', const Color(0xFFC5A880)),
-                          if (item.temporadaNombre != null)
-                            _buildTag('🍂 ${item.temporadaNombre}', const Color(0xFFA855F7)),
+                          if (item.categoriaNombre != null) _buildTag(item.categoriaNombre!, const Color(0xFF6366F1)),
+                          if (item.coleccionNombre != null) _buildTag('🧵 ${item.coleccionNombre}', const Color(0xFFC5A880)),
+                          if (item.temporadaNombre != null) _buildTag('🍂 ${item.temporadaNombre}', const Color(0xFFA855F7)),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -1366,9 +1355,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             color: isSubscribed ? AppTheme.successGreen : Colors.white,
                           ),
                           label: Text(
-                            isSubscribed
-                                ? '✓ Notificación Activada (Cancelar)'
-                                : '🔔 Avisarme cuando esté disponible',
+                            isSubscribed ? '✓ Notificación Activada (Cancelar)' : '🔔 Avisarme cuando esté disponible',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1376,9 +1363,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isSubscribed
-                                ? const Color(0x2610B981)
-                                : AppTheme.accentIndigo,
+                            backgroundColor: isSubscribed ? const Color(0x2610B981) : AppTheme.accentIndigo,
                             foregroundColor: Colors.white,
                             elevation: isSubscribed ? 0 : 2,
                             side: BorderSide(
@@ -1509,7 +1494,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   ],
                 ),
                 const SizedBox(height: 20),
-
                 ElevatedButton.icon(
                   onPressed: () => _showCheckoutModal(cartService),
                   icon: const Icon(Icons.payment),
@@ -1596,11 +1580,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     );
                   }
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.delete_outline, color: AppTheme.dangerRed, size: 18),
                       SizedBox(width: 2),
                       Text(
@@ -1625,13 +1609,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       final candidates = [str, input.trim()];
       for (final t in candidates) {
         final m1 = RegExp(r'@(-?\d+\.\d+),(-?\d+\.\d+)').firstMatch(t);
-        if (m1 != null) return {'lat': double.parse(m1.group(1)!), 'lon': double.parse(m1.group(2)!)};
+        if (m1 != null) {
+          return {'lat': double.parse(m1.group(1)!), 'lon': double.parse(m1.group(2)!)};
+        }
 
         final mEmbed = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(t);
-        if (mEmbed != null) return {'lat': double.parse(mEmbed.group(1)!), 'lon': double.parse(mEmbed.group(2)!)};
+        if (mEmbed != null) {
+          return {'lat': double.parse(mEmbed.group(1)!), 'lon': double.parse(mEmbed.group(2)!)};
+        }
 
         final m2 = RegExp(r'[?&](?:q|ll|sll|query|center|daddr|destination|saddr)=(?:loc:)?(-?\d+\.\d+),(-?\d+\.\d+)', caseSensitive: false).firstMatch(t);
-        if (m2 != null) return {'lat': double.parse(m2.group(1)!), 'lon': double.parse(m2.group(2)!)};
+        if (m2 != null) {
+          return {'lat': double.parse(m2.group(1)!), 'lon': double.parse(m2.group(2)!)};
+        }
 
         final m3 = RegExp(r'(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})').firstMatch(t);
         if (m3 != null) {
@@ -1646,6 +1636,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     return null;
   }
 
+  // Kept only for staff QR configuration compatibility; online checkout does
+  // not expose QR payments.
+  // ignore: unused_element
   void _showQrStoreModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1902,8 +1895,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     final branchName = (cartService.items.isNotEmpty && cartService.items.first.sucursalNombre != null)
         ? cartService.items.first.sucursalNombre!
         : (branch != null ? (branch['nombre'] ?? branch['name'] ?? 'Sucursal Central') : 'Sucursal StyleStore');
-    final branchMapsUrl = (cartService.items.isNotEmpty ? cartService.items.first.sucursalMapsUrl : null) ??
-        (branch != null ? (branch['maps_url'] ?? branch['ubicacion_url']) : null);
+    final branchMapsUrl = (cartService.items.isNotEmpty ? cartService.items.first.sucursalMapsUrl : null) ?? (branch != null ? (branch['maps_url'] ?? branch['ubicacion_url']) : null);
 
     showModalBottomSheet(
       context: context,
@@ -2138,7 +2130,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                               children: [
                                 Text('PayPal v2 (Tarjeta o Saldo Digital)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                                 SizedBox(height: 2),
-                                Text('Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                Text('Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.',
+                                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
                               ],
                             ),
                           ),
@@ -2159,9 +2152,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         }
 
                         Navigator.pop(ctx);
-                        final direccionCompleta = mapsUrl.isNotEmpty
-                            ? (address.isNotEmpty ? '$address | Maps: $mapsUrl' : mapsUrl)
-                            : address;
+                        final direccionCompleta = mapsUrl.isNotEmpty ? (address.isNotEmpty ? '$address | Maps: $mapsUrl' : mapsUrl) : address;
 
                         // Extraer coordenadas GPS del enlace si existen
                         double? latDestino;
@@ -2234,7 +2225,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               )
             else
               ...orderService.orders.map((o) => _buildOrderCard(o, orderService)),
-
             const SizedBox(height: 20),
             const Text('🔖 Mis Reservas Activas (48h)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 10),
@@ -2478,10 +2468,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             ),
 
           // Botón de Garantía: Solicitar Cambio / Devolución (v6 Punto 9)
-          if ((order.estado.toLowerCase() == 'pagada' ||
-               order.estado.toLowerCase() == 'pagado' ||
-               order.estado.toLowerCase() == 'entregado' ||
-               order.estado.toLowerCase() == 'completada') &&
+          if ((order.estado.toLowerCase() == 'pagada' || order.estado.toLowerCase() == 'pagado' || order.estado.toLowerCase() == 'entregado' || order.estado.toLowerCase() == 'completada') &&
               DateTime.now().difference(order.createdAt).inDays <= 7)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
@@ -2553,7 +2540,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const SizedBox(height: 4),
                     Text('Orden: ${order.codigo}', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                     const SizedBox(height: 14),
-
                     const Text('Prenda a cambiar/devolver:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<int>(
@@ -2571,11 +2557,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setModalState(() => selectedDetalleId = val);
+                        if (val != null) {
+                          setModalState(() => selectedDetalleId = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 12),
-
                     const Text('Tipo de Solicitud:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     Row(
@@ -2600,7 +2587,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       ],
                     ),
                     const SizedBox(height: 12),
-
                     const Text('Motivo:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
@@ -2622,7 +2608,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       },
                     ),
                     const SizedBox(height: 12),
-
                     TextField(
                       controller: descCtrl,
                       maxLines: 2,
@@ -2634,7 +2619,6 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
@@ -2979,7 +2963,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       }
     } catch (_) {}
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     final emailCtrl = TextEditingController(text: 'comprador.sandbox@stylestore.com');
     final passwordCtrl = TextEditingController(text: 'SandboxPass2026!');
@@ -3209,6 +3193,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                                   requireAuth: true,
                                 );
 
+                                if (!bCtx.mounted || !context.mounted) return;
+
                                 if (capRes.statusCode == 200 || capRes.statusCode == 201) {
                                   Navigator.pop(bCtx);
                                   if (mounted) {
@@ -3239,6 +3225,7 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                                   });
                                 }
                               } catch (e) {
+                                if (!bCtx.mounted) return;
                                 setBState(() {
                                   procesando = false;
                                   errorMsg = 'Error al procesar el pago con PayPal Sandbox: $e';
@@ -3262,8 +3249,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const SizedBox(height: 14),
 
                     // Separador
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Expanded(child: Divider()),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
@@ -3294,9 +3281,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const SizedBox(height: 16),
 
                     // Footer
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text('🔒 Entorno Seguro PayPal Sandbox API v2', style: TextStyle(fontSize: 10, color: Colors.grey)),
                         Text('Documentación Sandbox', style: TextStyle(fontSize: 10, color: Color(0xFF0070BA), fontWeight: FontWeight.bold)),
                       ],

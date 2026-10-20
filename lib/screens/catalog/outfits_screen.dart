@@ -196,13 +196,15 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
         final createPayload = {
           'nombre': outfit['nombre'] ?? 'Outfit StyleStore',
           'descripcion': outfit['descripcion'],
-          'items': items.map((it) => {
-            'producto_codigo': it['producto_codigo'] ?? '',
-            'tipo_prenda': it['tipo_prenda'] ?? 'superior',
-            'posicion_x': it['posicion_x'] ?? 50.0,
-            'posicion_y': it['posicion_y'] ?? 50.0,
-            'orden_capa': it['orden_capa'] ?? 1,
-          }).toList(),
+          'items': items
+              .map((it) => {
+                    'producto_codigo': it['producto_codigo'] ?? '',
+                    'tipo_prenda': it['tipo_prenda'] ?? 'superior',
+                    'posicion_x': it['posicion_x'] ?? 50.0,
+                    'posicion_y': it['posicion_y'] ?? 50.0,
+                    'orden_capa': it['orden_capa'] ?? 1,
+                  })
+              .toList(),
         };
         final resCreate = await apiService.post(ApiConfig.outfitsUrl, body: createPayload, requireAuth: true);
         if (resCreate.statusCode == 200 || resCreate.statusCode == 201) {
@@ -241,7 +243,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.add_circle_outline, color: AppTheme.accentGold),
+            icon: const Icon(Icons.add_circle_outline, color: AppTheme.accentGold),
             tooltip: 'Crear Outfit Personalizado',
             onPressed: () => _showCreateOutfitModal(context),
           ),
@@ -338,7 +340,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFC5A880).withOpacity(0.15),
+                    color: const Color(0xFFC5A880).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFC5A880)),
                   ),
@@ -383,7 +385,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentIndigo.withOpacity(0.1),
+                            color: AppTheme.accentIndigo.withValues(alpha: 0.1),
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                           ),
                           child: Text(
@@ -469,7 +471,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
     }
 
     if (catalog.isEmpty) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ No se encontraron prendas en el catálogo.'),
@@ -479,12 +481,13 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       return;
     }
 
-    final nameCtrl = TextEditingController(text: 'Mi Outfit Estilo ' + (DateTime.now().minute % 100).toString());
+    final nameCtrl = TextEditingController(text: 'Mi Outfit Estilo ${DateTime.now().minute % 100}');
     final descCtrl = TextEditingController(text: 'Combinación personalizada creada desde StyleStore App');
     final List<Producto> selectedProds = [];
     bool isSaving = false;
 
-    if (!mounted) return;
+    if (!context.mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -539,7 +542,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                       style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         labelText: 'Nombre del Outfit',
-                        labelStyle: TextStyle(color: AppTheme.accentGold),
+                        labelStyle: const TextStyle(color: AppTheme.accentGold),
                         filled: true,
                         fillColor: AppTheme.bgPrimary,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -568,13 +571,13 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentGold.withOpacity(0.15),
+                            color: AppTheme.accentGold.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppTheme.accentGold),
                           ),
                           child: Text(
                             'Total: Bs ${currentTotal.toStringAsFixed(2)}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppTheme.accentGold,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
@@ -593,7 +596,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                           final foto = ApiConfig.resolveImageUrl(prod.foto);
 
                           return Card(
-                            color: isSelected ? AppTheme.accentIndigo.withOpacity(0.2) : AppTheme.bgPrimary,
+                            color: isSelected ? AppTheme.accentIndigo.withValues(alpha: 0.2) : AppTheme.bgPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
@@ -622,7 +625,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                               ),
                               subtitle: Text(
                                 '${prod.tipoPrenda.toUpperCase()} • Bs ${prod.precio.toStringAsFixed(2)}',
-                                style: TextStyle(fontSize: 11, color: AppTheme.accentGold),
+                                style: const TextStyle(fontSize: 11, color: AppTheme.accentGold),
                               ),
                               trailing: Checkbox(
                                 value: isSelected,
@@ -653,13 +656,15 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                 final payload = {
                                   'nombre': nameCtrl.text.trim().isEmpty ? 'Mi Outfit Personalizado' : nameCtrl.text.trim(),
                                   'descripcion': descCtrl.text.trim(),
-                                  'items': selectedProds.map((p) => {
-                                    'producto_codigo': p.codigo,
-                                    'tipo_prenda': p.tipoPrenda,
-                                    'posicion_x': 50.0,
-                                    'posicion_y': 50.0,
-                                    'orden_capa': 1,
-                                  }).toList(),
+                                  'items': selectedProds
+                                      .map((p) => {
+                                            'producto_codigo': p.codigo,
+                                            'tipo_prenda': p.tipoPrenda,
+                                            'posicion_x': 50.0,
+                                            'posicion_y': 50.0,
+                                            'orden_capa': 1,
+                                          })
+                                      .toList(),
                                 };
 
                                 try {
@@ -669,10 +674,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                     requireAuth: true,
                                   );
 
-                                  if (ctx.mounted) {
+                                  if (ctx.mounted && mounted) {
                                     Navigator.pop(ctx);
                                     if (res.statusCode == 200 || res.statusCode == 201) {
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                      scaffoldMessenger.showSnackBar(
                                         const SnackBar(
                                           content: Text('✨ ¡Outfit guardado exitosamente!'),
                                           backgroundColor: AppTheme.successGreen,
@@ -680,7 +685,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                       );
                                       _fetchOutfits();
                                     } else {
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                      scaffoldMessenger.showSnackBar(
                                         const SnackBar(
                                           content: Text('⚠️ Se guardó el outfit localmente en tu sesión.'),
                                           backgroundColor: AppTheme.accentIndigo,
@@ -692,21 +697,23 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                           'nombre': payload['nombre'],
                                           'descripcion': payload['descripcion'],
                                           'total': currentTotal,
-                                          'items': selectedProds.map((p) => {
-                                            'producto_codigo': p.codigo,
-                                            'producto_nombre': p.nombre,
-                                            'tipo_prenda': p.tipoPrenda,
-                                            'foto_url': p.foto,
-                                            'precio': p.precio,
-                                          }).toList(),
+                                          'items': selectedProds
+                                              .map((p) => {
+                                                    'producto_codigo': p.codigo,
+                                                    'producto_nombre': p.nombre,
+                                                    'tipo_prenda': p.tipoPrenda,
+                                                    'foto_url': p.foto,
+                                                    'precio': p.precio,
+                                                  })
+                                              .toList(),
                                         });
                                       });
                                     }
                                   }
                                 } catch (_) {
-                                  if (ctx.mounted) {
+                                  if (ctx.mounted && mounted) {
                                     Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                    scaffoldMessenger.showSnackBar(
                                       const SnackBar(
                                         content: Text('✨ Outfit añadido a tus combinaciones.'),
                                         backgroundColor: AppTheme.successGreen,
@@ -715,9 +722,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                   }
                                 }
                               },
-                        icon: isSaving
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.save_outlined),
+                        icon: isSaving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
                         label: Text(
                           isSaving ? 'Guardando...' : 'Guardar Outfit (${selectedProds.length} prendas)',
                           style: const TextStyle(fontWeight: FontWeight.bold),

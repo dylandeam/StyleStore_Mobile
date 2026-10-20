@@ -21,8 +21,7 @@ class DeliveryTrackingScreen extends StatefulWidget {
   State<DeliveryTrackingScreen> createState() => _DeliveryTrackingScreenState();
 }
 
-class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
-    with SingleTickerProviderStateMixin {
+class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> with SingleTickerProviderStateMixin {
   Timer? _timer;
   bool _isLoading = true;
   String? _errorMessage;
@@ -214,14 +213,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  statusColor.withOpacity(0.12),
-                  const Color(0xFF14263D).withOpacity(0.05),
+                  statusColor.withValues(alpha: 0.12),
+                  const Color(0xFF14263D).withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: statusColor.withOpacity(0.3)),
+              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -229,7 +228,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -254,9 +253,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        estado == 'entregado'
-                            ? 'Tu pedido ya fue entregado con éxito.'
-                            : 'Tiempo estimado de llegada: ~$minEst min',
+                        estado == 'entregado' ? 'Tu pedido ya fue entregado con éxito.' : 'Tiempo estimado de llegada: ~$minEst min',
                         style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ],
@@ -291,7 +288,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -357,7 +354,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
                                 height: 44 + (_pulseController.value * 16),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.amber.withOpacity(0.25 * (1 - _pulseController.value)),
+                                  color: Colors.amber.withValues(alpha: 0.25 * (1 - _pulseController.value)),
                                 ),
                               ),
                               Container(
@@ -367,7 +364,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
+                                      color: Colors.black.withValues(alpha: 0.3),
                                       blurRadius: 6,
                                     ),
                                   ],
@@ -401,7 +398,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
+                        color: Colors.black.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -540,7 +537,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withOpacity(0.9),
+        color: const Color(0xFF1E293B).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isOrigin ? const Color(0xFF38BDF8) : const Color(0xFF10B981),
@@ -628,7 +625,7 @@ class _GridBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF334155).withOpacity(0.2)
+      ..color = const Color(0xFF334155).withValues(alpha: 0.2)
       ..strokeWidth = 1.0;
 
     const step = 25.0;
