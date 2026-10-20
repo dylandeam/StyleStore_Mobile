@@ -1,13 +1,17 @@
 class ApiConfig {
-  /// Base API URL - default set to local network IP for physical device testing
-  static String baseUrl = 'http://192.168.0.17:8000/api/v1';
+  static const String productionBaseUrl =
+      'https://web-production-07e73.up.railway.app/api/v1';
+
+  /// La nube es el destino estable; las direcciones locales quedan como respaldo
+  /// para desarrollo y emuladores.
+  static String baseUrl = productionBaseUrl;
 
   /// Candidate URLs to attempt connection if default fails
   static List<String> get candidateUrls => [
+        productionBaseUrl,
         'http://192.168.0.17:8000/api/v1',
         'http://10.0.2.2:8000/api/v1',
         'http://localhost:8000/api/v1',
-        'https://stylestorebackend-production.up.railway.app/api/v1',
       ];
 
   /// Resolves relative image paths to full HTTP URLs using active baseUrl
@@ -23,7 +27,7 @@ class ApiConfig {
           '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
       return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
     } catch (_) {
-      return 'http://192.168.0.17:8000${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
+      return 'https://web-production-07e73.up.railway.app${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
     }
   }
 

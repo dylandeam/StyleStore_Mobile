@@ -574,6 +574,30 @@ class _CatalogScreenState extends State<CatalogScreen>
             ],
           ),
         ),
+        if (catalogService.usingOfflineData)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7E6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF59E0B)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_off, color: Color(0xFFB7791F)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Catálogo guardado. Stock provisional. Última sincronización: ${catalogService.lastSync?.toLocal().toString().substring(0, 16) ?? 'sin fecha'}.',
+                    style:
+                        const TextStyle(color: Color(0xFF7C4A03), fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(
           child: catalogService.isLoading
               ? const Center(
@@ -599,10 +623,23 @@ class _CatalogScreenState extends State<CatalogScreen>
                       ),
                     )
                   : catalogService.productos.isEmpty
-                      ? const Center(
-                          child: Text(
-                              'No hay productos disponibles para esta sucursal.',
-                              style: TextStyle(color: AppTheme.textSecondary)))
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'No hay productos disponibles para esta sucursal.',
+                                style: TextStyle(color: AppTheme.textSecondary),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => catalogService.fetchCatalog(),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Actualizar catálogo'),
+                              ),
+                            ],
+                          ),
+                        )
                       : RefreshIndicator(
                           onRefresh: () async {
                             await catalogService.fetchCatalog();
