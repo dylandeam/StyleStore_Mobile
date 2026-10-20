@@ -16,6 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _apellidoController = TextEditingController();
   final _emailController = TextEditingController();
+  final _empresaController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -24,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _apellidoController.dispose();
     _emailController.dispose();
+    _empresaController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -37,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       apellido: _apellidoController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
+      empresaCodigo: _empresaController.text,
     );
 
     if (success && mounted) {
@@ -148,6 +151,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 28),
+
+                    TextFormField(
+                      controller: _empresaController,
+                      textCapitalization: TextCapitalization.none,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Código de empresa (opcional)',
+                        prefixIcon: Icon(Icons.business_outlined, color: AppTheme.textMuted),
+                        hintText: 'Déjalo vacío si usas StyleStore',
+                      ),
+                      validator: (value) {
+                        final code = value?.trim() ?? '';
+                        if (code.isNotEmpty && !RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(code)) {
+                          return 'Usa letras, números, guion o guion bajo';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
                     // Error message
                     if (authService.errorMessage != null) ...[

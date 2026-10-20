@@ -1,5 +1,6 @@
 class User {
   final int id;
+  final int? empresaId;
   final String email;
   final String name;
   final String? apellido;
@@ -9,10 +10,12 @@ class User {
   final String? foto;
   final String role;
   final bool isActive;
+  final bool isPlatformAdmin;
   final DateTime createdAt;
 
   User({
     required this.id,
+    this.empresaId,
     required this.email,
     required this.name,
     this.apellido,
@@ -22,12 +25,14 @@ class User {
     this.foto,
     this.role = 'cliente',
     required this.isActive,
+    this.isPlatformAdmin = false,
     required this.createdAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as int,
+      empresaId: json['empresa_id'] as int?,
       email: json['email'] as String,
       name: (json['name'] ?? json['nombre'] ?? '') as String,
       apellido: json['apellido'] as String?,
@@ -37,15 +42,15 @@ class User {
       foto: json['foto'] as String?,
       role: json['role'] as String? ?? 'cliente',
       isActive: json['is_active'] as bool? ?? true,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+      isPlatformAdmin: json['is_platform_admin'] as bool? ?? false,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'empresa_id': empresaId,
       'email': email,
       'name': name,
       'apellido': apellido,
@@ -55,6 +60,7 @@ class User {
       'foto': foto,
       'role': role,
       'is_active': isActive,
+      'is_platform_admin': isPlatformAdmin,
       'created_at': createdAt.toIso8601String(),
     };
   }

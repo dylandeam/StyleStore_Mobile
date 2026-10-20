@@ -47,6 +47,7 @@ class AuthService extends ChangeNotifier {
     String? apellido,
     required String email,
     required String password,
+    String? empresaCodigo,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -60,6 +61,9 @@ class AuthService extends ChangeNotifier {
       };
       if (apellido != null && apellido.trim().isNotEmpty) {
         body['apellido'] = apellido.trim();
+      }
+      if (empresaCodigo != null && empresaCodigo.trim().isNotEmpty) {
+        body['empresa_codigo'] = empresaCodigo.trim().toLowerCase();
       }
 
       final response = await _apiService.post(
