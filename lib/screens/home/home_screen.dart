@@ -680,6 +680,17 @@ class HomeScreen extends StatelessWidget {
                               arguments: 5);
                         },
                       ),
+                      ListTile(
+                        leading: const Icon(Icons.cloud_sync_outlined,
+                            color: Color(0xFFF59E0B), size: 20),
+                        title: const Text('Operaciones sin conexión',
+                            style: TextStyle(fontSize: 14)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(
+                              context, AppRoutes.offlineOperations);
+                        },
+                      ),
                     ],
                   ),
                 ),

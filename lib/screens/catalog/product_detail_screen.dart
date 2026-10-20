@@ -9,6 +9,7 @@ import '../../models/producto.dart';
 import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/catalog_service.dart';
+import '../../services/offline_sync_service.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String codigo;
@@ -66,7 +67,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
 
       if (resDetalle.statusCode == 200) {
-        final prodData = jsonDecode(utf8.decode(resDetalle.bodyBytes)) as Map<String, dynamic>;
+        final prodData = jsonDecode(utf8.decode(resDetalle.bodyBytes))
+            as Map<String, dynamic>;
         List<dynamic> recData = [];
         if (resRec.statusCode == 200) {
           final recJson = jsonDecode(utf8.decode(resRec.bodyBytes));
@@ -95,7 +97,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = 'No se pudo cargar la prenda (${resDetalle.statusCode}).';
+            _errorMessage =
+                'No se pudo cargar la prenda (${resDetalle.statusCode}).';
             _isLoading = false;
           });
         }
@@ -117,11 +120,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (_filtroSucursalId != null) {
         try {
           seleccion = existencias.firstWhere(
-            (e) => e['sucursal_id'] == _filtroSucursalId && ((e['cantidad'] as num?)?.toInt() ?? 0) > 0,
+            (e) =>
+                e['sucursal_id'] == _filtroSucursalId &&
+                ((e['cantidad'] as num?)?.toInt() ?? 0) > 0,
           );
         } catch (_) {
           try {
-            seleccion = existencias.firstWhere((e) => e['sucursal_id'] == _filtroSucursalId);
+            seleccion = existencias
+                .firstWhere((e) => e['sucursal_id'] == _filtroSucursalId);
           } catch (_) {
             seleccion = existencias.first;
           }
@@ -131,7 +137,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       }
 
       _selectedTallaId = seleccion['talla_id'];
-      _selectedStockInventarioId = seleccion['stock_inventario_id'] ?? seleccion['id'];
+      _selectedStockInventarioId =
+          seleccion['stock_inventario_id'] ?? seleccion['id'];
       _selectedSucursalId = seleccion['sucursal_id'] ?? 1;
       _availableStock = (seleccion['cantidad'] as num?)?.toInt() ?? 0;
       _quantity = _availableStock > 0 ? 1 : 0;
@@ -158,10 +165,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _agregarAlCarrito({bool irAlCheckout = false}) async {
-    if (_selectedColorId == null || _selectedTallaId == null || _availableStock <= 0) {
+    if (_selectedColorId == null ||
+        _selectedTallaId == null ||
+        _availableStock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor selecciona un color y talla con existencias disponibles.'),
+          content: Text(
+              'Por favor selecciona un color y talla con existencias disponibles.'),
           backgroundColor: AppTheme.dangerRed,
         ),
       );
@@ -192,7 +202,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         Navigator.pop(context, true); // Regresa e indica que debe ir al carrito
       }
     } else {
-      final msg = cartService.errorMessage ?? 'No se pudo añadir la prenda al carrito.';
+      final msg =
+          cartService.errorMessage ?? 'No se pudo añadir la prenda al carrito.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -228,12 +239,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 48),
+                const Icon(Icons.error_outline,
+                    color: AppTheme.dangerRed, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   _errorMessage ?? 'Prenda no encontrada',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 16),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
@@ -248,17 +261,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     final p = _producto!;
-    final fotoToUse = _showBackPhoto && p['foto_trasera'] != null ? p['foto_trasera'] : p['foto'];
+    final fotoToUse = _showBackPhoto && p['foto_trasera'] != null
+        ? p['foto_trasera']
+        : p['foto'];
     final imageUrl = _resolveImageUrl(fotoToUse);
     final variantes = (p['variantes'] as List<dynamic>?) ?? [];
     final varianteActual = variantes.firstWhere(
       (v) => v['producto_color_id'] == _selectedColorId,
       orElse: () => variantes.isNotEmpty ? variantes.first : null,
     );
-    final todasExistencias = (varianteActual?['existencias'] as List<dynamic>?) ?? [];
+    final todasExistencias =
+        (varianteActual?['existencias'] as List<dynamic>?) ?? [];
     final existenciasActuales = _filtroSucursalId == null
         ? todasExistencias
-        : todasExistencias.where((e) => e['sucursal_id'] == _filtroSucursalId).toList();
+        : todasExistencias
+            .where((e) => e['sucursal_id'] == _filtroSucursalId)
+            .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -329,13 +347,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
 
             // Selector de Ángulo Frontal / Trasera
-            if (p['foto_trasera'] != null && p['foto_trasera'].toString().isNotEmpty) ...[
+            if (p['foto_trasera'] != null &&
+                p['foto_trasera'].toString().isNotEmpty) ...[
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ChoiceChip(
-                    label: const Text('Frente', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text('Frente',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     avatar: const Icon(Icons.accessibility_new, size: 16),
                     selected: !_showBackPhoto,
                     selectedColor: const Color(0xFFC8A97E),
@@ -343,7 +363,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(width: 12),
                   ChoiceChip(
-                    label: const Text('Espalda', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text('Espalda',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     avatar: const Icon(Icons.flip_camera_android, size: 16),
                     selected: _showBackPhoto,
                     selectedColor: const Color(0xFFC8A97E),
@@ -425,7 +446,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: const Color(0xFFC8A97E),
                             borderRadius: BorderRadius.circular(20),
@@ -453,7 +475,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0x2014263D),
                     borderRadius: BorderRadius.circular(8),
@@ -516,7 +539,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (p['en_promocion'] == true) ...[
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEAEA),
                   borderRadius: BorderRadius.circular(8),
@@ -544,25 +568,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 if (p['coleccion_nombre'] != null)
                   _buildTag('🧵 ${p['coleccion_nombre']}', Colors.indigoAccent),
                 if (p['temporada_nombre'] != null)
-                  _buildTag('🗓️ ${p['temporada_nombre']}', Colors.orangeAccent),
+                  _buildTag(
+                      '🗓️ ${p['temporada_nombre']}', Colors.orangeAccent),
                 _buildTag(
                   '📦 Stock total: ${p['stock_total'] ?? 0} uds.',
-                  (p['stock_total'] ?? 0) > 0 ? AppTheme.successGreen : AppTheme.dangerRed,
+                  (p['stock_total'] ?? 0) > 0
+                      ? AppTheme.successGreen
+                      : AppTheme.dangerRed,
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
             // Descripción
-            if (p['descripcion'] != null && p['descripcion'].toString().isNotEmpty) ...[
+            if (p['descripcion'] != null &&
+                p['descripcion'].toString().isNotEmpty) ...[
               const Text(
                 'Descripción',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 6),
               Text(
                 p['descripcion'],
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.4),
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 14, height: 1.4),
               ),
               const Divider(color: AppTheme.borderGlass, height: 32),
             ],
@@ -582,14 +614,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     }
                   }
                 }
-                final mapsUrl = selBranch != null ? (selBranch['maps_url'] ?? selBranch['ubicacion_url']) : null;
+                final mapsUrl = selBranch != null
+                    ? (selBranch['maps_url'] ?? selBranch['ubicacion_url'])
+                    : null;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Container(
-                      margin: EdgeInsets.only(bottom: mapsUrl != null && mapsUrl.toString().trim().isNotEmpty ? 6 : 18),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      margin: EdgeInsets.only(
+                          bottom: mapsUrl != null &&
+                                  mapsUrl.toString().trim().isNotEmpty
+                              ? 6
+                              : 18),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.bgCard,
                         borderRadius: BorderRadius.circular(12),
@@ -599,7 +638,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         children: [
                           const Text(
                             '📍 Sucursal:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -611,14 +653,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 items: [
                                   const DropdownMenuItem<int?>(
                                     value: null,
-                                    child: Text('🌐 Todas las sucursales', style: TextStyle(fontSize: 13)),
+                                    child: Text('🌐 Todas las sucursales',
+                                        style: TextStyle(fontSize: 13)),
                                   ),
                                   ...sucursales.map((s) {
                                     final sId = s['id'] as int;
-                                    final nombre = s['nombre'] ?? 'Sucursal #$sId';
+                                    final nombre =
+                                        s['nombre'] ?? 'Sucursal #$sId';
                                     return DropdownMenuItem<int?>(
                                       value: sId,
-                                      child: Text(nombre, style: const TextStyle(fontSize: 13)),
+                                      child: Text(nombre,
+                                          style: const TextStyle(fontSize: 13)),
                                     );
                                   }),
                                 ],
@@ -627,10 +672,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     _filtroSucursalId = val;
                                     if (_selectedColorId != null) {
                                       final v = variantes.firstWhere(
-                                        (item) => item['producto_color_id'] == _selectedColorId,
-                                        orElse: () => variantes.isNotEmpty ? variantes.first : null,
+                                        (item) =>
+                                            item['producto_color_id'] ==
+                                            _selectedColorId,
+                                        orElse: () => variantes.isNotEmpty
+                                            ? variantes.first
+                                            : null,
                                       );
-                                      if (v != null) _actualizarTallasParaColor(v);
+                                      if (v != null) {
+                                        _actualizarTallasParaColor(v);
+                                      }
                                     }
                                   });
                                 },
@@ -640,27 +691,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ],
                       ),
                     ),
-                    if (mapsUrl != null && mapsUrl.toString().trim().isNotEmpty) ...[
+                    if (mapsUrl != null &&
+                        mapsUrl.toString().trim().isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16, left: 4),
                         child: InkWell(
                           onTap: () {
-                            Clipboard.setData(ClipboardData(text: mapsUrl.toString()));
+                            Clipboard.setData(
+                                ClipboardData(text: mapsUrl.toString()));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('📍 Enlace de Maps de ${selBranch?['nombre'] ?? 'Sucursal'} copiado'),
+                                content: Text(
+                                    '📍 Enlace de Maps de ${selBranch?['nombre'] ?? 'Sucursal'} copiado'),
                                 backgroundColor: AppTheme.accentIndigo,
                               ),
                             );
                           },
                           child: Row(
                             children: [
-                              const Icon(Icons.location_on, size: 14, color: AppTheme.accentIndigo),
+                              const Icon(Icons.location_on,
+                                  size: 14, color: AppTheme.accentIndigo),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   'Ver sucursal en Google Maps (${selBranch?['nombre'] ?? 'Sucursal'}) ↗',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentIndigo, decoration: TextDecoration.underline),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.accentIndigo,
+                                      decoration: TextDecoration.underline),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -678,7 +737,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (variantes.isNotEmpty) ...[
               const Text(
                 'Selecciona Color',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -696,12 +758,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0x2014263D) : AppTheme.bgCard,
+                        color: isSelected
+                            ? const Color(0x2014263D)
+                            : AppTheme.bgCard,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF14263D) : AppTheme.borderGlass,
+                          color: isSelected
+                              ? const Color(0xFF14263D)
+                              : AppTheme.borderGlass,
                           width: isSelected ? 2 : 1,
                         ),
                       ),
@@ -714,7 +781,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             decoration: BoxDecoration(
                               color: hexColor,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.5),
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -722,7 +790,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             v['color_nombre'] ?? 'Color',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: AppTheme.textPrimary,
                             ),
                           ),
@@ -747,12 +817,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.info_outline, color: Color(0xFFFC2B2B), size: 20),
+                    Icon(Icons.info_outline,
+                        color: Color(0xFFFC2B2B), size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Esta prenda no tiene existencias en la sucursal seleccionada. Cambia de sucursal o selecciona "Todas las sucursales" para ver disponibilidad.',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textPrimary,
+                            height: 1.3),
                       ),
                     ),
                   ],
@@ -763,7 +837,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (existenciasActuales.isNotEmpty) ...[
               const Text(
                 'Selecciona Talla',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -780,7 +857,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         : () {
                             setState(() {
                               _selectedTallaId = e['talla_id'];
-                              _selectedStockInventarioId = e['stock_inventario_id'] ?? e['id'];
+                              _selectedStockInventarioId =
+                                  e['stock_inventario_id'] ?? e['id'];
                               _selectedSucursalId = e['sucursal_id'] ?? 1;
                               _availableStock = stock;
                               _quantity = 1;
@@ -788,14 +866,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.accentIndigo
-                            : (isOutOfStock ? AppTheme.bgSecondary : AppTheme.bgCard),
+                            : (isOutOfStock
+                                ? AppTheme.bgSecondary
+                                : AppTheme.bgCard),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppTheme.accentIndigo : AppTheme.borderGlass,
+                          color: isSelected
+                              ? AppTheme.accentIndigo
+                              : AppTheme.borderGlass,
                         ),
                       ),
                       child: Column(
@@ -808,7 +891,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               fontWeight: FontWeight.bold,
                               color: isSelected
                                   ? Colors.white
-                                  : (isOutOfStock ? AppTheme.textMuted : AppTheme.textPrimary),
+                                  : (isOutOfStock
+                                      ? AppTheme.textMuted
+                                      : AppTheme.textPrimary),
                             ),
                           ),
                           if (e['sucursal_nombre'] != null)
@@ -819,7 +904,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,
-                                  color: isSelected ? Colors.white70 : AppTheme.accentIndigo,
+                                  color: isSelected
+                                      ? Colors.white70
+                                      : AppTheme.accentIndigo,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -831,7 +918,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               fontSize: 10,
                               color: isSelected
                                   ? Colors.white70
-                                  : (isOutOfStock ? AppTheme.dangerRed : AppTheme.textSecondary),
+                                  : (isOutOfStock
+                                      ? AppTheme.dangerRed
+                                      : AppTheme.textSecondary),
                             ),
                           ),
                         ],
@@ -850,21 +939,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   const Text(
                     'Cantidad',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary),
                   ),
                   Row(
                     children: [
                       IconButton(
-                        onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                        onPressed: _quantity > 1
+                            ? () => setState(() => _quantity--)
+                            : null,
                         icon: const Icon(Icons.remove_circle_outline),
                         color: AppTheme.accentIndigo,
                       ),
                       Text(
                         '$_quantity',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary),
                       ),
                       IconButton(
-                        onPressed: _quantity < _availableStock ? () => setState(() => _quantity++) : null,
+                        onPressed: _quantity < _availableStock
+                            ? () => setState(() => _quantity++)
+                            : null,
                         icon: const Icon(Icons.add_circle_outline),
                         color: AppTheme.accentIndigo,
                       ),
@@ -885,7 +984,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       color: const Color(0x33C5A880),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 18),
+                    child: const Icon(Icons.auto_awesome,
+                        color: Color(0xFFC5A880), size: 18),
                   ),
                   const SizedBox(width: 8),
                   const Expanded(
@@ -902,7 +1002,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         Text(
                           'Algoritmo semántico de afinidad por corte, estilo y colección',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                              fontSize: 11, color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -918,7 +1019,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   itemBuilder: (context, index) {
                     final item = _recomendados[index];
                     final recImg = _resolveImageUrl(item['foto']);
-                    final score = ((item['score'] as num?)?.toDouble() ?? 0.0) * 100;
+                    final score =
+                        ((item['score'] as num?)?.toDouble() ?? 0.0) * 100;
                     final razones = (item['razones'] as List<dynamic>?) ?? [];
 
                     return GestureDetector(
@@ -927,7 +1029,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(codigo: item['codigo']),
+                            builder: (_) =>
+                                ProductDetailScreen(codigo: item['codigo']),
                           ),
                         );
                       },
@@ -955,16 +1058,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         ? Image.network(
                                             recImg,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const Icon(Icons.checkroom, color: AppTheme.textMuted),
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(Icons.checkroom,
+                                                    color: AppTheme.textMuted),
                                           )
-                                        : const Icon(Icons.checkroom, color: AppTheme.textMuted),
+                                        : const Icon(Icons.checkroom,
+                                            color: AppTheme.textMuted),
                                   ),
                                 ),
                                 Positioned(
                                   top: 4,
                                   right: 4,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFC5A880),
                                       borderRadius: BorderRadius.circular(6),
@@ -1006,7 +1113,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 razones.first.toString(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 10, color: Color(0xFFC5A880)),
+                                style: const TextStyle(
+                                    fontSize: 10, color: Color(0xFFC5A880)),
                               ),
                             ],
                           ],
@@ -1031,19 +1139,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
+      builder: (_) => const Center(
+          child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
     );
 
     bool puedeReservar = false;
     String mensaje = '';
     try {
-      final res = await api.get(ApiConfig.reservasElegibilidadUrl, requireAuth: true);
+      final res =
+          await api.get(ApiConfig.reservasElegibilidadUrl, requireAuth: true);
       if (res.statusCode == 200) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
         puedeReservar = data['puede_reservar'] == true;
         mensaje = data['mensaje'] ?? '';
       }
-    } catch (_) {}
+    } catch (_) {
+      puedeReservar = true;
+      mensaje =
+          'Sin conexión: la elegibilidad y el stock se validarán al sincronizar.';
+    }
 
     if (mounted) Navigator.pop(context);
 
@@ -1077,16 +1191,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     int diasReserva = 2;
     int sucursalSeleccionada = _selectedSucursalId;
-    final selectedBranch = catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
-      (branch) => branch?['id'] == sucursalSeleccionada,
-      orElse: () => null,
-    );
-    final aperturaTexto = (selectedBranch?['hora_apertura'] ?? '09:00').toString();
+    final selectedBranch =
+        catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
+              (branch) => branch?['id'] == sucursalSeleccionada,
+              orElse: () => null,
+            );
+    final aperturaTexto =
+        (selectedBranch?['hora_apertura'] ?? '09:00').toString();
     final cierreTexto = (selectedBranch?['hora_cierre'] ?? '18:00').toString();
     final aperturaPartes = aperturaTexto.split(':');
     final cierrePartes = cierreTexto.split(':');
-    final apertura = TimeOfDay(hour: int.tryParse(aperturaPartes[0]) ?? 9, minute: int.tryParse(aperturaPartes[1]) ?? 0);
-    final cierre = TimeOfDay(hour: int.tryParse(cierrePartes[0]) ?? 18, minute: int.tryParse(cierrePartes[1]) ?? 0);
+    final apertura = TimeOfDay(
+        hour: int.tryParse(aperturaPartes[0]) ?? 9,
+        minute: int.tryParse(aperturaPartes[1]) ?? 0);
+    final cierre = TimeOfDay(
+        hour: int.tryParse(cierrePartes[0]) ?? 18,
+        minute: int.tryParse(cierrePartes[1]) ?? 0);
     TimeOfDay horaRetiro = apertura;
 
     if (!mounted) return;
@@ -1094,7 +1214,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.bgCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -1110,11 +1231,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Reservar Prenda en Tienda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  const Text('Reservar Prenda en Tienda',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary)),
                   const SizedBox(height: 8),
-                  Text('Prenda: ${p['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF14263D))),
+                  Text('Prenda: ${p['nombre']}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF14263D))),
                   const SizedBox(height: 12),
-                  const Text('Fecha de recogida (hasta 3 días):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Text('Fecha de recogida (hasta 3 días):',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
@@ -1131,14 +1261,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                        fontStyle: FontStyle.italic),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.schedule),
                     label: Text('Hora de recogida: ${horaRetiro.format(ctx)}'),
                     onPressed: () async {
-                      final seleccion = await showTimePicker(context: ctx, initialTime: horaRetiro);
+                      final seleccion = await showTimePicker(
+                          context: ctx, initialTime: horaRetiro);
                       if (seleccion == null) return;
                       final minutos = seleccion.hour * 60 + seleccion.minute;
                       final inicio = apertura.hour * 60 + apertura.minute;
@@ -1146,7 +1280,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       if (minutos < inicio || minutos > fin) {
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Selecciona una hora entre $aperturaTexto y $cierreTexto.')),
+                            SnackBar(
+                                content: Text(
+                                    'Selecciona una hora entre $aperturaTexto y $cierreTexto.')),
                           );
                         }
                         return;
@@ -1156,7 +1292,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   Text(
                     'Horario de atención: $aperturaTexto – $cierreTexto',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -1165,17 +1302,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       final stockId = _selectedStockInventarioId;
                       if (stockId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Selecciona una talla disponible para reservar.')),
+                          const SnackBar(
+                              content: Text(
+                                  'Selecciona una talla disponible para reservar.')),
                         );
                         return;
                       }
 
-                      final resPost = await api.post(
-                        ApiConfig.reservasUrl,
-                        body: {
+                      final result = await Provider.of<OfflineSyncService>(
+                              context,
+                              listen: false)
+                          .submitReservation(
+                        {
                           'sucursal_id': sucursalSeleccionada,
                           'fecha_limite': fechaLimite.toIso8601String(),
-                          'hora_retiro': '${horaRetiro.hour.toString().padLeft(2, '0')}:${horaRetiro.minute.toString().padLeft(2, '0')}:00',
+                          'hora_retiro':
+                              '${horaRetiro.hour.toString().padLeft(2, '0')}:${horaRetiro.minute.toString().padLeft(2, '0')}:00',
                           'items': [
                             {
                               'stock_inventario_id': stockId,
@@ -1183,28 +1325,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             }
                           ],
                         },
-                        requireAuth: true,
                       );
 
                       if (mounted) {
-                        if (resPost.statusCode == 200 || resPost.statusCode == 201) {
+                        if (result.confirmed) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
+                              content: Text(
+                                  '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
                               backgroundColor: AppTheme.successGreen,
                             ),
                           );
                           _loadProductData();
+                        } else if (result.queued) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
+                              backgroundColor: const Color(0xFFB7791F),
+                              duration: const Duration(seconds: 6),
+                            ),
+                          );
                         } else {
-                          try {
-                            final errBody = jsonDecode(resPost.body);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(errBody['detail'] ?? 'No se pudo realizar la reserva.'),
-                                backgroundColor: AppTheme.dangerRed,
-                              ),
-                            );
-                          } catch (_) {}
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(result.message),
+                                backgroundColor: AppTheme.dangerRed),
+                          );
                         }
                       }
                     },
@@ -1212,7 +1359,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       backgroundColor: const Color(0xFF14263D),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Confirmar Reserva en Sucursal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('Confirmar Reserva en Sucursal',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -1224,7 +1373,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildBottomBar(Map<String, dynamic> p) {
-    final bool canBuy = _availableStock > 0 && _selectedColorId != null && _selectedTallaId != null;
+    final bool canBuy = _availableStock > 0 &&
+        _selectedColorId != null &&
+        _selectedTallaId != null;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1232,7 +1383,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         color: AppTheme.bgCard,
         border: Border(top: BorderSide(color: AppTheme.borderGlass)),
         boxShadow: [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, -2)),
+          BoxShadow(
+              color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, -2)),
         ],
       ),
       child: SafeArea(
@@ -1240,14 +1392,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: canBuy ? () => _agregarAlCarrito(irAlCheckout: false) : null,
+                onPressed: canBuy
+                    ? () => _agregarAlCarrito(irAlCheckout: false)
+                    : null,
                 icon: const Icon(Icons.add_shopping_cart, size: 18),
                 label: const Text('Al Carrito'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.accentIndigo,
                   side: const BorderSide(color: AppTheme.accentIndigo),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -1255,19 +1410,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             IconButton.filledTonal(
               onPressed: canBuy ? () => _abrirModalReserva(p) : null,
               tooltip: 'Reservar Prenda (Elegibilidad v6)',
-              icon: const Icon(Icons.bookmark_add_outlined, color: Color(0xFFC5A880)),
+              icon: const Icon(Icons.bookmark_add_outlined,
+                  color: Color(0xFFC5A880)),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: canBuy ? () => _agregarAlCarrito(irAlCheckout: true) : null,
+                onPressed:
+                    canBuy ? () => _agregarAlCarrito(irAlCheckout: true) : null,
                 icon: const Icon(Icons.flash_on, size: 18),
                 label: const Text('Comprar Ahora'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF14263D),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -1292,7 +1450,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

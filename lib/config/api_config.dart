@@ -19,7 +19,8 @@ class ApiConfig {
     }
     try {
       final uri = Uri.parse(baseUrl);
-      final origin = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+      final origin =
+          '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
       return '$origin${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
     } catch (_) {
       return 'http://192.168.0.17:8000${trimmed.startsWith('/') ? trimmed : '/$trimmed'}';
@@ -33,7 +34,8 @@ class ApiConfig {
   static String get refreshUrl => '$baseUrl/auth/refresh';
 
   // Password endpoints (CU4)
-  static String get requestPasswordChangeUrl => '$baseUrl/password/request-change';
+  static String get requestPasswordChangeUrl =>
+      '$baseUrl/password/request-change';
   static String get confirmPasswordChangeUrl => '$baseUrl/password/confirm';
 
   // User & Profile endpoints (CU6)
@@ -43,7 +45,8 @@ class ApiConfig {
   static String get catalogoUrl => '$baseUrl/catalogo';
   static String get catalogoParaTiUrl => '$baseUrl/catalogo/para-ti';
   static String get proximamenteUrl => '$baseUrl/proximamente';
-  static String get suscribirProximamenteUrl => '$baseUrl/notificaciones/suscribir-proximamente';
+  static String get suscribirProximamenteUrl =>
+      '$baseUrl/notificaciones/suscribir-proximamente';
   static String get notificacionesUrl => '$baseUrl/notificaciones';
 
   // Carrito de compras (CU12)
@@ -54,6 +57,7 @@ class ApiConfig {
   // Reservas (CU13)
   static String get reservasUrl => '$baseUrl/reservas';
   static String get reservasElegibilidadUrl => '$baseUrl/reservas/elegibilidad';
+  static String get syncOperationsUrl => '$baseUrl/sync/operations';
 
   // Cambios y Devoluciones (v6 Punto 9)
   static String get cambiosUrl => '$baseUrl/cambios';
@@ -69,9 +73,11 @@ class ApiConfig {
   static String get enviosUrl => '$baseUrl/envios';
 
   // Delivery StyleStore - Rastreo GPS (v7)
-  static String rastreoPublicoUrl(String token) => '$baseUrl/envios/rastreo/$token';
+  static String rastreoPublicoUrl(String token) =>
+      '$baseUrl/envios/rastreo/$token';
   static String conductorGpsUrl(int envioId) => '$baseUrl/envios/$envioId/gps';
-  static String webTrackerUrl(String token) => 'https://style-store-frontend-nine.vercel.app/delivery/rastreo/$token';
+  static String webTrackerUrl(String token) =>
+      'https://style-store-frontend-nine.vercel.app/delivery/rastreo/$token';
 
   // Outfits Combinaciones (Punto 9 / v7)
   static String get outfitsUrl => '$baseUrl/outfits';

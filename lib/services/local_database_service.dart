@@ -85,4 +85,86 @@ class LocalDatabaseService {
             jsonDecode(row['payload'] as String) as Map<String, dynamic>)
         .toList();
   }
+
+  Future<void> queueReservation({
+    required String operationUuid,
+    required String scope,
+    required Map<String, dynamic> payload,
+  }) async {
+    final createdAt = DateTime.now().toUtc().toIso8601String();
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('local_reservations', {
+        'operation_uuid': operationUuid,
+        'scope': scope,
+        'branch_id': payload['sucursal_id'],
+        'pickup_date': payload['fecha_limite'],
+        'pickup_time': payload['hora_retiro'],
+        'status': 'pendiente',
+        'created_at': createdAt,
+      });
+      for (final item
+          in (payload['items'] as List).cast<Map<String, dynamic>>()) {
+        await txn.insert('local_reservation_details', {
+          'operation_uuid': operationUuid,
+          'stock_id': item['stock_inventario_id'],
+          'quantity': item['cantidad'],
+        });
+      }
+      await txn.insert('sync_queue', {
+        'operation_uuid': operationUuid,
+        'scope': scope,
+        'operation_type': 'reserva',
+        'payload_version': 1,
+        'payload': jsonEncode(payload),
+        'client_created_at': createdAt,
+        'status': 'pendiente',
+      });
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> pendingOperations(String scope) async {
+    return (await database).query(
+      'sync_queue',
+      where: 'scope = ? AND status = ?',
+      whereArgs: [scope, 'pendiente'],
+      orderBy: 'client_created_at ASC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> allOperations(String scope) async {
+    return (await database).query(
+      'sync_queue',
+      where: 'scope = ?',
+      whereArgs: [scope],
+      orderBy: 'client_created_at DESC',
+    );
+  }
+
+  Future<void> updateOperation(
+    String operationUuid,
+    String status, {
+    String? reason,
+    int? resultId,
+  }) async {
+    final values = <String, Object?>{'status': status, 'reason': reason};
+    if (resultId != null) values['result_id'] = resultId;
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update('sync_queue', values,
+          where: 'operation_uuid = ?', whereArgs: [operationUuid]);
+      final typeRows = await txn.query('sync_queue',
+          columns: ['operation_type'],
+          where: 'operation_uuid = ?',
+          whereArgs: [operationUuid],
+          limit: 1);
+      if (typeRows.isNotEmpty) {
+        final table = typeRows.first['operation_type'] == 'reserva'
+            ? 'local_reservations'
+            : 'local_sales';
+        await txn.update(table, {'status': status, 'reason': reason},
+            where: 'operation_uuid = ?', whereArgs: [operationUuid]);
+      }
+    });
+  }
 }

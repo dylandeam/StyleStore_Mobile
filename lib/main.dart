@@ -13,6 +13,7 @@ import 'services/cart_service.dart';
 import 'services/order_service.dart';
 import 'services/storage_service.dart';
 import 'services/local_database_service.dart';
+import 'services/offline_sync_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,11 @@ class StyleStoreApp extends StatelessWidget {
         Provider<StorageService>.value(value: storageService),
         Provider<ApiService>.value(value: apiService),
         Provider<LocalDatabaseService>.value(value: localDatabase),
+        ChangeNotifierProvider<OfflineSyncService>(
+          lazy: false,
+          create: (_) =>
+              OfflineSyncService(apiService, localDatabase, storageService),
+        ),
         ChangeNotifierProvider<AuthService>(
           create: (_) => AuthService(apiService, storageService),
         ),

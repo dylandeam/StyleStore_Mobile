@@ -31,7 +31,8 @@ class CatalogScreen extends StatefulWidget {
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
 
-class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProviderStateMixin {
+class _CatalogScreenState extends State<CatalogScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<dynamic> _paraTiItems = [];
 
@@ -41,12 +42,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     _tabController = TabController(
       length: 6,
       vsync: this,
-      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 6) ? widget.initialTab : 0,
+      initialIndex: (widget.initialTab >= 0 && widget.initialTab < 6)
+          ? widget.initialTab
+          : 0,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CatalogService>(context, listen: false).fetchSucursales();
       Provider.of<CatalogService>(context, listen: false).fetchCatalog();
-      Provider.of<ProximamenteService>(context, listen: false).fetchProximamente();
+      Provider.of<ProximamenteService>(context, listen: false)
+          .fetchProximamente();
       Provider.of<CartService>(context, listen: false).fetchCart();
       Provider.of<OrderService>(context, listen: false).fetchOrders();
       Provider.of<OrderService>(context, listen: false).fetchReservas();
@@ -57,7 +61,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   Future<void> _fetchParaTi() async {
     try {
       final api = Provider.of<ApiService>(context, listen: false);
-      final res = await api.get(ApiConfig.catalogoParaTiUrl, requireAuth: false);
+      final res =
+          await api.get(ApiConfig.catalogoParaTiUrl, requireAuth: false);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         if (mounted) {
@@ -121,7 +126,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         backgroundColor: AppTheme.accentIndigo,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.smart_toy_outlined),
-        label: const Text('Asesor IA', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Asesor IA',
+            style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -147,7 +153,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   // ==========================================
   Widget _buildPromocionesTab() {
     final catalogService = Provider.of<CatalogService>(context);
-    final promos = catalogService.productos.where((p) => p.enPromocion).toList();
+    final promos =
+        catalogService.productos.where((p) => p.enPromocion).toList();
 
     return Column(
       children: [
@@ -163,20 +170,27 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE63946),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   '🔥 OFERTAS EXCLUSIVAS',
-                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 6),
               const Text(
                 'Descuentos de Temporada',
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
               Text(
@@ -186,24 +200,54 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             ],
           ),
         ),
+        if (catalogService.usingOfflineData)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7E6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF59E0B)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_off, color: Color(0xFFB7791F)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Catálogo guardado. Stock provisional. Última sincronización: ${catalogService.lastSync?.toLocal().toString().substring(0, 16) ?? 'sin fecha'}.',
+                    style:
+                        const TextStyle(color: Color(0xFF7C4A03), fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(
           child: catalogService.isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: AppTheme.accentIndigo))
               : promos.isEmpty
                   ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.local_offer_outlined, color: Colors.grey, size: 54),
+                          Icon(Icons.local_offer_outlined,
+                              color: Colors.grey, size: 54),
                           SizedBox(height: 12),
                           Text(
                             'No hay promociones activas en este momento',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary),
                           ),
                           SizedBox(height: 4),
                           Text(
                             'Visita el catálogo general para explorar todas nuestras prendas.',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            style: TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 13),
                           ),
                         ],
                       ),
@@ -258,7 +302,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       return word;
     }
 
-    final tokens = queryNorm.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    final tokens =
+        queryNorm.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
     if (tokens.isEmpty) return true;
 
     final List<String> pTargets = [
@@ -275,7 +320,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       bool tokenMatched = false;
 
       for (final target in pTargets) {
-        if (target.contains(token) || (normT.length >= 3 && target.contains(normT))) {
+        if (target.contains(token) ||
+            (normT.length >= 3 && target.contains(normT))) {
           tokenMatched = true;
           break;
         }
@@ -294,7 +340,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     if (!status.isGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se requieren permisos de micrófono para la búsqueda por voz.')),
+          const SnackBar(
+              content: Text(
+                  'Se requieren permisos de micrófono para la búsqueda por voz.')),
         );
       }
       return;
@@ -340,20 +388,28 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       decoration: BoxDecoration(
                         color: AppTheme.accentIndigo.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.accentIndigo, width: 2),
+                        border:
+                            Border.all(color: AppTheme.accentIndigo, width: 2),
                       ),
-                      child: const Icon(Icons.mic, color: AppTheme.accentIndigo, size: 36),
+                      child: const Icon(Icons.mic,
+                          color: AppTheme.accentIndigo, size: 36),
                     ),
                     const SizedBox(height: 16),
                     const Text(
                       '🎙️ Búsqueda por Voz IA',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      available ? 'Escuchando tu voz... Habla para buscar prendas.' : 'Selecciona una categoría o escribe tu búsqueda:',
+                      available
+                          ? 'Escuchando tu voz... Habla para buscar prendas.'
+                          : 'Selecciona una categoría o escribe tu búsqueda:',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textSecondary),
                     ),
                     const SizedBox(height: 20),
                     Wrap(
@@ -368,10 +424,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         '🧥 Chaquetas',
                       ].map((sug) {
                         return ActionChip(
-                          label: Text(sug, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          label: Text(sug,
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
                           backgroundColor: AppTheme.bgSecondary,
                           onPressed: () {
-                            final clean = sug.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+                            final clean =
+                                sug.replaceAll(RegExp(r'[^\w\s]'), '').trim();
                             setState(() {
                               _searchQuery = clean;
                               _searchController.text = clean;
@@ -413,11 +472,14 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               Expanded(
                 child: TextField(
                   controller: _searchController,
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                  style: const TextStyle(
+                      fontSize: 13, color: AppTheme.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Buscar prendas, códigos, categorías...',
-                    hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                    prefixIcon: const Icon(Icons.search, size: 20, color: AppTheme.accentIndigo),
+                    hintStyle: const TextStyle(
+                        fontSize: 13, color: AppTheme.textMuted),
+                    prefixIcon: const Icon(Icons.search,
+                        size: 20, color: AppTheme.accentIndigo),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -429,10 +491,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             },
                           )
                         : null,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 12),
                     filled: true,
                     fillColor: AppTheme.bgCard,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none),
                   ),
                   onChanged: (val) {
                     setState(() {
@@ -471,7 +536,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               const SizedBox(width: 8),
               const Text(
                 'Sucursal:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppTheme.textPrimary),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -480,15 +548,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     value: catalogService.selectedSucursalId,
                     isExpanded: true,
                     dropdownColor: AppTheme.bgCard,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textPrimary),
                     items: [
                       const DropdownMenuItem<int?>(
                         value: null,
-                        child: Text('🌐 Todas las sucursales', style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text('🌐 Todas las sucursales',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       ...catalogService.sucursales.map((s) {
                         final id = s['id'] as int;
-                        final nombre = s['nombre'] ?? s['name'] ?? 'Sucursal #$id';
+                        final nombre =
+                            s['nombre'] ?? s['name'] ?? 'Sucursal #$id';
                         final ciudad = s['ciudad'] ?? s['city'] ?? '';
                         return DropdownMenuItem<int?>(
                           value: id,
@@ -505,15 +576,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         ),
         Expanded(
           child: catalogService.isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: AppTheme.accentIndigo))
               : catalogService.errorMessage != null
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 48),
+                          const Icon(Icons.error_outline,
+                              color: AppTheme.dangerRed, size: 48),
                           const SizedBox(height: 12),
-                          Text(catalogService.errorMessage!, style: const TextStyle(color: AppTheme.textSecondary)),
+                          Text(catalogService.errorMessage!,
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary)),
                           const SizedBox(height: 12),
                           ElevatedButton(
                             onPressed: () => catalogService.fetchCatalog(),
@@ -523,7 +599,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       ),
                     )
                   : catalogService.productos.isEmpty
-                      ? const Center(child: Text('No hay productos disponibles para esta sucursal.', style: TextStyle(color: AppTheme.textSecondary)))
+                      ? const Center(
+                          child: Text(
+                              'No hay productos disponibles para esta sucursal.',
+                              style: TextStyle(color: AppTheme.textSecondary)))
                       : RefreshIndicator(
                           onRefresh: () async {
                             await catalogService.fetchCatalog();
@@ -533,19 +612,22 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             padding: const EdgeInsets.all(16),
                             children: [
                               _buildParaTiSection(),
-                              if (_paraTiItems.isNotEmpty) const SizedBox(height: 16),
+                              if (_paraTiItems.isNotEmpty)
+                                const SizedBox(height: 16),
                               if (filteredProds.isEmpty)
                                 const Padding(
                                   padding: EdgeInsets.all(24.0),
                                   child: Center(
                                     child: Text(
                                       'No se encontraron prendas que coincidan con la búsqueda.',
-                                      style: TextStyle(color: AppTheme.textSecondary),
+                                      style: TextStyle(
+                                          color: AppTheme.textSecondary),
                                     ),
                                   ),
                                 )
                               else
-                                ...filteredProds.map((p) => _buildProductCard(p)),
+                                ...filteredProds
+                                    .map((p) => _buildProductCard(p)),
                             ],
                           ),
                         ),
@@ -576,7 +658,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFC8A97E),
                   borderRadius: BorderRadius.circular(12),
@@ -588,21 +671,29 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     SizedBox(width: 4),
                     Text(
                       'IA LOCAL | PARA TI',
-                      style: TextStyle(color: Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
               GestureDetector(
                 onTap: _fetchParaTi,
-                child: const Text('Actualizar 🔄', style: TextStyle(color: Color(0xFFC8A97E), fontSize: 11, fontWeight: FontWeight.bold)),
+                child: const Text('Actualizar 🔄',
+                    style: TextStyle(
+                        color: Color(0xFFC8A97E),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           const Text(
             'Para Ti — Selección de Moda IA',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 2),
           const Text(
@@ -623,7 +714,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 final fotoUrl = _resolveImageUrl(item['foto'] as String?);
                 final precio = (item['precio'] as num?)?.toDouble() ?? 0.0;
                 final tagIncentivo = item['tag_incentivo'] ?? '🌟 Recomendado';
-                final razon = item['razon_recomendacion'] ?? 'Selección de estilo';
+                final razon =
+                    item['razon_recomendacion'] ?? 'Selección de estilo';
                 final catNom = item['categoria_nombre'] ?? 'Exclusivo';
 
                 return GestureDetector(
@@ -638,7 +730,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: AppTheme.borderGlass),
                       boxShadow: const [
-                        BoxShadow(color: Color(0x1414263D), blurRadius: 8, offset: Offset(0, 3)),
+                        BoxShadow(
+                            color: Color(0x1414263D),
+                            blurRadius: 8,
+                            offset: Offset(0, 3)),
                       ],
                     ),
                     child: Column(
@@ -647,7 +742,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         Stack(
                           children: [
                             ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(13)),
                               child: Container(
                                 height: 105,
                                 width: double.infinity,
@@ -656,12 +752,17 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                                     ? Image.network(
                                         fotoUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Center(
-                                          child: Icon(Icons.checkroom, color: AppTheme.textMuted, size: 36),
+                                        errorBuilder: (_, __, ___) =>
+                                            const Center(
+                                          child: Icon(Icons.checkroom,
+                                              color: AppTheme.textMuted,
+                                              size: 36),
                                         ),
                                       )
                                     : const Center(
-                                        child: Icon(Icons.checkroom, color: AppTheme.textMuted, size: 36),
+                                        child: Icon(Icons.checkroom,
+                                            color: AppTheme.textMuted,
+                                            size: 36),
                                       ),
                               ),
                             ),
@@ -669,15 +770,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                               top: 6,
                               left: 6,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: const Color(0xEE14263D),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0x66C8A97E)),
+                                  border: Border.all(
+                                      color: const Color(0x66C8A97E)),
                                 ),
                                 child: Text(
                                   tagIncentivo,
-                                  style: const TextStyle(color: Color(0xFFC8A97E), fontSize: 9, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: Color(0xFFC8A97E),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -690,33 +796,47 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             children: [
                               Text(
                                 '$codigo • $catNom',
-                                style: const TextStyle(fontSize: 9, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.textMuted,
+                                    fontWeight: FontWeight.w600),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 nombre,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 razon,
-                                style: const TextStyle(fontSize: 9.5, color: AppTheme.textSecondary, height: 1.2),
+                                style: const TextStyle(
+                                    fontSize: 9.5,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.2),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Bs. ${precio.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.accentIndigo),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppTheme.accentIndigo),
                                   ),
-                                  const Icon(Icons.arrow_forward_ios, size: 10, color: AppTheme.accentIndigo),
+                                  const Icon(Icons.arrow_forward_ios,
+                                      size: 10, color: AppTheme.accentIndigo),
                                 ],
                               ),
                             ],
@@ -759,7 +879,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.borderGlass),
         boxShadow: const [
-          BoxShadow(color: Color(0x1414263D), blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x1414263D), blurRadius: 10, offset: Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -777,7 +898,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(p),
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildImagePlaceholder(p),
                     ),
                   )
                 else
@@ -787,24 +909,32 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     top: 10,
                     left: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFE63946), Color(0xFFD62828)],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x66E63946), blurRadius: 6, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Color(0x66E63946),
+                              blurRadius: 6,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.local_offer, color: Colors.white, size: 12),
+                          const Icon(Icons.local_offer,
+                              color: Colors.white, size: 12),
                           const SizedBox(width: 4),
                           Text(
                             '${p.porcentajeDescuento}% OFF',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -814,7 +944,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xCC14263D),
                       borderRadius: BorderRadius.circular(8),
@@ -823,11 +954,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 12),
+                        Icon(Icons.auto_awesome,
+                            color: Color(0xFFC5A880), size: 12),
                         SizedBox(width: 4),
                         Text(
                           'Ver Ficha & IA',
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -846,14 +981,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0x2014263D),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         p.codigo,
-                        style: const TextStyle(color: Color(0xFF14263D), fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Color(0xFF14263D),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                     if (p.enPromocion && p.precioDescuento != null)
@@ -883,7 +1022,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     else
                       Text(
                         'Bs. ${p.precio.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D)),
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF14263D)),
                       ),
                   ],
                 ),
@@ -892,13 +1034,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   onTap: () => _openProductDetail(p),
                   child: Text(
                     p.nombre,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary),
                   ),
                 ),
-                if (p.enPromocion && p.tituloPromocion != null && p.tituloPromocion!.isNotEmpty) ...[
+                if (p.enPromocion &&
+                    p.tituloPromocion != null &&
+                    p.tituloPromocion!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFEAEA),
                       borderRadius: BorderRadius.circular(6),
@@ -920,7 +1068,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     onTap: () => _openProductDetail(p),
                     child: Text(
                       p.descripcion!,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textSecondary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -931,12 +1080,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    if (p.coleccionNombre != null) _buildTag('🧵 ${p.coleccionNombre}', Colors.indigoAccent),
-                    if (p.categoriaNombre != null) _buildTag('📁 ${p.categoriaNombre}', Colors.blueGrey),
-                    if (p.temporadaNombre != null) _buildTag('🗓️ ${p.temporadaNombre}', Colors.orangeAccent),
+                    if (p.coleccionNombre != null)
+                      _buildTag('🧵 ${p.coleccionNombre}', Colors.indigoAccent),
+                    if (p.categoriaNombre != null)
+                      _buildTag('📁 ${p.categoriaNombre}', Colors.blueGrey),
+                    if (p.temporadaNombre != null)
+                      _buildTag(
+                          '🗓️ ${p.temporadaNombre}', Colors.orangeAccent),
                     _buildTag(
                       '📦 ${p.stockTotal} uds.',
-                      p.stockTotal > 0 ? AppTheme.successGreen : AppTheme.dangerRed,
+                      p.stockTotal > 0
+                          ? AppTheme.successGreen
+                          : AppTheme.dangerRed,
                     ),
                   ],
                 ),
@@ -947,12 +1102,14 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () => _openProductDetail(p),
-                    icon: const Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 16),
+                    icon: const Icon(Icons.auto_awesome,
+                        color: Color(0xFFC5A880), size: 16),
                     label: const Text('Ver Detalle, Tallas y Recomendados IA'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF14263D),
                       side: const BorderSide(color: Color(0xFFC5A880)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
@@ -964,28 +1121,35 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: p.stockTotal <= 0 ? null : () => _handleAddToCart(p),
-                        icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                        onPressed: p.stockTotal <= 0
+                            ? null
+                            : () => _handleAddToCart(p),
+                        icon:
+                            const Icon(Icons.shopping_cart_outlined, size: 16),
                         label: const Text('Al Carrito'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accentIndigo,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: p.stockTotal <= 0 ? null : () => _handleReserveProduct(p),
+                        onPressed: p.stockTotal <= 0
+                            ? null
+                            : () => _handleReserveProduct(p),
                         icon: const Icon(Icons.bookmark_border, size: 16),
                         label: const Text('Reservar (48h)'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFC5A880),
                           side: const BorderSide(color: Color(0xFFC5A880)),
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ),
@@ -1041,13 +1205,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: subscribed ? const Color(0x2610B981) : const Color(0x266366F1),
+                  color: subscribed
+                      ? const Color(0x2610B981)
+                      : const Color(0x266366F1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Icon(
-                    subscribed ? Icons.notifications_active : Icons.notifications_off_outlined,
-                    color: subscribed ? AppTheme.successGreen : AppTheme.accentIndigo,
+                    subscribed
+                        ? Icons.notifications_active
+                        : Icons.notifications_off_outlined,
+                    color: subscribed
+                        ? AppTheme.successGreen
+                        : AppTheme.accentIndigo,
                     size: 30,
                   ),
                 ),
@@ -1080,12 +1250,16 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: subscribed ? AppTheme.accentIndigo : AppTheme.bgSecondary,
+                    backgroundColor: subscribed
+                        ? AppTheme.accentIndigo
+                        : AppTheme.bgSecondary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Entendido',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -1099,7 +1273,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     final proxService = Provider.of<ProximamenteService>(context);
 
     if (proxService.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo));
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.accentIndigo));
     }
     if (proxService.items.isEmpty) {
       return RefreshIndicator(
@@ -1116,12 +1291,16 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   color: Color(0x1AC5A880),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.hourglass_empty, size: 48, color: Color(0xFFC5A880)),
+                child: const Icon(Icons.hourglass_empty,
+                    size: 48, color: Color(0xFFC5A880)),
               ),
               const SizedBox(height: 16),
               const Text(
                 'No hay lanzamientos futuros programados',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
@@ -1199,7 +1378,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               color: AppTheme.bgCard,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isSubscribed ? const Color(0x6610B981) : const Color(0x33C5A880),
+                color: isSubscribed
+                    ? const Color(0x6610B981)
+                    : const Color(0x33C5A880),
                 width: 1.2,
               ),
               boxShadow: const [
@@ -1217,14 +1398,16 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(18)),
                       child: imageUrl != null
                           ? Image.network(
                               imageUrl,
                               height: 180,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildNoImagePlaceholder(),
+                              errorBuilder: (_, __, ___) =>
+                                  _buildNoImagePlaceholder(),
                             )
                           : _buildNoImagePlaceholder(),
                     ),
@@ -1232,7 +1415,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       top: 12,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xDD14263D),
                           borderRadius: BorderRadius.circular(20),
@@ -1261,7 +1445,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         bottom: 10,
                         right: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xE60F172A),
                             borderRadius: BorderRadius.circular(12),
@@ -1270,11 +1455,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.event, size: 12, color: AppTheme.textMuted),
+                              const Icon(Icons.event,
+                                  size: 12, color: AppTheme.textMuted),
                               const SizedBox(width: 4),
                               Text(
                                 'Llegada: ${item.fechaEstimada}',
-                                style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -1294,9 +1483,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (item.categoriaNombre != null) _buildTag(item.categoriaNombre!, const Color(0xFF6366F1)),
-                          if (item.coleccionNombre != null) _buildTag('🧵 ${item.coleccionNombre}', const Color(0xFFC5A880)),
-                          if (item.temporadaNombre != null) _buildTag('🍂 ${item.temporadaNombre}', const Color(0xFFA855F7)),
+                          if (item.categoriaNombre != null)
+                            _buildTag(
+                                item.categoriaNombre!, const Color(0xFF6366F1)),
+                          if (item.coleccionNombre != null)
+                            _buildTag('🧵 ${item.coleccionNombre}',
+                                const Color(0xFFC5A880)),
+                          if (item.temporadaNombre != null)
+                            _buildTag('🍂 ${item.temporadaNombre}',
+                                const Color(0xFFA855F7)),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -1312,7 +1507,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       ),
 
                       // Descripción
-                      if (item.descripcion != null && item.descripcion!.trim().isNotEmpty) ...[
+                      if (item.descripcion != null &&
+                          item.descripcion!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
                           item.descripcion!,
@@ -1334,40 +1530,56 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         height: 46,
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            final res = await proxService.toggleSuscribir(item.id);
+                            final res =
+                                await proxService.toggleSuscribir(item.id);
                             if (context.mounted) {
                               final sub = res['subscribed'] == true;
                               final msg = res['message'] as String? ?? '';
-                              _mostrarDialogoNotificacion(context, item.nombre, sub, msg);
+                              _mostrarDialogoNotificacion(
+                                  context, item.nombre, sub, msg);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(msg),
                                   behavior: SnackBarBehavior.floating,
-                                  backgroundColor: sub ? AppTheme.successGreen : AppTheme.bgSecondary,
+                                  backgroundColor: sub
+                                      ? AppTheme.successGreen
+                                      : AppTheme.bgSecondary,
                                   duration: const Duration(seconds: 3),
                                 ),
                               );
                             }
                           },
                           icon: Icon(
-                            isSubscribed ? Icons.check_circle : Icons.notifications_active_outlined,
+                            isSubscribed
+                                ? Icons.check_circle
+                                : Icons.notifications_active_outlined,
                             size: 19,
-                            color: isSubscribed ? AppTheme.successGreen : Colors.white,
+                            color: isSubscribed
+                                ? AppTheme.successGreen
+                                : Colors.white,
                           ),
                           label: Text(
-                            isSubscribed ? '✓ Notificación Activada (Cancelar)' : '🔔 Avisarme cuando esté disponible',
+                            isSubscribed
+                                ? '✓ Notificación Activada (Cancelar)'
+                                : '🔔 Avisarme cuando esté disponible',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: isSubscribed ? AppTheme.successGreen : Colors.white,
+                              color: isSubscribed
+                                  ? AppTheme.successGreen
+                                  : Colors.white,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isSubscribed ? const Color(0x2610B981) : AppTheme.accentIndigo,
+                            backgroundColor: isSubscribed
+                                ? const Color(0x2610B981)
+                                : AppTheme.accentIndigo,
                             foregroundColor: Colors.white,
                             elevation: isSubscribed ? 0 : 2,
                             side: BorderSide(
-                              color: isSubscribed ? AppTheme.successGreen : Colors.transparent,
+                              color: isSubscribed
+                                  ? AppTheme.successGreen
+                                  : Colors.transparent,
                               width: 1.2,
                             ),
                             shape: RoundedRectangleBorder(
@@ -1406,7 +1618,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             SizedBox(height: 6),
             Text(
               'StyleStore Exclusive',
-              style: TextStyle(fontSize: 12, color: AppTheme.textMuted, letterSpacing: 0.5),
+              style: TextStyle(
+                  fontSize: 12, color: AppTheme.textMuted, letterSpacing: 0.5),
             ),
           ],
         ),
@@ -1421,16 +1634,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     final cartService = Provider.of<CartService>(context);
 
     if (cartService.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo));
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.accentIndigo));
     }
     if (cartService.items.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_bag_outlined, size: 64, color: AppTheme.textMuted),
+            Icon(Icons.shopping_bag_outlined,
+                size: 64, color: AppTheme.textMuted),
             SizedBox(height: 12),
-            Text('Tu carrito está vacío.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+            Text('Tu carrito está vacío.',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
           ],
         ),
       );
@@ -1455,16 +1671,24 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Resumen del Pedido', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                const Text('Resumen del Pedido',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary)),
                 const Divider(color: AppTheme.borderGlass, height: 24),
-                if (cartService.items.isNotEmpty && cartService.items.first.sucursalNombre != null) ...[
+                if (cartService.items.isNotEmpty &&
+                    cartService.items.first.sucursalNombre != null) ...[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Despacho desde:', style: TextStyle(color: AppTheme.textSecondary)),
+                      const Text('Despacho desde:',
+                          style: TextStyle(color: AppTheme.textSecondary)),
                       Text(
                         cartService.items.first.sucursalNombre!,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentIndigo),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentIndigo),
                       ),
                     ],
                   ),
@@ -1473,24 +1697,41 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Subtotal Prendas:', style: TextStyle(color: AppTheme.textSecondary)),
-                    Text('Bs. ${cartService.total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Subtotal Prendas:',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                    Text('Bs. ${cartService.total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Delivery StyleStore (5Bs + 0.6Bs/km):', style: TextStyle(color: AppTheme.textSecondary)),
-                    Text('Bs. ${(5.0 + (4.5 * 0.60)).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Delivery StyleStore (5Bs + 0.6Bs/km):',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                    Text('Bs. ${(5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                   ],
                 ),
                 const Divider(color: AppTheme.borderGlass, height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total a Pagar:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
-                    Text('Bs. ${(cartService.total + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                    const Text('Total a Pagar:',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF14263D))),
+                    Text(
+                        'Bs. ${(cartService.total + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF14263D))),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -1502,7 +1743,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     backgroundColor: const Color(0xFF14263D),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
@@ -1539,23 +1781,33 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.productoNombre, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                Text(item.productoNombre,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary)),
                 Text(
                   'Color: ${item.colorNombre ?? "Único"} | Talla: ${item.tallaNombre ?? "Estándar"}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 if (item.sucursalNombre != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       '📍 ${item.sucursalNombre}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.accentIndigo),
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.accentIndigo),
                     ),
                   ),
                 const SizedBox(height: 2),
                 Text(
                   '${item.cantidad} x Bs. ${item.precioUnitario.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF14263D)),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF14263D)),
                 ),
               ],
             ),
@@ -1565,7 +1817,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             children: [
               Text(
                 'Bs. ${item.subtotal.toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF14263D)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Color(0xFF14263D)),
               ),
               const SizedBox(height: 4),
               InkWell(
@@ -1585,11 +1838,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.delete_outline, color: AppTheme.dangerRed, size: 18),
+                      Icon(Icons.delete_outline,
+                          color: AppTheme.dangerRed, size: 18),
                       SizedBox(width: 2),
                       Text(
                         'Eliminar',
-                        style: TextStyle(color: AppTheme.dangerRed, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: AppTheme.dangerRed,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -1610,20 +1867,33 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       for (final t in candidates) {
         final m1 = RegExp(r'@(-?\d+\.\d+),(-?\d+\.\d+)').firstMatch(t);
         if (m1 != null) {
-          return {'lat': double.parse(m1.group(1)!), 'lon': double.parse(m1.group(2)!)};
+          return {
+            'lat': double.parse(m1.group(1)!),
+            'lon': double.parse(m1.group(2)!)
+          };
         }
 
         final mEmbed = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(t);
         if (mEmbed != null) {
-          return {'lat': double.parse(mEmbed.group(1)!), 'lon': double.parse(mEmbed.group(2)!)};
+          return {
+            'lat': double.parse(mEmbed.group(1)!),
+            'lon': double.parse(mEmbed.group(2)!)
+          };
         }
 
-        final m2 = RegExp(r'[?&](?:q|ll|sll|query|center|daddr|destination|saddr)=(?:loc:)?(-?\d+\.\d+),(-?\d+\.\d+)', caseSensitive: false).firstMatch(t);
+        final m2 = RegExp(
+                r'[?&](?:q|ll|sll|query|center|daddr|destination|saddr)=(?:loc:)?(-?\d+\.\d+),(-?\d+\.\d+)',
+                caseSensitive: false)
+            .firstMatch(t);
         if (m2 != null) {
-          return {'lat': double.parse(m2.group(1)!), 'lon': double.parse(m2.group(2)!)};
+          return {
+            'lat': double.parse(m2.group(1)!),
+            'lon': double.parse(m2.group(2)!)
+          };
         }
 
-        final m3 = RegExp(r'(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})').firstMatch(t);
+        final m3 = RegExp(r'(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})')
+            .firstMatch(t);
         if (m3 != null) {
           final lat = double.parse(m3.group(1)!);
           final lon = double.parse(m3.group(2)!);
@@ -1645,7 +1915,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => FutureBuilder<http.Response>(
-        future: Provider.of<ApiService>(context, listen: false).get(ApiConfig.qrConfigUrl, requireAuth: false),
+        future: Provider.of<ApiService>(context, listen: false)
+            .get(ApiConfig.qrConfigUrl, requireAuth: false),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Container(
@@ -1666,9 +1937,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           }
 
           final qrUrl = data?['qr_image_url'] as String?;
-          final banco = (data?['banco_nombre'] ?? 'Banco BNB / BCP / Unión').toString();
-          final cuenta = (data?['numero_cuenta'] ?? '10000034928123').toString();
-          final titular = (data?['titular_cuenta'] ?? 'StyleStore S.R.L.').toString();
+          final banco =
+              (data?['banco_nombre'] ?? 'Banco BNB / BCP / Unión').toString();
+          final cuenta =
+              (data?['numero_cuenta'] ?? '10000034928123').toString();
+          final titular =
+              (data?['titular_cuenta'] ?? 'StyleStore S.R.L.').toString();
           final expira = (data?['fecha_expiracion'] ?? '').toString();
 
           return Container(
@@ -1685,11 +1959,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.qr_code_2, color: Color(0xFF0F766E), size: 26),
+                        Icon(Icons.qr_code_2,
+                            color: Color(0xFF0F766E), size: 26),
                         SizedBox(width: 8),
                         Text(
                           'QR Simple de Cobro',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary),
                         ),
                       ],
                     ),
@@ -1704,7 +1982,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.network(
-                      qrUrl.startsWith('http') ? qrUrl : '${ApiConfig.baseUrl.replaceAll('/api/v1', '')}$qrUrl',
+                      qrUrl.startsWith('http')
+                          ? qrUrl
+                          : '${ApiConfig.baseUrl.replaceAll('/api/v1', '')}$qrUrl',
                       height: 260,
                       width: 260,
                       fit: BoxFit.contain,
@@ -1715,7 +1995,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.qr_code_2, size: 110, color: Colors.grey),
+                        child: const Icon(Icons.qr_code_2,
+                            size: 110, color: Colors.grey),
                       ),
                     ),
                   )
@@ -1727,28 +2008,37 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.qr_code_2, size: 110, color: Color(0xFF0F766E)),
+                    child: const Icon(Icons.qr_code_2,
+                        size: 110, color: Color(0xFF0F766E)),
                   ),
                 const SizedBox(height: 12),
                 Text(
                   titular,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.textPrimary),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '$banco • Cta: $cuenta',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13),
                 ),
                 if (expira.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Válido hasta: $expira',
-                    style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0x0D0F766E),
                     borderRadius: BorderRadius.circular(10),
@@ -1761,8 +2051,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 ),
                 Builder(
                   builder: (innerContext) {
-                    final user = Provider.of<AuthService>(context, listen: false).currentUser;
-                    final isStaff = user != null && (user.role == 'admin' || user.role == 'encargado');
+                    final user =
+                        Provider.of<AuthService>(context, listen: false)
+                            .currentUser;
+                    final isStaff = user != null &&
+                        (user.role == 'admin' || user.role == 'encargado');
                     if (!isStaff) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -1771,8 +2064,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           Navigator.pop(ctx);
                           _showUpdateQrDialog(context, data);
                         },
-                        icon: const Icon(Icons.edit, size: 16, color: AppTheme.accentIndigo),
-                        label: const Text('Actualizar QR (Admin/Encargado)', style: TextStyle(fontSize: 12, color: AppTheme.accentIndigo, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.edit,
+                            size: 16, color: AppTheme.accentIndigo),
+                        label: const Text('Actualizar QR (Admin/Encargado)',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.accentIndigo,
+                                fontWeight: FontWeight.bold)),
                       ),
                     );
                   },
@@ -1786,12 +2084,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     );
   }
 
-  void _showUpdateQrDialog(BuildContext context, Map<String, dynamic>? currentData) {
-    final bancoCtrl = TextEditingController(text: currentData?['banco_nombre'] ?? 'Banco BNB');
-    final cuentaCtrl = TextEditingController(text: currentData?['numero_cuenta'] ?? '');
-    final titularCtrl = TextEditingController(text: currentData?['titular_cuenta'] ?? 'StyleStore S.R.L.');
-    final expiraCtrl = TextEditingController(text: currentData?['fecha_expiracion'] ?? '');
-    final urlCtrl = TextEditingController(text: currentData?['qr_image_url'] ?? '');
+  void _showUpdateQrDialog(
+      BuildContext context, Map<String, dynamic>? currentData) {
+    final bancoCtrl = TextEditingController(
+        text: currentData?['banco_nombre'] ?? 'Banco BNB');
+    final cuentaCtrl =
+        TextEditingController(text: currentData?['numero_cuenta'] ?? '');
+    final titularCtrl = TextEditingController(
+        text: currentData?['titular_cuenta'] ?? 'StyleStore S.R.L.');
+    final expiraCtrl =
+        TextEditingController(text: currentData?['fecha_expiracion'] ?? '');
+    final urlCtrl =
+        TextEditingController(text: currentData?['qr_image_url'] ?? '');
 
     showDialog(
       context: context,
@@ -1800,7 +2104,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           children: [
             Icon(Icons.qr_code_scanner, color: AppTheme.accentIndigo),
             SizedBox(width: 8),
-            Text('Actualizar QR Mostrador', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Actualizar QR Mostrador',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: SingleChildScrollView(
@@ -1809,27 +2114,34 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
             children: [
               TextField(
                 controller: urlCtrl,
-                decoration: const InputDecoration(labelText: 'URL o Path de Imagen QR', hintText: '/uploads/qr/qr.png'),
+                decoration: const InputDecoration(
+                    labelText: 'URL o Path de Imagen QR',
+                    hintText: '/uploads/qr/qr.png'),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: bancoCtrl,
-                decoration: const InputDecoration(labelText: 'Banco', hintText: 'Banco BNB'),
+                decoration: const InputDecoration(
+                    labelText: 'Banco', hintText: 'Banco BNB'),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: cuentaCtrl,
-                decoration: const InputDecoration(labelText: 'Número de Cuenta'),
+                decoration:
+                    const InputDecoration(labelText: 'Número de Cuenta'),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: titularCtrl,
-                decoration: const InputDecoration(labelText: 'Titular de la Cuenta'),
+                decoration:
+                    const InputDecoration(labelText: 'Titular de la Cuenta'),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: expiraCtrl,
-                decoration: const InputDecoration(labelText: 'Fecha de Expiración', hintText: 'YYYY-MM-DD o DD/MM/YYYY'),
+                decoration: const InputDecoration(
+                    labelText: 'Fecha de Expiración',
+                    hintText: 'YYYY-MM-DD o DD/MM/YYYY'),
               ),
             ],
           ),
@@ -1842,7 +2154,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           ElevatedButton(
             onPressed: () async {
               try {
-                final apiService = Provider.of<ApiService>(context, listen: false);
+                final apiService =
+                    Provider.of<ApiService>(context, listen: false);
                 await apiService.post(
                   ApiConfig.qrConfigUrl,
                   body: {
@@ -1856,7 +2169,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 if (context.mounted) {
                   Navigator.pop(dialogCtx);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('QR actualizado exitosamente')),
+                    const SnackBar(
+                        content: Text('QR actualizado exitosamente')),
                   );
                 }
               } catch (e) {
@@ -1880,7 +2194,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
     double distanciaKm = 4.5;
 
     final catalogService = Provider.of<CatalogService>(context, listen: false);
-    final sucursalId = cartService.items.isNotEmpty ? cartService.items.first.sucursalId : catalogService.selectedSucursalId;
+    final sucursalId = cartService.items.isNotEmpty
+        ? cartService.items.first.sucursalId
+        : catalogService.selectedSucursalId;
     Map<String, dynamic>? branch;
     if (catalogService.sucursales.isNotEmpty) {
       try {
@@ -1892,16 +2208,25 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         branch = catalogService.sucursales.first;
       }
     }
-    final branchName = (cartService.items.isNotEmpty && cartService.items.first.sucursalNombre != null)
+    final branchName = (cartService.items.isNotEmpty &&
+            cartService.items.first.sucursalNombre != null)
         ? cartService.items.first.sucursalNombre!
-        : (branch != null ? (branch['nombre'] ?? branch['name'] ?? 'Sucursal Central') : 'Sucursal StyleStore');
-    final branchMapsUrl = (cartService.items.isNotEmpty ? cartService.items.first.sucursalMapsUrl : null) ?? (branch != null ? (branch['maps_url'] ?? branch['ubicacion_url']) : null);
+        : (branch != null
+            ? (branch['nombre'] ?? branch['name'] ?? 'Sucursal Central')
+            : 'Sucursal StyleStore');
+    final branchMapsUrl = (cartService.items.isNotEmpty
+            ? cartService.items.first.sucursalMapsUrl
+            : null) ??
+        (branch != null
+            ? (branch['maps_url'] ?? branch['ubicacion_url'])
+            : null);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.bgCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -1920,7 +2245,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Finalizar Pedido Online', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Finalizar Pedido Online',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 14),
 
                     // Alerta informativa Delivery StyleStore con Maps de Sucursal
@@ -1937,44 +2266,57 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           const Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.local_shipping_outlined, color: Color(0xFF14263D), size: 20),
+                              Icon(Icons.local_shipping_outlined,
+                                  color: Color(0xFF14263D), size: 20),
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Delivery StyleStore: Servicio privado de despacho. Tarifa fija de Bs. 5.00 + Bs. 0.60 por kilómetro desde la sucursal.',
-                                  style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.3),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textPrimary,
+                                      height: 1.3),
                                 ),
                               ),
                             ],
                           ),
-                          if (branchMapsUrl != null && branchMapsUrl.toString().trim().isNotEmpty) ...[
+                          if (branchMapsUrl != null &&
+                              branchMapsUrl.toString().trim().isNotEmpty) ...[
                             const SizedBox(height: 8),
                             InkWell(
                               onTap: () {
-                                Clipboard.setData(ClipboardData(text: branchMapsUrl.toString()));
+                                Clipboard.setData(ClipboardData(
+                                    text: branchMapsUrl.toString()));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('📍 Enlace de Maps de $branchName copiado'),
+                                    content: Text(
+                                        '📍 Enlace de Maps de $branchName copiado'),
                                     backgroundColor: AppTheme.accentIndigo,
                                   ),
                                 );
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0x806366F1)),
+                                  border: Border.all(
+                                      color: const Color(0x806366F1)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.location_on, size: 16, color: AppTheme.accentIndigo),
+                                    const Icon(Icons.location_on,
+                                        size: 16, color: AppTheme.accentIndigo),
                                     const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
                                         'Ver ubicación de $branchName en Google Maps ↗',
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentIndigo),
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.accentIndigo),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -1993,22 +2335,29 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       onChanged: (val) async {
                         if (val.trim().isNotEmpty) {
                           try {
-                            final apiService = Provider.of<ApiService>(context, listen: false);
+                            final apiService =
+                                Provider.of<ApiService>(context, listen: false);
                             final resQuote = await apiService.post(
                               '${ApiConfig.baseUrl}/envios/cotizar-distancia',
                               body: {
                                 'sucursal_id': sucursalId,
-                                'ubicacion_url': mapsCtrl.text.trim().isNotEmpty ? mapsCtrl.text.trim() : null,
+                                'ubicacion_url': mapsCtrl.text.trim().isNotEmpty
+                                    ? mapsCtrl.text.trim()
+                                    : null,
                                 'direccion': val.trim(),
-                                'ciudad': branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
+                                'ciudad': branch != null
+                                    ? (branch['ciudad'] ?? 'Santa Cruz')
+                                    : 'Santa Cruz',
                               },
                               requireAuth: false,
                             );
                             if (resQuote.statusCode == 200) {
-                              final qData = jsonDecode(utf8.decode(resQuote.bodyBytes));
+                              final qData =
+                                  jsonDecode(utf8.decode(resQuote.bodyBytes));
                               if (qData['distancia_km'] != null) {
                                 setModalState(() {
-                                  distanciaKm = (qData['distancia_km'] as num).toDouble();
+                                  distanciaKm =
+                                      (qData['distancia_km'] as num).toDouble();
                                 });
                               }
                             }
@@ -2017,8 +2366,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       },
                       decoration: InputDecoration(
                         labelText: 'Dirección o Referencia de Entrega',
-                        hintText: 'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        hintText:
+                            'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
                       ),
                     ),
@@ -2028,32 +2379,43 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       controller: mapsCtrl,
                       onChanged: (val) async {
                         try {
-                          final apiService = Provider.of<ApiService>(context, listen: false);
+                          final apiService =
+                              Provider.of<ApiService>(context, listen: false);
                           final resQuote = await apiService.post(
                             '${ApiConfig.baseUrl}/envios/cotizar-distancia',
                             body: {
                               'sucursal_id': sucursalId,
-                              'ubicacion_url': val.trim().isNotEmpty ? val.trim() : null,
-                              'direccion': addressCtrl.text.trim().isNotEmpty ? addressCtrl.text.trim() : 'Santa Cruz',
-                              'ciudad': branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
+                              'ubicacion_url':
+                                  val.trim().isNotEmpty ? val.trim() : null,
+                              'direccion': addressCtrl.text.trim().isNotEmpty
+                                  ? addressCtrl.text.trim()
+                                  : 'Santa Cruz',
+                              'ciudad': branch != null
+                                  ? (branch['ciudad'] ?? 'Santa Cruz')
+                                  : 'Santa Cruz',
                             },
                             requireAuth: false,
                           );
                           if (resQuote.statusCode == 200) {
-                            final qData = jsonDecode(utf8.decode(resQuote.bodyBytes));
+                            final qData =
+                                jsonDecode(utf8.decode(resQuote.bodyBytes));
                             if (qData['distancia_km'] != null) {
                               setModalState(() {
-                                distanciaKm = (qData['distancia_km'] as num).toDouble();
+                                distanciaKm =
+                                    (qData['distancia_km'] as num).toDouble();
                               });
                             }
                           }
                         } catch (_) {}
                       },
                       decoration: InputDecoration(
-                        labelText: 'Enlace de Google Maps (Ubicación exacta del cliente)',
+                        labelText:
+                            'Enlace de Google Maps (Ubicación exacta del cliente)',
                         hintText: 'https://maps.app.goo.gl/...',
-                        prefixIcon: const Icon(Icons.location_on, color: AppTheme.accentIndigo),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        prefixIcon: const Icon(Icons.location_on,
+                            color: AppTheme.accentIndigo),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
                       ),
                     ),
@@ -2073,8 +2435,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Distancia de entrega estimada:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-                              Text('${distanciaKm.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.accentIndigo)),
+                              const Text('Distancia de entrega estimada:',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.textSecondary)),
+                              Text('${distanciaKm.toStringAsFixed(1)} km',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.accentIndigo)),
                             ],
                           ),
                           Slider(
@@ -2086,23 +2455,39 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             label: '${distanciaKm.toStringAsFixed(1)} km',
                             onChanged: (val) {
                               setModalState(() {
-                                distanciaKm = double.parse(val.toStringAsFixed(1));
+                                distanciaKm =
+                                    double.parse(val.toStringAsFixed(1));
                               });
                             },
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Costo Delivery (5Bs + 0.6Bs/km):', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                              Text('Bs. ${costoEnvio.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                              const Text('Costo Delivery (5Bs + 0.6Bs/km):',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary)),
+                              Text('Bs. ${costoEnvio.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF14263D))),
                             ],
                           ),
                           const Divider(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Total a Pagar (Prendas + Envío):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
-                              Text('Bs. ${totalPagar.toStringAsFixed(2)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF14263D))),
+                              const Text('Total a Pagar (Prendas + Envío):',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF14263D))),
+                              Text('Bs. ${totalPagar.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF14263D))),
                             ],
                           ),
                         ],
@@ -2110,11 +2495,16 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 14),
 
-                    const Text('Método de Pago Online:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    const Text('Método de Pago Online:',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 8),
 
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: const Color(0x1A14263D),
                         borderRadius: BorderRadius.circular(10),
@@ -2122,16 +2512,24 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.radio_button_checked, color: AppTheme.accentIndigo, size: 20),
+                          Icon(Icons.radio_button_checked,
+                              color: AppTheme.accentIndigo, size: 20),
                           SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('PayPal v2 (Tarjeta o Saldo Digital)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                Text('PayPal v2 (Tarjeta o Saldo Digital)',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.textPrimary)),
                                 SizedBox(height: 2),
-                                Text('Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.',
-                                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                Text(
+                                    'Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary)),
                               ],
                             ),
                           ),
@@ -2146,13 +2544,19 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         final mapsUrl = mapsCtrl.text.trim();
                         if (address.isEmpty && mapsUrl.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Por favor ingresa la dirección de entrega o enlace de Maps.')),
+                            const SnackBar(
+                                content: Text(
+                                    'Por favor ingresa la dirección de entrega o enlace de Maps.')),
                           );
                           return;
                         }
 
                         Navigator.pop(ctx);
-                        final direccionCompleta = mapsUrl.isNotEmpty ? (address.isNotEmpty ? '$address | Maps: $mapsUrl' : mapsUrl) : address;
+                        final direccionCompleta = mapsUrl.isNotEmpty
+                            ? (address.isNotEmpty
+                                ? '$address | Maps: $mapsUrl'
+                                : mapsUrl)
+                            : address;
 
                         // Extraer coordenadas GPS del enlace si existen
                         double? latDestino;
@@ -2172,15 +2576,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           latitudDestino: latDestino,
                           longitudDestino: lonDestino,
                           ubicacionUrl: mapsUrl.isNotEmpty ? mapsUrl : null,
-                          ciudad: branch != null ? (branch['ciudad'] ?? 'Santa Cruz') : 'Santa Cruz',
+                          ciudad: branch != null
+                              ? (branch['ciudad'] ?? 'Santa Cruz')
+                              : 'Santa Cruz',
                           sucursalId: sucursalId,
                         );
 
                         if (res != null) {
-                          final ordenId = (res['orden_id'] ?? res['id']) as int?;
-                          final trackingToken = res['token_seguimiento'] as String?;
+                          final ordenId =
+                              (res['orden_id'] ?? res['id']) as int?;
+                          final trackingToken =
+                              res['token_seguimiento'] as String?;
                           if (ordenId != null && mounted) {
-                            _procesarPagoPayPalSandbox(context, ordenId, totalPagar, trackingToken);
+                            _procesarPagoPayPalSandbox(
+                                context, ordenId, totalPagar, trackingToken);
                           }
                         }
                       },
@@ -2188,7 +2597,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         backgroundColor: const Color(0xFF14263D),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text('Confirmar y Pagar Bs. ${totalPagar.toStringAsFixed(2)} con PayPal', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text(
+                          'Confirmar y Pagar Bs. ${totalPagar.toStringAsFixed(2)} con PayPal',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -2216,22 +2629,33 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('📦 Mis Compras y Envíos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const Text('📦 Mis Compras y Envíos',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary)),
             const SizedBox(height: 10),
             if (orderService.orders.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text('No tienes órdenes de compra registradas.', style: TextStyle(color: AppTheme.textMuted)),
+                child: Text('No tienes órdenes de compra registradas.',
+                    style: TextStyle(color: AppTheme.textMuted)),
               )
             else
-              ...orderService.orders.map((o) => _buildOrderCard(o, orderService)),
+              ...orderService.orders
+                  .map((o) => _buildOrderCard(o, orderService)),
             const SizedBox(height: 20),
-            const Text('🔖 Mis Reservas Activas (48h)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const Text('🔖 Mis Reservas Activas (48h)',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary)),
             const SizedBox(height: 10),
             if (orderService.reservas.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text('No tienes reservas activas.', style: TextStyle(color: AppTheme.textMuted)),
+                child: Text('No tienes reservas activas.',
+                    style: TextStyle(color: AppTheme.textMuted)),
               )
             else
               ...orderService.reservas.map((r) => _buildReservaCard(r)),
@@ -2256,12 +2680,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(order.codigo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary)),
-              _buildTag(order.estado.toUpperCase(), _getStatusColor(order.estado)),
+              Text(order.codigo,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppTheme.textPrimary)),
+              _buildTag(
+                  order.estado.toUpperCase(), _getStatusColor(order.estado)),
             ],
           ),
           const SizedBox(height: 6),
-          Text('Total: Bs. ${order.total.toStringAsFixed(2)} | Tipo: ${order.tipoVenta}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text(
+              'Total: Bs. ${order.total.toStringAsFixed(2)} | Tipo: ${order.tipoVenta}',
+              style:
+                  const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           if (order.envioEstado != null) ...[
             const SizedBox(height: 4),
             Row(
@@ -2275,7 +2707,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text('Envío: ${order.envioEstado}', style: const TextStyle(fontSize: 12, color: AppTheme.accentIndigo, fontWeight: FontWeight.w600)),
+                Text('Envío: ${order.envioEstado}',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.accentIndigo,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ],
@@ -2300,7 +2736,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppTheme.accentIndigo,
                           borderRadius: BorderRadius.circular(6),
@@ -2308,11 +2745,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.local_shipping, color: Colors.white, size: 12),
+                            Icon(Icons.local_shipping,
+                                color: Colors.white, size: 12),
                             SizedBox(width: 4),
                             Text(
                               'Delivery StyleStore',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11),
                             ),
                           ],
                         ),
@@ -2320,14 +2761,18 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       const Spacer(),
                       if (order.minutosEstimados != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0x2610B981),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '~${order.minutosEstimados} min',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.successGreen),
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.successGreen),
                           ),
                         ),
                     ],
@@ -2335,38 +2780,48 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.qr_code, size: 16, color: AppTheme.textSecondary),
+                      const Icon(Icons.qr_code,
+                          size: 16, color: AppTheme.textSecondary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Código: ${order.trackingCode}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: AppTheme.textPrimary),
                         ),
                       ),
                     ],
                   ),
-                  if (order.deliveryConductor != null && order.deliveryConductor!.isNotEmpty) ...[
+                  if (order.deliveryConductor != null &&
+                      order.deliveryConductor!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.person_pin, size: 16, color: AppTheme.textSecondary),
+                        const Icon(Icons.person_pin,
+                            size: 16, color: AppTheme.textSecondary),
                         const SizedBox(width: 6),
                         Text(
                           'Conductor: ${order.deliveryConductor}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
                   ],
-                  if (order.repartidorNombre != null && order.repartidorNombre!.isNotEmpty) ...[
+                  if (order.repartidorNombre != null &&
+                      order.repartidorNombre!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.badge, size: 16, color: AppTheme.textSecondary),
+                        const Icon(Icons.badge,
+                            size: 16, color: AppTheme.textSecondary),
                         const SizedBox(width: 6),
                         Text(
                           'Repartidor: ${order.repartidorNombre}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -2377,7 +2832,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: order.trackingCode!));
+                            Clipboard.setData(
+                                ClipboardData(text: order.trackingCode!));
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Código de rastreo copiado.'),
@@ -2390,12 +2846,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.accentIndigo,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            textStyle: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                      if (order.tokenSeguimiento != null && order.tokenSeguimiento!.isNotEmpty) ...[
+                      if (order.tokenSeguimiento != null &&
+                          order.tokenSeguimiento!.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
@@ -2414,9 +2873,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             label: const Text('Rastrear Envío'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.accentIndigo,
-                              side: const BorderSide(color: AppTheme.accentIndigo),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              side: const BorderSide(
+                                  color: AppTheme.accentIndigo),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              textStyle: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -2425,13 +2887,17 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _showTrackingDialog(order),
-                            icon: const Icon(Icons.local_shipping_outlined, size: 14),
+                            icon: const Icon(Icons.local_shipping_outlined,
+                                size: 14),
                             label: const Text('Info Envío'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.accentIndigo,
-                              side: const BorderSide(color: AppTheme.accentIndigo),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              side: const BorderSide(
+                                  color: AppTheme.accentIndigo),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              textStyle: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -2450,10 +2916,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               padding: const EdgeInsets.only(top: 8.0),
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final ok = await service.confirmarEntregaEnvio(order.envioId!);
+                  final ok =
+                      await service.confirmarEntregaEnvio(order.envioId!);
                   if (mounted && ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('¡Entrega confirmada con éxito!'), backgroundColor: AppTheme.successGreen),
+                      const SnackBar(
+                          content: Text('¡Entrega confirmada con éxito!'),
+                          backgroundColor: AppTheme.successGreen),
                     );
                   }
                 },
@@ -2462,25 +2931,32 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.successGreen,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ),
 
           // Botón de Garantía: Solicitar Cambio / Devolución (v6 Punto 9)
-          if ((order.estado.toLowerCase() == 'pagada' || order.estado.toLowerCase() == 'pagado' || order.estado.toLowerCase() == 'entregado' || order.estado.toLowerCase() == 'completada') &&
+          if ((order.estado.toLowerCase() == 'pagada' ||
+                  order.estado.toLowerCase() == 'pagado' ||
+                  order.estado.toLowerCase() == 'entregado' ||
+                  order.estado.toLowerCase() == 'completada') &&
               DateTime.now().difference(order.createdAt).inDays <= 7)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: OutlinedButton.icon(
                 onPressed: () => _showSolicitarCambioDialog(order, service),
                 icon: const Icon(Icons.sync_alt, size: 16),
-                label: const Text('Solicitar Cambio o Devolución (Plazo 7 días)'),
+                label:
+                    const Text('Solicitar Cambio o Devolución (Plazo 7 días)'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFC5A880),
                   side: const BorderSide(color: Color(0xFFC5A880)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
@@ -2492,7 +2968,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
   void _showSolicitarCambioDialog(OrderItem order, OrderService service) {
     if (order.detalles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay detalles registrados para esta orden.')),
+        const SnackBar(
+            content: Text('No hay detalles registrados para esta orden.')),
       );
       return;
     }
@@ -2514,7 +2991,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.bgCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -2534,26 +3012,40 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       children: [
                         Icon(Icons.sync_alt, color: Color(0xFFC5A880)),
                         SizedBox(width: 8),
-                        Text('Solicitar Cambio o Devolución', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                        Text('Solicitar Cambio o Devolución',
+                            style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('Orden: ${order.codigo}', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text('Orden: ${order.codigo}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary)),
                     const SizedBox(height: 14),
-                    const Text('Prenda a cambiar/devolver:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Prenda a cambiar/devolver:',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<int>(
                       initialValue: selectedDetalleId,
                       dropdownColor: AppTheme.bgCard,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                       ),
                       items: order.detalles.map((d) {
                         return DropdownMenuItem<int>(
                           value: d.id,
-                          child: Text('${d.productoNombre} (${d.tallaNombre ?? ''} / ${d.colorNombre ?? ''}) - Bs. ${d.subtotal.toStringAsFixed(2)}', overflow: TextOverflow.ellipsis),
+                          child: Text(
+                              '${d.productoNombre} (${d.tallaNombre ?? ''} / ${d.colorNombre ?? ''}) - Bs. ${d.subtotal.toStringAsFixed(2)}',
+                              overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -2563,7 +3055,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       },
                     ),
                     const SizedBox(height: 12),
-                    const Text('Tipo de Solicitud:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Tipo de Solicitud:',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -2572,7 +3068,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             label: const Center(child: Text('Cambio')),
                             selected: tipo == 'cambio',
                             selectedColor: const Color(0xFFC5A880),
-                            onSelected: (_) => setModalState(() => tipo = 'cambio'),
+                            onSelected: (_) =>
+                                setModalState(() => tipo = 'cambio'),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -2581,21 +3078,28 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             label: const Center(child: Text('Devolución')),
                             selected: tipo == 'devolucion',
                             selectedColor: const Color(0xFFC5A880),
-                            onSelected: (_) => setModalState(() => tipo = 'devolucion'),
+                            onSelected: (_) =>
+                                setModalState(() => tipo = 'devolucion'),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text('Motivo:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Motivo:',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: motivo,
                       dropdownColor: AppTheme.bgCard,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                       ),
                       items: motivos.map((m) {
                         return DropdownMenuItem<String>(
@@ -2613,8 +3117,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       maxLines: 2,
                       decoration: InputDecoration(
                         labelText: 'Descripción del problema',
-                        hintText: 'Explica brevemente qué ocurrió con la prenda...',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        hintText:
+                            'Explica brevemente qué ocurrió con la prenda...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
                       ),
                     ),
@@ -2622,7 +3128,9 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
-                        final desc = descCtrl.text.trim().isEmpty ? 'Solicitud desde app móvil' : descCtrl.text.trim();
+                        final desc = descCtrl.text.trim().isEmpty
+                            ? 'Solicitud desde app móvil'
+                            : descCtrl.text.trim();
                         final result = await service.solicitarCambio(
                           ordenVentaId: order.id,
                           detalleVentaId: selectedDetalleId,
@@ -2638,8 +3146,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           final String msg = result['msg'] as String;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(isOk ? '¡Solicitud registrada! Preséntate en la sucursal asignada con tu prenda y comprobante.' : msg),
-                              backgroundColor: isOk ? AppTheme.successGreen : AppTheme.dangerRed,
+                              content: Text(isOk
+                                  ? '¡Solicitud registrada! Preséntate en la sucursal asignada con tu prenda y comprobante.'
+                                  : msg),
+                              backgroundColor: isOk
+                                  ? AppTheme.successGreen
+                                  : AppTheme.dangerRed,
                             ),
                           );
                           if (isOk) {
@@ -2651,7 +3163,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         backgroundColor: const Color(0xFF14263D),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text('Enviar Solicitud a la Tienda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: const Text('Enviar Solicitud a la Tienda',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -2678,13 +3193,22 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(res.codigo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFC5A880))),
+              Text(res.codigo,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFFC5A880))),
               _buildTag(res.estado.toUpperCase(), _getStatusColor(res.estado)),
             ],
           ),
           const SizedBox(height: 6),
-          Text('Límite de recojo: ${res.fechaLimite.day}/${res.fechaLimite.month}/${res.fechaLimite.year}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-          Text('Total: Bs. ${res.totalEstimado.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+          Text(
+              'Límite de recojo: ${res.fechaLimite.day}/${res.fechaLimite.month}/${res.fechaLimite.year}',
+              style:
+                  const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text('Total: Bs. ${res.totalEstimado.toStringAsFixed(2)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -2739,7 +3263,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                           color: const Color(0xFF14263D).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.two_wheeler, color: Color(0xFF14263D), size: 24),
+                        child: const Icon(Icons.two_wheeler,
+                            color: Color(0xFF14263D), size: 24),
                       ),
                       const SizedBox(width: 10),
                       const Column(
@@ -2747,18 +3272,23 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         children: [
                           Text(
                             'Delivery StyleStore',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppTheme.textPrimary),
                           ),
                           Text(
                             'Rastreo de Entrega en Vivo',
-                            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            style: TextStyle(
+                                fontSize: 12, color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                    icon:
+                        const Icon(Icons.close, color: AppTheme.textSecondary),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
@@ -2776,10 +3306,15 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Código de Rastreo:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                        const Text('Código de Rastreo:',
+                            style: TextStyle(
+                                fontSize: 13, color: AppTheme.textSecondary)),
                         Text(
                           order.trackingCode ?? 'N/A',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentIndigo),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.accentIndigo),
                         ),
                       ],
                     ),
@@ -2787,10 +3322,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Estado del Envío:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                        const Text('Estado del Envío:',
+                            style: TextStyle(
+                                fontSize: 13, color: AppTheme.textSecondary)),
                         _buildTag(
                           (order.envioEstado ?? 'En Camino').toUpperCase(),
-                          _getEnvioStatusColor(order.envioEstado ?? 'en_camino'),
+                          _getEnvioStatusColor(
+                              order.envioEstado ?? 'en_camino'),
                         ),
                       ],
                     ),
@@ -2798,15 +3336,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                 ),
               ),
               const SizedBox(height: 12),
-              if (order.repartidorNombre != null || order.deliveryConductor != null) ...[
+              if (order.repartidorNombre != null ||
+                  order.deliveryConductor != null) ...[
                 Row(
                   children: [
-                    const Icon(Icons.badge_outlined, size: 16, color: Color(0xFFC5A880)),
+                    const Icon(Icons.badge_outlined,
+                        size: 16, color: Color(0xFFC5A880)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Repartidor: ${order.repartidorNombre ?? order.deliveryConductor}',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppTheme.textPrimary),
                       ),
                     ),
                   ],
@@ -2816,25 +3359,32 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
               if (order.minutosEstimados != null) ...[
                 Row(
                   children: [
-                    const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFC5A880)),
+                    const Icon(Icons.timer_outlined,
+                        size: 16, color: Color(0xFFC5A880)),
                     const SizedBox(width: 8),
                     Text(
                       'Tiempo estimado: ~${order.minutosEstimados} minutos',
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
               ],
-              if (order.repartidorLat != null && order.repartidorLon != null) ...[
+              if (order.repartidorLat != null &&
+                  order.repartidorLon != null) ...[
                 Row(
                   children: [
-                    const Icon(Icons.gps_fixed, size: 16, color: AppTheme.successGreen),
+                    const Icon(Icons.gps_fixed,
+                        size: 16, color: AppTheme.successGreen),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'GPS Repartidor: ${order.repartidorLat!.toStringAsFixed(4)}, ${order.repartidorLon!.toStringAsFixed(4)}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ),
                   ],
@@ -2847,10 +3397,12 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        Provider.of<OrderService>(context, listen: false).fetchOrders();
+                        Provider.of<OrderService>(context, listen: false)
+                            .fetchOrders();
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Estado de pedidos actualizado.')),
+                          const SnackBar(
+                              content: Text('Estado de pedidos actualizado.')),
                         );
                       },
                       icon: const Icon(Icons.refresh, size: 16),
@@ -2859,7 +3411,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         backgroundColor: const Color(0xFF14263D),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                   ),
@@ -2867,9 +3420,11 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(text: order.trackingCode!));
+                        Clipboard.setData(
+                            ClipboardData(text: order.trackingCode!));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Código copiado al portapapeles.')),
+                          const SnackBar(
+                              content: Text('Código copiado al portapapeles.')),
                         );
                       },
                       icon: const Icon(Icons.copy, size: 16),
@@ -2877,8 +3432,10 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.accentIndigo,
                         side: const BorderSide(color: AppTheme.accentIndigo),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                   ],
@@ -2943,7 +3500,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
         '${ApiConfig.baseUrl}/pagos/paypal/crear-orden',
         body: {
           'orden_venta_id': ordenId,
-          'return_url': 'https://style-store-frontend-nine.vercel.app/paypal-return',
+          'return_url':
+              'https://style-store-frontend-nine.vercel.app/paypal-return',
           'cancel_url': 'https://style-store-frontend-nine.vercel.app/carrito',
         },
         requireAuth: true,
@@ -2965,7 +3523,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
 
     if (!context.mounted) return;
 
-    final emailCtrl = TextEditingController(text: 'comprador.sandbox@stylestore.com');
+    final emailCtrl =
+        TextEditingController(text: 'comprador.sandbox@stylestore.com');
     final passwordCtrl = TextEditingController(text: 'SandboxPass2026!');
 
     showModalBottomSheet(
@@ -3011,11 +3570,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF08A),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFDE047)),
+                                border:
+                                    Border.all(color: const Color(0xFFFDE047)),
                               ),
                               child: const Text(
                                 'SANDBOX OFICIAL',
@@ -3105,15 +3666,21 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     // Campo Email
                     const Text(
                       'Correo electrónico de prueba:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF334155)),
                     ),
                     const SizedBox(height: 4),
                     TextField(
                       controller: emailCtrl,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                          fontSize: 14, color: Color(0xFF0F172A)),
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
                       ),
@@ -3123,16 +3690,22 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     // Campo Password
                     const Text(
                       'Contraseña:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF334155)),
                     ),
                     const SizedBox(height: 4),
                     TextField(
                       controller: passwordCtrl,
                       obscureText: true,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                          fontSize: 14, color: Color(0xFF0F172A)),
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
                       ),
@@ -3146,12 +3719,17 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         passwordCtrl.text = 'SandboxPass2026!';
                       },
                       icon: const Text('⚡', style: TextStyle(fontSize: 14)),
-                      label: const Text('Cargar credenciales de prueba predeterminadas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: const Text(
+                          'Cargar credenciales de prueba predeterminadas',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF003087),
-                        side: const BorderSide(color: Color(0xFF0070BA), style: BorderStyle.solid),
+                        side: const BorderSide(
+                            color: Color(0xFF0070BA), style: BorderStyle.solid),
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -3166,7 +3744,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         ),
                         child: Text(
                           '⚠️ $errorMsg',
-                          style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12),
+                          style: const TextStyle(
+                              color: Color(0xFF991B1B), fontSize: 12),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -3183,7 +3762,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                               });
 
                               try {
-                                final tokenAUsar = paypalOrderId ?? 'MOCK_TOKEN_$ordenId';
+                                final tokenAUsar =
+                                    paypalOrderId ?? 'MOCK_TOKEN_$ordenId';
                                 final capRes = await apiService.post(
                                   '${ApiConfig.baseUrl}/pagos/paypal/capturar-orden',
                                   body: {
@@ -3195,40 +3775,50 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
 
                                 if (!bCtx.mounted || !context.mounted) return;
 
-                                if (capRes.statusCode == 200 || capRes.statusCode == 201) {
+                                if (capRes.statusCode == 200 ||
+                                    capRes.statusCode == 201) {
                                   Navigator.pop(bCtx);
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('🎉 ¡Pago verificado y procesado exitosamente con PayPal!'),
+                                        content: Text(
+                                            '🎉 ¡Pago verificado y procesado exitosamente con PayPal!'),
                                         backgroundColor: AppTheme.successGreen,
                                         duration: Duration(seconds: 4),
                                       ),
                                     );
-                                    Provider.of<OrderService>(context, listen: false).fetchOrders();
+                                    Provider.of<OrderService>(context,
+                                            listen: false)
+                                        .fetchOrders();
                                     _tabController.animateTo(5); // Mis Pedidos
 
-                                    if (trackingToken != null && trackingToken.isNotEmpty) {
+                                    if (trackingToken != null &&
+                                        trackingToken.isNotEmpty) {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => DeliveryTrackingScreen(token: trackingToken),
+                                          builder: (_) =>
+                                              DeliveryTrackingScreen(
+                                                  token: trackingToken),
                                         ),
                                       );
                                     }
                                   }
                                 } else {
-                                  final capData = jsonDecode(utf8.decode(capRes.bodyBytes));
+                                  final capData =
+                                      jsonDecode(utf8.decode(capRes.bodyBytes));
                                   setBState(() {
                                     procesando = false;
-                                    errorMsg = capData['detail'] ?? 'No se pudo completar la verificación del pago en PayPal.';
+                                    errorMsg = capData['detail'] ??
+                                        'No se pudo completar la verificación del pago en PayPal.';
                                   });
                                 }
                               } catch (e) {
                                 if (!bCtx.mounted) return;
                                 setBState(() {
                                   procesando = false;
-                                  errorMsg = 'Error al procesar el pago con PayPal Sandbox: $e';
+                                  errorMsg =
+                                      'Error al procesar el pago con PayPal Sandbox: $e';
                                 });
                               }
                             },
@@ -3236,14 +3826,20 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         backgroundColor: const Color(0xFF0070BA),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
                         elevation: 2,
                       ),
                       child: procesando
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
                           : const Text(
                               'Iniciar Sesión en Sandbox →',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                     ),
                     const SizedBox(height: 14),
@@ -3254,7 +3850,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                         Expanded(child: Divider()),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.circle_outlined, size: 8, color: Colors.grey),
+                          child: Icon(Icons.circle_outlined,
+                              size: 8, color: Colors.grey),
                         ),
                         Expanded(child: Divider()),
                       ],
@@ -3264,18 +3861,25 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     // Abrir en ventana externa
                     OutlinedButton.icon(
                       onPressed: () {
-                        final url = approveUrl ?? 'https://www.sandbox.paypal.com';
-                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                        final url =
+                            approveUrl ?? 'https://www.sandbox.paypal.com';
+                        launchUrl(Uri.parse(url),
+                            mode: LaunchMode.externalApplication);
                       },
-                      icon: const Icon(Icons.language, size: 18, color: Color(0xFF0070BA)),
+                      icon: const Icon(Icons.language,
+                          size: 18, color: Color(0xFF0070BA)),
                       label: const Text(
                         'Abrir en ventana externa de sandbox.paypal.com',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0070BA)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0070BA)),
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: const BorderSide(color: Color(0xFF0070BA)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -3284,8 +3888,13 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('🔒 Entorno Seguro PayPal Sandbox API v2', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                        Text('Documentación Sandbox', style: TextStyle(fontSize: 10, color: Color(0xFF0070BA), fontWeight: FontWeight.bold)),
+                        Text('🔒 Entorno Seguro PayPal Sandbox API v2',
+                            style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        Text('Documentación Sandbox',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF0070BA),
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],
@@ -3307,7 +3916,8 @@ class _CatalogScreenState extends State<CatalogScreen> with SingleTickerProvider
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+        style:
+            TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }
