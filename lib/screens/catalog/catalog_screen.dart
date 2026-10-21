@@ -148,6 +148,169 @@ class _CatalogScreenState extends State<CatalogScreen>
     return OutfitsScreen(availableProducts: catalogService.productos);
   }
 
+  Future<void> _showPickupCheckoutModal(CartService cartService) async {
+    final api = Provider.of<ApiService>(context, listen: false);
+    final catalogService = Provider.of<CatalogService>(context, listen: false);
+    final sucursalId = cartService.items.isNotEmpty
+        ? cartService.items.first.sucursalId
+        : catalogService.selectedSucursalId;
+    if (sucursalId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo identificar la sucursal de recojo.')),
+      );
+      return;
+    }
+    final branch = catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
+          (item) => item?['id'] == sucursalId,
+          orElse: () => null,
+        );
+    final branchName = cartService.items.isNotEmpty
+        ? (cartService.items.first.sucursalNombre ?? 'Sucursal')
+        : (branch?['nombre'] ?? branch?['name'] ?? 'Sucursal');
+
+    String formatDate(DateTime value) =>
+        '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    Future<List<Map<String, dynamic>>> loadBlocks(DateTime value) async {
+      try {
+        final response = await api.get(
+          ApiConfig.reservasDisponibilidadUrl(sucursalId, formatDate(value)),
+          requireAuth: true,
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          return List<Map<String, dynamic>>.from(data['bloques'] ?? const []);
+        }
+      } catch (_) {}
+      return [];
+    }
+
+    int selectedDay = 1;
+    var pickupDate = DateTime.now().add(const Duration(days: 1));
+    var blocks = await loadBlocks(pickupDate);
+    String selectedTime = blocks
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((item) => item?['disponible'] == true,
+                orElse: () => null)?['inicio']
+            ?.toString() ??
+        '';
+    bool loading = false;
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Recojo programado',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Sucursal: $branchName',
+                  style: const TextStyle(color: AppTheme.textSecondary)),
+              const SizedBox(height: 16),
+              const Text('Fecha (máximo 3 días)',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [0, 1, 2, 3].map((day) => ChoiceChip(
+                  label: Text(day == 0 ? 'Hoy' : '+$day día${day == 1 ? '' : 's'}'),
+                  selected: selectedDay == day,
+                  onSelected: (_) async {
+                    setModalState(() {
+                      selectedDay = day;
+                      pickupDate = DateTime.now().add(Duration(days: day));
+                      loading = true;
+                      selectedTime = '';
+                    });
+                    final fetched = await loadBlocks(pickupDate);
+                    if (!sheetContext.mounted) return;
+                    setModalState(() {
+                      blocks = fetched;
+                      selectedTime = fetched
+                              .cast<Map<String, dynamic>?>()
+                              .firstWhere((item) => item?['disponible'] == true,
+                                  orElse: () => null)?['inicio']
+                              ?.toString() ??
+                          '';
+                      loading = false;
+                    });
+                  },
+                )).toList(),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: selectedTime.isEmpty ? null : selectedTime,
+                decoration: const InputDecoration(
+                  labelText: 'Bloque de una hora',
+                  prefixIcon: Icon(Icons.schedule),
+                ),
+                hint: Text(loading ? 'Consultando...' : 'Selecciona un horario'),
+                items: blocks.map((block) {
+                  final start = block['inicio'].toString();
+                  final end = block['fin'].toString();
+                  final available = block['disponible'] == true;
+                  return DropdownMenuItem<String>(
+                    value: available ? start : 'ocupado-$start',
+                    enabled: available,
+                    child: Text('$start–$end ${available ? 'Disponible' : 'Ocupado'}'),
+                  );
+                }).toList(),
+                onChanged: loading
+                    ? null
+                    : (value) => setModalState(() => selectedTime = value ?? ''),
+              ),
+              const SizedBox(height: 18),
+              ElevatedButton(
+                onPressed: selectedTime.isEmpty || loading
+                    ? null
+                    : () async {
+                        final response = await cartService.checkout(
+                          metodoPago: 'paypal',
+                          sucursalId: sucursalId,
+                          tipoEntrega: 'recojo',
+                          fechaRecojo: formatDate(pickupDate),
+                          horaRecojo: '$selectedTime:00',
+                        );
+                        if (response == null || !sheetContext.mounted) {
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                              const SnackBar(content: Text('No se pudo programar el recojo. Actualiza los horarios e inténtalo nuevamente.')),
+                            );
+                          }
+                          return;
+                        }
+                        Navigator.pop(sheetContext);
+                        final orderId = (response['orden_venta_id'] ??
+                            response['orden_id'] ?? response['id']) as int?;
+                        if (orderId != null && mounted) {
+                          _procesarPagoPayPalSandbox(
+                            context, orderId, cartService.total, null,
+                          );
+                        }
+                      },
+                child: Text('Confirmar recojo y pagar Bs. ${cartService.total.toStringAsFixed(2)}'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ==========================================
   // TAB PROMO: PROMOCIONES Y DESCUENTOS
   // ==========================================
@@ -2225,7 +2388,29 @@ class _CatalogScreenState extends State<CatalogScreen>
     );
   }
 
-  void _showCheckoutModal(CartService cartService) {
+  Future<void> _showCheckoutModal(CartService cartService) async {
+    final usarDelivery = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('¿Cómo recibirás tu compra?'),
+        content: const Text('Elige delivery a domicilio o recojo programado en la sucursal de origen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Recojo en sucursal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delivery'),
+          ),
+        ],
+      ),
+    );
+    if (usarDelivery == null || !mounted) return;
+    if (!usarDelivery) {
+      await _showPickupCheckoutModal(cartService);
+      return;
+    }
     final addressCtrl = TextEditingController(text: 'Av. América #450');
     final mapsCtrl = TextEditingController();
     double distanciaKm = 4.5;
@@ -2620,8 +2805,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                         );
 
                         if (res != null) {
-                          final ordenId =
-                              (res['orden_id'] ?? res['id']) as int?;
+                          final ordenId = (res['orden_venta_id'] ??
+                              res['orden_id'] ?? res['id']) as int?;
                           final trackingToken =
                               res['token_seguimiento'] as String?;
                           if (ordenId != null && mounted) {

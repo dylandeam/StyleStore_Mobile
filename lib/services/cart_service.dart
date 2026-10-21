@@ -128,6 +128,9 @@ class CartService extends ChangeNotifier {
     String? ciudad,
     String? referencia,
     int? sucursalId,
+    String? tipoEntrega,
+    String? fechaRecojo,
+    String? horaRecojo,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -143,6 +146,9 @@ class CartService extends ChangeNotifier {
         if (ciudad != null && ciudad.isNotEmpty) 'ciudad': ciudad,
         if (referencia != null && referencia.isNotEmpty) 'referencia': referencia,
         if (sucursalId != null) 'sucursal_id': sucursalId,
+        if (tipoEntrega != null) 'tipo_entrega': tipoEntrega,
+        if (fechaRecojo != null) 'fecha_recojo': fechaRecojo,
+        if (horaRecojo != null) 'hora_recojo': horaRecojo,
       };
 
       final res = await _apiService.post(
