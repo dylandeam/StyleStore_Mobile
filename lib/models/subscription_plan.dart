@@ -6,6 +6,7 @@ class SubscriptionPlan {
   final String currency;
   final int? maxBranches;
   final bool generativeAi;
+  final Map<String, bool> capabilities;
   final List<String> benefits;
   final Map<String, dynamic> style;
 
@@ -17,6 +18,7 @@ class SubscriptionPlan {
     required this.currency,
     this.maxBranches,
     required this.generativeAi,
+    required this.capabilities,
     required this.benefits,
     required this.style,
   });
@@ -30,6 +32,9 @@ class SubscriptionPlan {
         currency: json['moneda']?.toString() ?? 'BOB',
         maxBranches: int.tryParse(json['max_sucursales']?.toString() ?? ''),
         generativeAi: json['ia_generativa'] == true,
+        capabilities: Map<String, dynamic>.from(
+          json['capacidades'] as Map? ?? const {},
+        ).map((key, value) => MapEntry(key, value == true)),
         benefits: (json['beneficios'] as List<dynamic>? ?? [])
             .map((item) => item.toString())
             .toList(),

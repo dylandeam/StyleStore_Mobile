@@ -53,14 +53,14 @@ class _PlansScreenState extends State<PlansScreen> {
       builder: (context) => AlertDialog(
         title: Text('Contratar ${plan.name}'),
         content: Text(
-            'El precio mensual será ${plan.currency} ${plan.price.toStringAsFixed(2)}.'),
+            'Confirma el pago simulado de ${plan.currency} ${plan.price.toStringAsFixed(2)}. El tenant se activará al registrarse el pago.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar')),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirmar')),
+              child: const Text('Confirmar pago')),
         ],
       ),
     );
@@ -69,8 +69,8 @@ class _PlansScreenState extends State<PlansScreen> {
       final contract = await _service.contract(plan.code);
       if (!mounted) return;
       setState(() => _contract = contract);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Plan ${plan.name} contratado.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Pago confirmado. Plan ${plan.name} activado.')));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -166,9 +166,12 @@ class _PlansScreenState extends State<PlansScreen> {
           Text(plan.maxBranches == null
               ? 'Alcance configurable'
               : 'Hasta ${plan.maxBranches} sucursales'),
-          Text(plan.generativeAi
-              ? 'IA generativa incluida'
-              : 'Sin IA generativa'),
+          Text(plan.capabilities['chatbot'] == true
+              ? 'Chatbot incluido'
+              : 'Sin chatbot'),
+          Text(plan.capabilities['predicciones'] == true
+              ? 'Predicciones incluidas'
+              : 'Sin predicciones'),
           const SizedBox(height: 12),
           ...plan.benefits.map((benefit) => Padding(
               padding: const EdgeInsets.only(bottom: 6),

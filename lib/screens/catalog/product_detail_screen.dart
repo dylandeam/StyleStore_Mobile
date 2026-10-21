@@ -1247,15 +1247,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final aperturaTexto =
         (selectedBranch?['hora_apertura'] ?? '09:00').toString();
     final cierreTexto = (selectedBranch?['hora_cierre'] ?? '18:00').toString();
-    final aperturaPartes = aperturaTexto.split(':');
-    final cierrePartes = cierreTexto.split(':');
-    final apertura = TimeOfDay(
-        hour: int.tryParse(aperturaPartes[0]) ?? 9,
-        minute: int.tryParse(aperturaPartes[1]) ?? 0);
-    final cierre = TimeOfDay(
-        hour: int.tryParse(cierrePartes[0]) ?? 18,
-        minute: int.tryParse(cierrePartes[1]) ?? 0);
-    TimeOfDay horaRetiro = apertura;
+    String formatDate(DateTime value) =>
+        '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    Future<List<Map<String, dynamic>>> cargarBloques(DateTime fecha) async {
+      try {
+        final response = await api.get(
+          ApiConfig.reservasDisponibilidadUrl(
+              sucursalSeleccionada, formatDate(fecha)),
+          requireAuth: true,
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          return List<Map<String, dynamic>>.from(data['bloques'] ?? const []);
+        }
+      } catch (_) {}
+      return [];
+    }
+
+    var bloques = await cargarBloques(
+        DateTime.now().add(Duration(days: diasReserva)));
+    String horaRetiro = bloques
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((block) => block?['disponible'] == true,
+                orElse: () => null)?['inicio']
+            ?.toString() ??
+        '';
+    bool cargandoBloques = false;
 
     if (!mounted) return;
     showModalBottomSheet(
@@ -1302,7 +1319,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         label: Text('$d días'),
                         selected: sel,
                         selectedColor: const Color(0xFFC5A880),
-                        onSelected: (_) => setModalState(() => diasReserva = d),
+                        onSelected: (_) async {
+                          setModalState(() {
+                            diasReserva = d;
+                            cargandoBloques = true;
+                            horaRetiro = '';
+                          });
+                          final nuevos = await cargarBloques(
+                              DateTime.now().add(Duration(days: d)));
+                          if (!ctx.mounted) return;
+                          setModalState(() {
+                            bloques = nuevos;
+                            horaRetiro = nuevos
+                                    .cast<Map<String, dynamic>?>()
+                                    .firstWhere(
+                                        (block) => block?['disponible'] == true,
+                                        orElse: () => null)?['inicio']
+                                    ?.toString() ??
+                                '';
+                            cargandoBloques = false;
+                          });
+                        },
                       );
                     }).toList(),
                   ),
@@ -1315,28 +1352,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         fontStyle: FontStyle.italic),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.schedule),
-                    label: Text('Hora de recogida: ${horaRetiro.format(ctx)}'),
-                    onPressed: () async {
-                      final seleccion = await showTimePicker(
-                          context: ctx, initialTime: horaRetiro);
-                      if (seleccion == null) return;
-                      final minutos = seleccion.hour * 60 + seleccion.minute;
-                      final inicio = apertura.hour * 60 + apertura.minute;
-                      final fin = cierre.hour * 60 + cierre.minute;
-                      if (minutos < inicio || minutos > fin) {
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    'Selecciona una hora entre $aperturaTexto y $cierreTexto.')),
-                          );
-                        }
-                        return;
-                      }
-                      setModalState(() => horaRetiro = seleccion);
-                    },
+                  DropdownButtonFormField<String>(
+                    initialValue: horaRetiro.isEmpty ? null : horaRetiro,
+                    decoration: const InputDecoration(
+                      labelText: 'Bloque de recogida (1 hora)',
+                      prefixIcon: Icon(Icons.schedule),
+                    ),
+                    hint: Text(cargandoBloques
+                        ? 'Consultando horarios...'
+                        : 'Selecciona un bloque disponible'),
+                    items: bloques.map((block) {
+                      final disponible = block['disponible'] == true;
+                      final inicio = block['inicio'].toString();
+                      final fin = block['fin'].toString();
+                      return DropdownMenuItem<String>(
+                        value: disponible ? inicio : 'ocupado-$inicio',
+                        enabled: disponible,
+                        child: Text('$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
+                      );
+                    }).toList(),
+                    onChanged: cargandoBloques
+                        ? null
+                        : (value) => setModalState(
+                            () => horaRetiro = value ?? ''),
                   ),
                   Text(
                     'Horario de atención: $aperturaTexto – $cierreTexto',
@@ -1345,7 +1383,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () async {
+                    onPressed: horaRetiro.isEmpty ? null : () async {
                       Navigator.pop(ctx);
                       final stockId = _selectedStockInventarioId;
                       if (stockId == null) {
@@ -1364,8 +1402,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         {
                           'sucursal_id': sucursalSeleccionada,
                           'fecha_limite': fechaLimite.toIso8601String(),
-                          'hora_retiro':
-                              '${horaRetiro.hour.toString().padLeft(2, '0')}:${horaRetiro.minute.toString().padLeft(2, '0')}:00',
+                          'hora_retiro': '$horaRetiro:00',
                           'items': [
                             {
                               'stock_inventario_id': stockId,

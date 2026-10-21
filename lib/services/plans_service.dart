@@ -29,7 +29,12 @@ class PlansService {
   Future<Map<String, dynamic>> contract(String code) async {
     final response = await _api.post(
       '${ApiConfig.baseUrl}/planes/contratar',
-      body: {'plan_codigo': code},
+      body: {
+        'plan_codigo': code,
+        'pago_confirmado': true,
+        'referencia_pago':
+            'MOBILE-SIM-${DateTime.now().millisecondsSinceEpoch}',
+      },
     );
     if (response.statusCode != 200) {
       final body = jsonDecode(response.body);

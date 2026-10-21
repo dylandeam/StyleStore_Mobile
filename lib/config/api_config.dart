@@ -61,6 +61,8 @@ class ApiConfig {
   // Reservas (CU13)
   static String get reservasUrl => '$baseUrl/reservas';
   static String get reservasElegibilidadUrl => '$baseUrl/reservas/elegibilidad';
+  static String reservasDisponibilidadUrl(int sucursalId, String fecha) =>
+      '$baseUrl/reservas/disponibilidad?sucursal_id=$sucursalId&fecha=$fecha';
   static String get syncOperationsUrl => '$baseUrl/sync/operations';
 
   // Cambios y Devoluciones (v6 Punto 9)
