@@ -16,22 +16,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _apellidoController = TextEditingController();
   final _emailController = TextEditingController();
-  final _empresaController = TextEditingController();
   final _passwordController = TextEditingController();
+  List<Map<String, dynamic>> _companies = const [];
+  final Set<String> _selectedCompanyCodes = {};
+  bool _loadingCompanies = true;
+  bool _companiesRequested = false;
+  String? _companiesError;
   bool _obscurePassword = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_companiesRequested) {
+      _companiesRequested = true;
+      _loadCompanies();
+    }
+  }
+
+  Future<void> _loadCompanies() async {
+    try {
+      final companies =
+          await context.read<AuthService>().getRegistrationCompanies();
+      if (!mounted) return;
+      setState(() {
+        _companies = companies;
+        _loadingCompanies = false;
+        _companiesError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingCompanies = false;
+        _companiesError = error.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _apellidoController.dispose();
     _emailController.dispose();
-    _empresaController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCompanyCodes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Selecciona al menos una empresa.'),
+        backgroundColor: AppTheme.dangerRed,
+      ));
+      return;
+    }
 
     final authService = Provider.of<AuthService>(context, listen: false);
     final success = await authService.register(
@@ -39,13 +77,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       apellido: _apellidoController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      empresaCodigo: _empresaController.text,
+      empresaCodigos: _selectedCompanyCodes.toList(),
     );
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('¡Cuenta creada exitosamente! Ahora puedes iniciar sesión.'),
+          content:
+              Text('¡Cuenta creada exitosamente! Ahora puedes iniciar sesión.'),
           backgroundColor: AppTheme.successGreen,
         ),
       );
@@ -61,7 +100,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
@@ -78,10 +118,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: BoxDecoration(
                           color: AppTheme.bgCard,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.borderGlass, width: 2),
+                          border:
+                              Border.all(color: AppTheme.borderGlass, width: 2),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.accentIndigo.withValues(alpha: 0.12),
+                              color:
+                                  AppTheme.accentIndigo.withValues(alpha: 0.12),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -93,7 +135,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             height: 76,
                             width: 76,
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
                               Icons.storefront,
                               size: 56,
                               color: AppTheme.accentIndigo,
@@ -106,16 +149,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Brand Badge
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppTheme.accentIndigo.withValues(alpha: 0.08),
-                          border: Border.all(color: AppTheme.accentIndigo.withValues(alpha: 0.25)),
+                          border: Border.all(
+                              color: AppTheme.accentIndigo
+                                  .withValues(alpha: 0.25)),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.stars, color: AppTheme.accentIndigo, size: 16),
+                            Icon(Icons.stars,
+                                color: AppTheme.accentIndigo, size: 16),
                             SizedBox(width: 6),
                             Text(
                               'StyleStore Auth',
@@ -152,22 +199,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 28),
 
-                    TextFormField(
-                      controller: _empresaController,
-                      textCapitalization: TextCapitalization.none,
-                      style: const TextStyle(color: AppTheme.textPrimary),
+                    InputDecorator(
                       decoration: const InputDecoration(
-                        labelText: 'Código de empresa (opcional)',
-                        prefixIcon: Icon(Icons.business_outlined, color: AppTheme.textMuted),
-                        hintText: 'Déjalo vacío si usas StyleStore',
+                        labelText: 'Empresas donde deseas registrarte *',
+                        prefixIcon: Icon(Icons.business_outlined,
+                            color: AppTheme.textMuted),
                       ),
-                      validator: (value) {
-                        final code = value?.trim() ?? '';
-                        if (code.isNotEmpty && !RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(code)) {
-                          return 'Usa letras, números, guion o guion bajo';
-                        }
-                        return null;
-                      },
+                      child: _loadingCompanies
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          : _companiesError != null
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_companiesError!,
+                                        style: const TextStyle(
+                                            color: AppTheme.dangerRed)),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          _loadingCompanies = true;
+                                          _companiesError = null;
+                                        });
+                                        _loadCompanies();
+                                      },
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Reintentar'),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  children: _companies.map((company) {
+                                    final code = company['codigo'].toString();
+                                    return CheckboxListTile(
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                      value:
+                                          _selectedCompanyCodes.contains(code),
+                                      title: Text(company['nombre'].toString()),
+                                      subtitle: Text(code),
+                                      onChanged: (checked) => setState(() {
+                                        if (checked == true) {
+                                          _selectedCompanyCodes.add(code);
+                                        } else {
+                                          _selectedCompanyCodes.remove(code);
+                                        }
+                                      }),
+                                    );
+                                  }).toList(),
+                                ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text(
+                        'Puedes elegir una o varias; la primera será tu tienda inicial.',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                      ),
                     ),
                     const SizedBox(height: 16),
 
@@ -182,12 +272,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 20),
+                            const Icon(Icons.error_outline,
+                                color: AppTheme.dangerRed, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 authService.errorMessage!,
-                                style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
+                                style: const TextStyle(
+                                    color: Color(0xFFFCA5A5), fontSize: 13),
                               ),
                             ),
                           ],
@@ -202,7 +294,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Nombres',
-                        prefixIcon: Icon(Icons.person_outline, color: AppTheme.textMuted),
+                        prefixIcon: Icon(Icons.person_outline,
+                            color: AppTheme.textMuted),
                         hintText: 'Ej: Lupita',
                       ),
                       validator: (value) {
@@ -220,7 +313,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Apellidos',
-                        prefixIcon: Icon(Icons.badge_outlined, color: AppTheme.textMuted),
+                        prefixIcon: Icon(Icons.badge_outlined,
+                            color: AppTheme.textMuted),
                         hintText: 'Ej: Cardozo Mendez',
                       ),
                       validator: (value) {
@@ -239,14 +333,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Correo Electrónico',
-                        prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                        prefixIcon: Icon(Icons.email_outlined,
+                            color: AppTheme.textMuted),
                         hintText: 'ejemplo@stylestore.com',
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Ingresa tu correo';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value)) {
                           return 'Correo electrónico no válido';
                         }
                         return null;
@@ -261,19 +357,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted),
+                        prefixIcon: const Icon(Icons.lock_outline,
+                            color: AppTheme.textMuted),
                         hintText: 'Mínimo 8 caracteres',
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                             color: AppTheme.textMuted,
                           ),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.length < 8) {
                           return 'La contraseña debe tener al menos 8 caracteres';
+                        }
+                        if (!RegExp(r'(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9])')
+                            .hasMatch(value)) {
+                          return 'Incluye mayúscula, minúscula y un carácter especial';
                         }
                         return null;
                       },
@@ -282,7 +386,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // Submit Button
                     ElevatedButton(
-                      onPressed: authService.status == AuthStatus.loading ? null : _submit,
+                      onPressed: authService.status == AuthStatus.loading
+                          ? null
+                          : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentIndigo,
                       ),
@@ -290,7 +396,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -309,11 +416,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         const Text(
                           '¿Ya tienes una cuenta? ',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                          style: TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 14),
                         ),
                         GestureDetector(
                           onTap: () {
-                            Navigator.pushReplacementNamed(context, AppRoutes.login);
+                            Navigator.pushReplacementNamed(
+                                context, AppRoutes.login);
                           },
                           child: const Text(
                             'Inicia sesión',

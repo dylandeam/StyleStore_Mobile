@@ -19,13 +19,21 @@ class OrderService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  void resetTenantState() {
+    _orders = [];
+    _reservas = [];
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> fetchOrders() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final res = await _apiService.get(ApiConfig.misComprasUrl, requireAuth: true);
+      final res =
+          await _apiService.get(ApiConfig.misComprasUrl, requireAuth: true);
       if (res.statusCode == 200) {
         final List<dynamic> list = jsonDecode(res.body);
         _orders = list.map((j) => OrderItem.fromJson(j)).toList();
@@ -44,7 +52,8 @@ class OrderService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _apiService.get(ApiConfig.reservasUrl, requireAuth: true);
+      final res =
+          await _apiService.get(ApiConfig.reservasUrl, requireAuth: true);
       if (res.statusCode == 200) {
         final List<dynamic> list = jsonDecode(res.body);
         _reservas = list.map((j) => ReservaItem.fromJson(j)).toList();
@@ -89,14 +98,18 @@ class OrderService extends ChangeNotifier {
           'tipo': tipo,
           'motivo': motivo,
           'sucursal_id': sucursalId,
-          'fecha_programada': '${fechaProgramada.year.toString().padLeft(4, '0')}-${fechaProgramada.month.toString().padLeft(2, '0')}-${fechaProgramada.day.toString().padLeft(2, '0')}',
+          'fecha_programada':
+              '${fechaProgramada.year.toString().padLeft(4, '0')}-${fechaProgramada.month.toString().padLeft(2, '0')}-${fechaProgramada.day.toString().padLeft(2, '0')}',
           'descripcion_problema': descripcionProblema,
         },
         requireAuth: true,
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return {'ok': true, 'msg': data['mensaje'] ?? 'Solicitud registrada exitosamente.'};
+        return {
+          'ok': true,
+          'msg': data['mensaje'] ?? 'Solicitud registrada exitosamente.'
+        };
       } else {
         String msg = 'No se pudo registrar la solicitud.';
         try {

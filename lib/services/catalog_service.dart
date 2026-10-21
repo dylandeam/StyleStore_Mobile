@@ -28,6 +28,16 @@ class CatalogService extends ChangeNotifier {
   DateTime? get lastSync => _lastSync;
   bool get usingOfflineData => _usingOfflineData;
 
+  void resetTenantState() {
+    _productos = [];
+    _sucursales = [];
+    _selectedSucursalId = null;
+    _errorMessage = null;
+    _lastSync = null;
+    _usingOfflineData = false;
+    notifyListeners();
+  }
+
   Future<void> fetchSucursales() async {
     try {
       final res =

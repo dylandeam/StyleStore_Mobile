@@ -47,7 +47,7 @@ class AuthService extends ChangeNotifier {
     String? apellido,
     required String email,
     required String password,
-    String? empresaCodigo,
+    required List<String> empresaCodigos,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -62,9 +62,11 @@ class AuthService extends ChangeNotifier {
       if (apellido != null && apellido.trim().isNotEmpty) {
         body['apellido'] = apellido.trim();
       }
-      if (empresaCodigo != null && empresaCodigo.trim().isNotEmpty) {
-        body['empresa_codigo'] = empresaCodigo.trim().toLowerCase();
-      }
+      body['empresa_codigos'] = empresaCodigos
+          .map((code) => code.trim().toLowerCase())
+          .where((code) => code.isNotEmpty)
+          .toSet()
+          .toList();
 
       final response = await _apiService.post(
         ApiConfig.registerUrl,
@@ -89,6 +91,46 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<List<Map<String, dynamic>>> getRegistrationCompanies() async {
+    final response = await _apiService.get(
+      '${ApiConfig.baseUrl}/empresas/publicas/registro',
+      requireAuth: false,
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudieron cargar las empresas disponibles.');
+    }
+    return (jsonDecode(response.body) as List<dynamic>)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getTenants() async {
+    final response = await _apiService.get('${ApiConfig.baseUrl}/auth/tenants');
+    if (response.statusCode != 200) {
+      throw Exception('No se pudieron cargar tus empresas.');
+    }
+    return (jsonDecode(response.body) as List<dynamic>)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<void> selectTenant(int empresaId) async {
+    final response = await _apiService.post(
+      '${ApiConfig.baseUrl}/auth/tenants/select',
+      body: {'empresa_id': empresaId},
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['detail'] ?? 'No se pudo cambiar de empresa.');
+    }
+    final data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    await _storageService.saveTokens(
+      accessToken: data['access_token'] as String,
+      refreshToken: data['refresh_token'] as String,
+    );
+    await fetchProfile();
   }
 
   Future<bool> login({

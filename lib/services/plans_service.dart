@@ -26,19 +26,34 @@ class PlansService {
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
   }
 
-  Future<Map<String, dynamic>> contract(String code) async {
+  Future<Map<String, dynamic>> createPayPalOrder(
+    String code, {
+    required String returnUrl,
+    required String cancelUrl,
+  }) async {
     final response = await _api.post(
-      '${ApiConfig.baseUrl}/planes/contratar',
+      '${ApiConfig.baseUrl}/planes/paypal/crear-orden',
       body: {
         'plan_codigo': code,
-        'pago_confirmado': true,
-        'referencia_pago':
-            'MOBILE-SIM-${DateTime.now().millisecondsSinceEpoch}',
+        'return_url': returnUrl,
+        'cancel_url': cancelUrl,
       },
     );
     if (response.statusCode != 200) {
       final body = jsonDecode(response.body);
-      throw Exception(body['detail'] ?? 'No se pudo contratar el plan.');
+      throw Exception(body['detail'] ?? 'No se pudo iniciar el pago.');
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+  }
+
+  Future<Map<String, dynamic>> capturePayPalOrder(String orderId) async {
+    final response = await _api.post(
+      '${ApiConfig.baseUrl}/planes/paypal/capturar-orden',
+      body: {'paypal_order_id': orderId},
+    );
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['detail'] ?? 'PayPal no pudo confirmar el cobro.');
     }
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
   }

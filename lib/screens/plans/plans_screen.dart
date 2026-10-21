@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/theme.dart';
 import '../../models/subscription_plan.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/plans_service.dart';
 
 class PlansScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class _PlansScreenState extends State<PlansScreen> {
   List<SubscriptionPlan> _plans = const [];
   Map<String, dynamic>? _contract;
   bool _loading = true;
+  bool _paying = false;
   String? _error;
 
   @override
@@ -48,34 +51,96 @@ class _PlansScreenState extends State<PlansScreen> {
   }
 
   Future<void> _contractPlan(SubscriptionPlan plan) async {
+    final user = context.read<AuthService>().currentUser;
+    if (user?.role.toLowerCase() != 'administrador') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:
+            Text('Solo el administrador del tenant puede cambiar el plan.'),
+      ));
+      return;
+    }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Contratar ${plan.name}'),
         content: Text(
-            'Confirma el pago simulado de ${plan.currency} ${plan.price.toStringAsFixed(2)}. El tenant se activará al registrarse el pago.'),
+            'Se abrirá PayPal para cobrar ${plan.currency} ${plan.price.toStringAsFixed(2)}. El plan actual no cambiará hasta que PayPal confirme el pago.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar')),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirmar pago')),
+              child: const Text('Ir a PayPal')),
         ],
       ),
     );
     if (accepted != true) return;
+    setState(() {
+      _paying = true;
+      _error = null;
+    });
     try {
-      final contract = await _service.contract(plan.code);
+      const returnUrl =
+          'https://style-store-frontend-nine.vercel.app/planes?paypal_plan_mobile=1';
+      const cancelUrl =
+          'https://style-store-frontend-nine.vercel.app/planes?paypal_cancelado=1';
+      final order = await _service.createPayPalOrder(
+        plan.code,
+        returnUrl: returnUrl,
+        cancelUrl: cancelUrl,
+      );
+      final links = (order['links'] as List<dynamic>? ?? const []);
+      String? approvalUrl;
+      for (final item in links) {
+        final link = Map<String, dynamic>.from(item as Map);
+        if (link['rel'] == 'approve') {
+          approvalUrl = link['href']?.toString();
+          break;
+        }
+      }
+      final orderId = order['id']?.toString();
+      if (approvalUrl == null || orderId == null) {
+        throw Exception('PayPal no devolvió un enlace de aprobación válido.');
+      }
+      final opened = await launchUrl(
+        Uri.parse(approvalUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) throw Exception('No se pudo abrir PayPal.');
+      if (!mounted) return;
+      final verify = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Verificar pago'),
+          content: const Text(
+              'Completa la aprobación en PayPal, vuelve a StyleStore y pulsa “Ya pagué”. Si cancelaste, tu plan actual seguirá sin cambios.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Ya pagué'),
+            ),
+          ],
+        ),
+      );
+      if (verify != true) return;
+      final contract = await _service.capturePayPalOrder(orderId);
       if (!mounted) return;
       setState(() => _contract = contract);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Pago confirmado. Plan ${plan.name} activado.')));
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', ''))));
       }
+    } finally {
+      if (mounted) setState(() => _paying = false);
     }
   }
 
@@ -135,6 +200,9 @@ class _PlansScreenState extends State<PlansScreen> {
   Widget _buildPlanCard(SubscriptionPlan plan) {
     final color = _colorFor(plan);
     final current = _contract?['plan_codigo'] == plan.code;
+    final canContract =
+        context.read<AuthService>().currentUser?.role.toLowerCase() ==
+            'administrador';
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
@@ -188,9 +256,15 @@ class _PlansScreenState extends State<PlansScreen> {
           SizedBox(
               width: double.infinity,
               child: FilledButton(
-                  onPressed: current ? null : () => _contractPlan(plan),
+                  onPressed: current || !canContract || _paying
+                      ? null
+                      : () => _contractPlan(plan),
                   style: FilledButton.styleFrom(backgroundColor: color),
-                  child: Text(current ? 'Plan actual' : 'Contratar plan'))),
+                  child: Text(current
+                      ? 'Plan actual'
+                      : canContract
+                          ? (_paying ? 'Procesando…' : 'Contratar plan')
+                          : 'Solo administrador'))),
         ]),
       ),
     );

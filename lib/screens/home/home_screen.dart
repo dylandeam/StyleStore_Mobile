@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/tenant_switcher.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -555,6 +556,7 @@ class HomeScreen extends StatelessWidget {
                   const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
           ),
+          if (role == 'cliente') const TenantSwitcher(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),

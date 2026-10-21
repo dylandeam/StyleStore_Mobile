@@ -18,13 +18,21 @@ class CartService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  void resetTenantState() {
+    _items = [];
+    _total = 0;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> fetchCart() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final res = await _apiService.get(ApiConfig.carritoUrl, requireAuth: true);
+      final res =
+          await _apiService.get(ApiConfig.carritoUrl, requireAuth: true);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final List<dynamic> rawItems = data['items'] ?? [];
@@ -68,9 +76,11 @@ class CartService extends ChangeNotifier {
       } else {
         try {
           final data = jsonDecode(utf8.decode(res.bodyBytes));
-          _errorMessage = data['detail'] ?? 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+          _errorMessage = data['detail'] ??
+              'Error (${res.statusCode}): No se pudo agregar al carrito.';
         } catch (_) {
-          _errorMessage = 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+          _errorMessage =
+              'Error (${res.statusCode}): No se pudo agregar al carrito.';
         }
       }
     } catch (e) {
@@ -104,9 +114,11 @@ class CartService extends ChangeNotifier {
       } else {
         try {
           final data = jsonDecode(utf8.decode(res.bodyBytes));
-          _errorMessage = data['detail'] ?? 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+          _errorMessage = data['detail'] ??
+              'Error (${res.statusCode}): No se pudo agregar al carrito.';
         } catch (_) {
-          _errorMessage = 'Error (${res.statusCode}): No se pudo agregar al carrito.';
+          _errorMessage =
+              'Error (${res.statusCode}): No se pudo agregar al carrito.';
         }
       }
     } catch (e) {
@@ -139,12 +151,15 @@ class CartService extends ChangeNotifier {
       final body = <String, dynamic>{
         'metodo_pago': metodoPago,
         if (distanciaKm != null) 'distancia_km': distanciaKm,
-        if (direccionEnvio != null && direccionEnvio.isNotEmpty) 'direccion_envio': direccionEnvio,
+        if (direccionEnvio != null && direccionEnvio.isNotEmpty)
+          'direccion_envio': direccionEnvio,
         if (latitudDestino != null) 'latitud_destino': latitudDestino,
         if (longitudDestino != null) 'longitud_destino': longitudDestino,
-        if (ubicacionUrl != null && ubicacionUrl.isNotEmpty) 'ubicacion_url': ubicacionUrl,
+        if (ubicacionUrl != null && ubicacionUrl.isNotEmpty)
+          'ubicacion_url': ubicacionUrl,
         if (ciudad != null && ciudad.isNotEmpty) 'ciudad': ciudad,
-        if (referencia != null && referencia.isNotEmpty) 'referencia': referencia,
+        if (referencia != null && referencia.isNotEmpty)
+          'referencia': referencia,
         if (sucursalId != null) 'sucursal_id': sucursalId,
         if (tipoEntrega != null) 'tipo_entrega': tipoEntrega,
         if (fechaRecojo != null) 'fecha_recojo': fechaRecojo,
@@ -176,7 +191,8 @@ class CartService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final res = await _apiService.delete('${ApiConfig.carritoAgregarUrl}/$itemId', requireAuth: true);
+      final res = await _apiService
+          .delete('${ApiConfig.carritoAgregarUrl}/$itemId', requireAuth: true);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final List<dynamic> rawItems = data['items'] ?? [];
