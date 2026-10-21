@@ -2955,6 +2955,28 @@ class _CatalogScreenState extends State<CatalogScreen>
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary)),
             const SizedBox(height: 10),
+            if (orderService.saldoFavor > 0) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0x1A16A34A),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0x6616A34A)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.account_balance_wallet_outlined,
+                      color: Color(0xFF15803D)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text(
+                          'Saldo a favor en esta empresa: Bs. ${orderService.saldoFavor.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF15803D)))),
+                ]),
+              ),
+              const SizedBox(height: 10),
+            ],
             if (orderService.orders.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
@@ -3262,14 +3284,15 @@ class _CatalogScreenState extends State<CatalogScreen>
                   order.estado.toLowerCase() == 'pagado' ||
                   order.estado.toLowerCase() == 'entregado' ||
                   order.estado.toLowerCase() == 'completada') &&
-              DateTime.now().difference(order.createdAt).inDays <= 7)
+              DateTime.now().difference(order.createdAt).inDays <=
+                  service.plazoCambiosDias)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: OutlinedButton.icon(
                 onPressed: () => _showSolicitarCambioDialog(order, service),
                 icon: const Icon(Icons.sync_alt, size: 16),
-                label:
-                    const Text('Solicitar Cambio o Devolución (Plazo 7 días)'),
+                label: Text(
+                    'Solicitar Cambio o Devolución (Plazo ${service.plazoCambiosDias} días)'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFC5A880),
                   side: const BorderSide(color: Color(0xFFC5A880)),

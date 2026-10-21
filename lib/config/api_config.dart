@@ -69,6 +69,8 @@ class ApiConfig {
 
   // Cambios y Devoluciones (v6 Punto 9)
   static String get cambiosUrl => '$baseUrl/cambios';
+  static String get cambiosPoliticaUrl => '$baseUrl/cambios/politica';
+  static String get cambiosMiSaldoUrl => '$baseUrl/cambios/mi-saldo';
 
   // Sucursales
   static String get sucursalesUrl => '$baseUrl/sucursales';

@@ -11,6 +11,8 @@ class OrderService extends ChangeNotifier {
   List<ReservaItem> _reservas = [];
   bool _isLoading = false;
   String? _errorMessage;
+  int _plazoCambiosDias = 7;
+  double _saldoFavor = 0;
 
   OrderService(this._apiService);
 
@@ -18,11 +20,15 @@ class OrderService extends ChangeNotifier {
   List<ReservaItem> get reservas => _reservas;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get plazoCambiosDias => _plazoCambiosDias;
+  double get saldoFavor => _saldoFavor;
 
   void resetTenantState() {
     _orders = [];
     _reservas = [];
     _errorMessage = null;
+    _plazoCambiosDias = 7;
+    _saldoFavor = 0;
     notifyListeners();
   }
 
@@ -38,12 +44,30 @@ class OrderService extends ChangeNotifier {
         final List<dynamic> list = jsonDecode(res.body);
         _orders = list.map((j) => OrderItem.fromJson(j)).toList();
       }
+      await _fetchExchangePolicyAndBalance();
     } catch (e) {
       _errorMessage = 'Error al cargar historial de pedidos.';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _fetchExchangePolicyAndBalance() async {
+    try {
+      final policy = await _apiService.get(ApiConfig.cambiosPoliticaUrl,
+          requireAuth: true);
+      if (policy.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(policy.bodyBytes));
+        _plazoCambiosDias = (data['plazo_cambios_dias'] as num?)?.toInt() ?? 7;
+      }
+      final balance =
+          await _apiService.get(ApiConfig.cambiosMiSaldoUrl, requireAuth: true);
+      if (balance.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(balance.bodyBytes));
+        _saldoFavor = double.tryParse(data['saldo']?.toString() ?? '0') ?? 0;
+      }
+    } catch (_) {}
   }
 
   Future<void> fetchReservas() async {
