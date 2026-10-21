@@ -35,6 +35,10 @@ class _CatalogScreenState extends State<CatalogScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<dynamic> _paraTiItems = [];
+  final TextEditingController _discountCodeCtrl = TextEditingController();
+  String _appliedDiscountCode = '';
+  int _discountPercent = 0;
+  bool _validatingDiscount = false;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class _CatalogScreenState extends State<CatalogScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _discountCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -156,14 +161,16 @@ class _CatalogScreenState extends State<CatalogScreen>
         : catalogService.selectedSucursalId;
     if (sucursalId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo identificar la sucursal de recojo.')),
+        const SnackBar(
+            content: Text('No se pudo identificar la sucursal de recojo.')),
       );
       return;
     }
-    final branch = catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
-          (item) => item?['id'] == sucursalId,
-          orElse: () => null,
-        );
+    final branch =
+        catalogService.sucursales.cast<Map<String, dynamic>?>().firstWhere(
+              (item) => item?['id'] == sucursalId,
+              orElse: () => null,
+            );
     final branchName = cartService.items.isNotEmpty
         ? (cartService.items.first.sucursalNombre ?? 'Sucursal')
         : (branch?['nombre'] ?? branch?['name'] ?? 'Sucursal');
@@ -226,30 +233,36 @@ class _CatalogScreenState extends State<CatalogScreen>
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: [0, 1, 2, 3].map((day) => ChoiceChip(
-                  label: Text(day == 0 ? 'Hoy' : '+$day día${day == 1 ? '' : 's'}'),
-                  selected: selectedDay == day,
-                  onSelected: (_) async {
-                    setModalState(() {
-                      selectedDay = day;
-                      pickupDate = DateTime.now().add(Duration(days: day));
-                      loading = true;
-                      selectedTime = '';
-                    });
-                    final fetched = await loadBlocks(pickupDate);
-                    if (!sheetContext.mounted) return;
-                    setModalState(() {
-                      blocks = fetched;
-                      selectedTime = fetched
-                              .cast<Map<String, dynamic>?>()
-                              .firstWhere((item) => item?['disponible'] == true,
-                                  orElse: () => null)?['inicio']
-                              ?.toString() ??
-                          '';
-                      loading = false;
-                    });
-                  },
-                )).toList(),
+                children: [0, 1, 2, 3]
+                    .map((day) => ChoiceChip(
+                          label: Text(day == 0
+                              ? 'Hoy'
+                              : '+$day día${day == 1 ? '' : 's'}'),
+                          selected: selectedDay == day,
+                          onSelected: (_) async {
+                            setModalState(() {
+                              selectedDay = day;
+                              pickupDate =
+                                  DateTime.now().add(Duration(days: day));
+                              loading = true;
+                              selectedTime = '';
+                            });
+                            final fetched = await loadBlocks(pickupDate);
+                            if (!sheetContext.mounted) return;
+                            setModalState(() {
+                              blocks = fetched;
+                              selectedTime = fetched
+                                      .cast<Map<String, dynamic>?>()
+                                      .firstWhere(
+                                          (item) => item?['disponible'] == true,
+                                          orElse: () => null)?['inicio']
+                                      ?.toString() ??
+                                  '';
+                              loading = false;
+                            });
+                          },
+                        ))
+                    .toList(),
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
@@ -258,7 +271,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                   labelText: 'Bloque de una hora',
                   prefixIcon: Icon(Icons.schedule),
                 ),
-                hint: Text(loading ? 'Consultando...' : 'Selecciona un horario'),
+                hint:
+                    Text(loading ? 'Consultando...' : 'Selecciona un horario'),
                 items: blocks.map((block) {
                   final start = block['inicio'].toString();
                   final end = block['fin'].toString();
@@ -266,12 +280,14 @@ class _CatalogScreenState extends State<CatalogScreen>
                   return DropdownMenuItem<String>(
                     value: available ? start : 'ocupado-$start',
                     enabled: available,
-                    child: Text('$start–$end ${available ? 'Disponible' : 'Ocupado'}'),
+                    child: Text(
+                        '$start–$end ${available ? 'Disponible' : 'Ocupado'}'),
                   );
                 }).toList(),
                 onChanged: loading
                     ? null
-                    : (value) => setModalState(() => selectedTime = value ?? ''),
+                    : (value) =>
+                        setModalState(() => selectedTime = value ?? ''),
               ),
               const SizedBox(height: 18),
               ElevatedButton(
@@ -284,25 +300,35 @@ class _CatalogScreenState extends State<CatalogScreen>
                           tipoEntrega: 'recojo',
                           fechaRecojo: formatDate(pickupDate),
                           horaRecojo: '$selectedTime:00',
+                          codigoDescuento: _appliedDiscountCode.isNotEmpty
+                              ? _appliedDiscountCode
+                              : null,
                         );
                         if (response == null || !sheetContext.mounted) {
                           if (sheetContext.mounted) {
                             ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              const SnackBar(content: Text('No se pudo programar el recojo. Actualiza los horarios e inténtalo nuevamente.')),
+                              const SnackBar(
+                                  content: Text(
+                                      'No se pudo programar el recojo. Actualiza los horarios e inténtalo nuevamente.')),
                             );
                           }
                           return;
                         }
                         Navigator.pop(sheetContext);
                         final orderId = (response['orden_venta_id'] ??
-                            response['orden_id'] ?? response['id']) as int?;
+                            response['orden_id'] ??
+                            response['id']) as int?;
                         if (orderId != null && mounted) {
                           _procesarPagoPayPalSandbox(
-                            context, orderId, cartService.total, null,
+                            context,
+                            orderId,
+                            cartService.total * (1 - _discountPercent / 100),
+                            null,
                           );
                         }
                       },
-                child: Text('Confirmar recojo y pagar Bs. ${cartService.total.toStringAsFixed(2)}'),
+                child: Text(
+                    'Confirmar recojo y pagar Bs. ${(cartService.total * (1 - _discountPercent / 100)).toStringAsFixed(2)}'),
               ),
             ],
           ),
@@ -1830,8 +1856,38 @@ class _CatalogScreenState extends State<CatalogScreen>
   // ==========================================
   // TAB 3: MI CARRITO (CU12, CU17, CU19)
   // ==========================================
+  Future<void> _applyDiscountCode(CartService cartService) async {
+    final code = _discountCodeCtrl.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+    setState(() => _validatingDiscount = true);
+    final result = await cartService.validateDiscountCode(code);
+    if (!mounted) return;
+    setState(() {
+      _validatingDiscount = false;
+      if (result != null) {
+        _appliedDiscountCode = result['codigo']?.toString() ?? code;
+        _discountPercent = (result['porcentaje'] as num?)?.toInt() ?? 0;
+        _discountCodeCtrl.text = _appliedDiscountCode;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result != null
+          ? 'Código $_appliedDiscountCode aplicado: $_discountPercent% OFF.'
+          : (cartService.errorMessage ?? 'Código no válido.')),
+    ));
+  }
+
+  void _removeDiscountCode() {
+    setState(() {
+      _appliedDiscountCode = '';
+      _discountPercent = 0;
+      _discountCodeCtrl.clear();
+    });
+  }
+
   Widget _buildCartTab() {
     final cartService = Provider.of<CartService>(context);
+    final discountAmount = cartService.total * _discountPercent / 100;
 
     if (cartService.isLoading) {
       return const Center(
@@ -1906,6 +1962,42 @@ class _CatalogScreenState extends State<CatalogScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
+                TextField(
+                  controller: _discountCodeCtrl,
+                  enabled: _appliedDiscountCode.isEmpty,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: 'Código de descuento',
+                    prefixIcon: const Icon(Icons.discount_outlined),
+                    suffixIcon: TextButton(
+                      onPressed: _validatingDiscount
+                          ? null
+                          : (_appliedDiscountCode.isEmpty
+                              ? () => _applyDiscountCode(cartService)
+                              : _removeDiscountCode),
+                      child: Text(_validatingDiscount
+                          ? 'Validando...'
+                          : (_appliedDiscountCode.isEmpty
+                              ? 'Aplicar'
+                              : 'Quitar')),
+                    ),
+                  ),
+                ),
+                if (_appliedDiscountCode.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('$_appliedDiscountCode ($_discountPercent%)',
+                          style: const TextStyle(color: Colors.green)),
+                      Text('- Bs. ${discountAmount.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1927,7 +2019,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF14263D))),
                     Text(
-                        'Bs. ${(cartService.total + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
+                        'Bs. ${(cartService.total - discountAmount + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -2393,7 +2485,8 @@ class _CatalogScreenState extends State<CatalogScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('¿Cómo recibirás tu compra?'),
-        content: const Text('Elige delivery a domicilio o recojo programado en la sucursal de origen.'),
+        content: const Text(
+            'Elige delivery a domicilio o recojo programado en la sucursal de origen.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -2453,7 +2546,8 @@ class _CatalogScreenState extends State<CatalogScreen>
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final double costoEnvio = 5.0 + (distanciaKm * 0.60);
-            final double totalPagar = cartService.total + costoEnvio;
+            final double totalPagar =
+                cartService.total * (1 - _discountPercent / 100) + costoEnvio;
 
             return Padding(
               padding: EdgeInsets.only(
@@ -2802,11 +2896,15 @@ class _CatalogScreenState extends State<CatalogScreen>
                               ? (branch['ciudad'] ?? 'Santa Cruz')
                               : 'Santa Cruz',
                           sucursalId: sucursalId,
+                          codigoDescuento: _appliedDiscountCode.isNotEmpty
+                              ? _appliedDiscountCode
+                              : null,
                         );
 
                         if (res != null) {
                           final ordenId = (res['orden_venta_id'] ??
-                              res['orden_id'] ?? res['id']) as int?;
+                              res['orden_id'] ??
+                              res['id']) as int?;
                           final trackingToken =
                               res['token_seguimiento'] as String?;
                           if (ordenId != null && mounted) {

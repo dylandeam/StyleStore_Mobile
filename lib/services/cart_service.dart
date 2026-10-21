@@ -143,6 +143,7 @@ class CartService extends ChangeNotifier {
     String? tipoEntrega,
     String? fechaRecojo,
     String? horaRecojo,
+    String? codigoDescuento,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -164,6 +165,8 @@ class CartService extends ChangeNotifier {
         if (tipoEntrega != null) 'tipo_entrega': tipoEntrega,
         if (fechaRecojo != null) 'fecha_recojo': fechaRecojo,
         if (horaRecojo != null) 'hora_recojo': horaRecojo,
+        if (codigoDescuento != null && codigoDescuento.isNotEmpty)
+          'codigo_descuento': codigoDescuento,
       };
 
       final res = await _apiService.post(
@@ -184,6 +187,23 @@ class CartService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> validateDiscountCode(String code) async {
+    try {
+      final res = await _apiService.post(
+        ApiConfig.validarCodigoDescuentoUrl,
+        body: {'codigo': code.trim().toUpperCase(), 'canal': 'online'},
+        requireAuth: true,
+      );
+      if (res.statusCode == 200) return jsonDecode(utf8.decode(res.bodyBytes));
+      final data = jsonDecode(utf8.decode(res.bodyBytes));
+      _errorMessage = data['detail']?.toString() ?? 'El código no es válido.';
+    } catch (_) {
+      _errorMessage = 'No se pudo validar el código.';
+    }
+    notifyListeners();
     return null;
   }
 

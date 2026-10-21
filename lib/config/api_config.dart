@@ -57,6 +57,8 @@ class ApiConfig {
   static String get carritoUrl => '$baseUrl/carrito/mio';
   static String get carritoAgregarUrl => '$baseUrl/carrito/items';
   static String get carritoCheckoutUrl => '$baseUrl/carrito/checkout';
+  static String get validarCodigoDescuentoUrl =>
+      '$baseUrl/promociones/codigos/validar';
 
   // Reservas (CU13)
   static String get reservasUrl => '$baseUrl/reservas';
