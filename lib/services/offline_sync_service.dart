@@ -157,10 +157,16 @@ class OfflineSyncService extends ChangeNotifier {
           final status = result['status'] == 'procesando'
               ? 'pendiente'
               : result['status'].toString();
+          final refundId = result['refund_id'];
+          final refundAmount = result['refund_amount'];
+          final baseReason = result['reason']?.toString();
+          final reason = refundId == null
+              ? baseReason
+              : '${baseReason ?? 'Venta rechazada.'} Reembolso #$refundId pendiente por Bs $refundAmount.';
           await _database.updateOperation(
             operation['operation_uuid'] as String,
             status,
-            reason: result['reason']?.toString(),
+            reason: reason,
             resultId: result['result_id'] as int?,
           );
         } catch (_) {
