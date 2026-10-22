@@ -24,7 +24,8 @@ class OrderDetailItem {
       colorNombre: json['color_nombre'] as String?,
       tallaNombre: json['talla_nombre'] as String?,
       cantidad: json['cantidad'] as int? ?? 1,
-      precioUnitario: double.tryParse(json['precio_unitario']?.toString() ?? '0') ?? 0.0,
+      precioUnitario:
+          double.tryParse(json['precio_unitario']?.toString() ?? '0') ?? 0.0,
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
     );
   }
@@ -53,6 +54,10 @@ class OrderItem {
   final double? latitudDestino;
   final double? longitudDestino;
   final int? minutosEstimados;
+  final int? pagoId;
+  final String? pagoEstado;
+  final String? reciboNumero;
+  final bool pagoEmailConfirmado;
 
   OrderItem({
     required this.id,
@@ -75,6 +80,10 @@ class OrderItem {
     this.latitudDestino,
     this.longitudDestino,
     this.minutosEstimados,
+    this.pagoId,
+    this.pagoEstado,
+    this.reciboNumero,
+    this.pagoEmailConfirmado = false,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -82,14 +91,19 @@ class OrderItem {
     final rawDetalles = json['detalles'] as List<dynamic>? ?? [];
 
     // Tracking: leer de los campos nuevos, con fallback a los viejos yango_*
-    String? code = json['tracking_code'] as String?
-        ?? json['yango_tracking_code'] as String?
-        ?? (envio != null ? (envio['tracking_code'] ?? envio['yango_tracking_code']) as String? : null);
-    String? url = json['tracking_url'] as String?
-        ?? json['yango_tracking_url'] as String?
-        ?? (envio != null ? (envio['tracking_url'] ?? envio['yango_tracking_url']) as String? : null);
-    String? token = json['token_seguimiento'] as String?
-        ?? (envio != null ? envio['token_seguimiento'] as String? : null);
+    String? code = json['tracking_code'] as String? ??
+        json['yango_tracking_code'] as String? ??
+        (envio != null
+            ? (envio['tracking_code'] ?? envio['yango_tracking_code'])
+                as String?
+            : null);
+    String? url = json['tracking_url'] as String? ??
+        json['yango_tracking_url'] as String? ??
+        (envio != null
+            ? (envio['tracking_url'] ?? envio['yango_tracking_url']) as String?
+            : null);
+    String? token = json['token_seguimiento'] as String? ??
+        (envio != null ? envio['token_seguimiento'] as String? : null);
 
     return OrderItem(
       id: json['id'] as int? ?? 0,
@@ -101,20 +115,28 @@ class OrderItem {
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
       sucursalId: json['sucursal_id'] as int?,
-      detalles: rawDetalles.map((d) => OrderDetailItem.fromJson(d as Map<String, dynamic>)).toList(),
-      envioId: json['envio_id'] as int? ?? (envio != null ? envio['id'] as int? : null),
-      envioEstado: json['envio_estado'] as String? ?? (envio != null ? envio['estado'] as String? : null),
+      detalles: rawDetalles
+          .map((d) => OrderDetailItem.fromJson(d as Map<String, dynamic>))
+          .toList(),
+      envioId: json['envio_id'] as int? ??
+          (envio != null ? envio['id'] as int? : null),
+      envioEstado: json['envio_estado'] as String? ??
+          (envio != null ? envio['estado'] as String? : null),
       trackingCode: code,
       trackingUrl: url,
       tokenSeguimiento: token,
-      deliveryConductor: json['delivery_conductor'] as String?
-          ?? (envio != null ? envio['delivery_conductor'] as String? : null),
+      deliveryConductor: json['delivery_conductor'] as String? ??
+          (envio != null ? envio['delivery_conductor'] as String? : null),
       repartidorLat: _parseDouble(envio?['repartidor_lat']),
       repartidorLon: _parseDouble(envio?['repartidor_lon']),
       repartidorNombre: envio?['repartidor_nombre'] as String?,
       latitudDestino: _parseDouble(envio?['latitud_destino']),
       longitudDestino: _parseDouble(envio?['longitud_destino']),
       minutosEstimados: envio?['minutos_estimados'] as int?,
+      pagoId: json['pago_id'] as int?,
+      pagoEstado: json['pago_estado'] as String?,
+      reciboNumero: json['recibo_numero'] as String?,
+      pagoEmailConfirmado: json['pago_email_confirmado'] as bool? ?? false,
     );
   }
 

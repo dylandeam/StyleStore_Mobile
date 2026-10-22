@@ -3309,6 +3309,21 @@ class _CatalogScreenState extends State<CatalogScreen>
           ],
           const SizedBox(height: 10),
 
+          if (order.pagoId != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: OutlinedButton.icon(
+                onPressed: () => _showPaymentReceipt(order),
+                icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                label: Text(
+                    'Ver recibo ${order.reciboNumero ?? '#${order.pagoId}'}'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.successGreen,
+                  side: const BorderSide(color: AppTheme.successGreen),
+                ),
+              ),
+            ),
+
           // Botón ¿Le llegó su pedido?
           if (order.envioId != null && order.envioEstado != 'entregado')
             Padding(
@@ -3379,6 +3394,62 @@ class _CatalogScreenState extends State<CatalogScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  void _showPaymentReceipt(OrderItem order) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.verified_outlined,
+                  color: AppTheme.successGreen, size: 42),
+              const SizedBox(height: 8),
+              Text(order.reciboNumero ?? 'RECIBO #${order.pagoId}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 16),
+              Text('Orden: #${order.id}'),
+              Text(
+                  'Estado del pago: ${(order.pagoEstado ?? 'aprobado').toUpperCase()}'),
+              Text('Total pagado: Bs. ${order.total.toStringAsFixed(2)}'),
+              Text(
+                  'Fecha: ${order.createdAt.day.toString().padLeft(2, '0')}/${order.createdAt.month.toString().padLeft(2, '0')}/${order.createdAt.year}'),
+              const Divider(height: 28),
+              ...order.detalles.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      Expanded(
+                          child: Text(
+                              '${item.cantidad} × ${item.productoNombre}')),
+                      Text('Bs. ${item.subtotal.toStringAsFixed(2)}'),
+                    ]),
+                  )),
+              if (order.pagoEmailConfirmado)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('La confirmación también fue enviada por correo.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppTheme.successGreen)),
+                ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
