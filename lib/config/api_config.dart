@@ -74,6 +74,9 @@ class ApiConfig {
   static String get cambiosUrl => '$baseUrl/cambios';
   static String get cambiosPoliticaUrl => '$baseUrl/cambios/politica';
   static String get cambiosMiSaldoUrl => '$baseUrl/cambios/mi-saldo';
+  static String get experienciaCalificacionesUrl =>
+      '$baseUrl/experiencia/calificaciones';
+  static String get experienciaReclamosUrl => '$baseUrl/experiencia/reclamos';
 
   // Sucursales
   static String get sucursalesUrl => '$baseUrl/sucursales';

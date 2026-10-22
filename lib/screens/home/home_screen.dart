@@ -683,6 +683,16 @@ class HomeScreen extends StatelessWidget {
                         },
                       ),
                       ListTile(
+                        leading: const Icon(Icons.star_outline,
+                            color: Color(0xFFD4AF37), size: 20),
+                        title: const Text('Calificaciones y Reclamos',
+                            style: TextStyle(fontSize: 14)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, AppRoutes.experience);
+                        },
+                      ),
+                      ListTile(
                         leading: const Icon(Icons.cloud_sync_outlined,
                             color: Color(0xFFF59E0B), size: 20),
                         title: const Text('Operaciones sin conexión',

@@ -93,7 +93,7 @@ class OrderService extends ChangeNotifier {
   Future<bool> confirmarEntregaEnvio(int envioId) async {
     try {
       final res = await _apiService.patch(
-        '${ApiConfig.enviosUrl}/$envioId/confirmar-entrega',
+        '${ApiConfig.enviosUrl}/$envioId/completar',
         requireAuth: true,
       );
       if (res.statusCode == 200) {

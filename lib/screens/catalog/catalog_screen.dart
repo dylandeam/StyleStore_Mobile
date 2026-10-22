@@ -10,6 +10,7 @@ import '../../config/api_config.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../config/theme.dart';
+import '../../config/routes.dart';
 import '../../models/producto.dart';
 import '../../models/cart_item.dart';
 import '../../models/order.dart';
@@ -3356,6 +3357,24 @@ class _CatalogScreenState extends State<CatalogScreen>
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          if (['pagada', 'entregada', 'completada']
+              .contains(order.estado.toLowerCase()))
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.experience,
+                  arguments: order.id,
+                ),
+                icon: const Icon(Icons.star_outline, size: 16),
+                label: const Text('Calificar servicio o registrar reclamo'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.accentIndigo,
+                  side: const BorderSide(color: AppTheme.accentIndigo),
                 ),
               ),
             ),

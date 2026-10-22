@@ -10,6 +10,7 @@ import '../screens/plans/plans_screen.dart';
 import '../models/producto.dart';
 import '../screens/offline/offline_operations_screen.dart';
 import '../screens/offline/offline_cash_sale_screen.dart';
+import '../screens/account/experience_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -22,6 +23,7 @@ class AppRoutes {
   static const String plans = '/plans';
   static const String offlineOperations = '/offline-operations';
   static const String offlineCashSale = '/offline-cash-sale';
+  static const String experience = '/experience';
 
   static Map<String, WidgetBuilder> get routes => {
         login: (context) => const LoginScreen(),
@@ -42,5 +44,9 @@ class AppRoutes {
         plans: (context) => const PlansScreen(),
         offlineOperations: (context) => const OfflineOperationsScreen(),
         offlineCashSale: (context) => const OfflineCashSaleScreen(),
+        experience: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          return ExperienceScreen(initialOrderId: args is int ? args : null);
+        },
       };
 }
