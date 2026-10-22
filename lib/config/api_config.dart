@@ -48,6 +48,9 @@ class ApiConfig {
   // Catálogo y Próximamente (CU11, CU14)
   static String get catalogoUrl => '$baseUrl/catalogo';
   static String get catalogoParaTiUrl => '$baseUrl/catalogo/para-ti';
+  static String get favoritosUrl => '$baseUrl/favoritos';
+  static String favoritoUrl(String codigo) =>
+      '$favoritosUrl/${Uri.encodeComponent(codigo)}';
   static String get proximamenteUrl => '$baseUrl/proximamente';
   static String get suscribirProximamenteUrl =>
       '$baseUrl/notificaciones/suscribir-proximamente';

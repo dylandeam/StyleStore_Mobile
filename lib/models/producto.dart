@@ -25,11 +25,14 @@ class Producto {
   final String? tituloPromocion;
   final List<String> colores;
   final int stockTotal;
+  final bool esFavorito;
 
   String? get fotoUrl => ApiConfig.resolveImageUrl(foto);
   String? get fotoTraseraUrl => ApiConfig.resolveImageUrl(fotoTrasera);
-  String? get fotoVestidorFrontalUrl => ApiConfig.resolveImageUrl(fotoVestidorFrontal);
-  String? get fotoVestidorTraseraUrl => ApiConfig.resolveImageUrl(fotoVestidorTrasera);
+  String? get fotoVestidorFrontalUrl =>
+      ApiConfig.resolveImageUrl(fotoVestidorFrontal);
+  String? get fotoVestidorTraseraUrl =>
+      ApiConfig.resolveImageUrl(fotoVestidorTrasera);
 
   Producto({
     required this.codigo,
@@ -56,6 +59,7 @@ class Producto {
     this.tituloPromocion,
     required this.colores,
     required this.stockTotal,
+    this.esFavorito = false,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -69,7 +73,8 @@ class Producto {
 
     double? parsedPrecioDescuento;
     if (json['precio_descuento'] != null) {
-      parsedPrecioDescuento = double.tryParse(json['precio_descuento'].toString());
+      parsedPrecioDescuento =
+          double.tryParse(json['precio_descuento'].toString());
     }
 
     return Producto(
@@ -97,6 +102,35 @@ class Producto {
       tituloPromocion: json['titulo_promocion'],
       colores: parsedColores,
       stockTotal: json['stock_total'] ?? 0,
+      esFavorito: json['es_favorito'] ?? false,
     );
   }
+
+  Producto copyWith({bool? esFavorito}) => Producto(
+        codigo: codigo,
+        nombre: nombre,
+        descripcion: descripcion,
+        foto: foto,
+        fotoTrasera: fotoTrasera,
+        fotoVestidorFrontal: fotoVestidorFrontal,
+        fotoVestidorTrasera: fotoVestidorTrasera,
+        tipoPrenda: tipoPrenda,
+        puntosClaveIa: puntosClaveIa,
+        precio: precio,
+        categoriaId: categoriaId,
+        categoriaNombre: categoriaNombre,
+        temporadaId: temporadaId,
+        temporadaNombre: temporadaNombre,
+        coleccionId: coleccionId,
+        coleccionNombre: coleccionNombre,
+        active: active,
+        visibleEnCatalogo: visibleEnCatalogo,
+        enPromocion: enPromocion,
+        porcentajeDescuento: porcentajeDescuento,
+        precioDescuento: precioDescuento,
+        tituloPromocion: tituloPromocion,
+        colores: colores,
+        stockTotal: stockTotal,
+        esFavorito: esFavorito ?? this.esFavorito,
+      );
 }

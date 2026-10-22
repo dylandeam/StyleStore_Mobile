@@ -39,6 +39,7 @@ class _CatalogScreenState extends State<CatalogScreen>
   String _appliedDiscountCode = '';
   int _discountPercent = 0;
   bool _validatingDiscount = false;
+  bool _showOnlyFavorites = false;
 
   @override
   void initState() {
@@ -647,7 +648,8 @@ class _CatalogScreenState extends State<CatalogScreen>
     final catalogService = Provider.of<CatalogService>(context);
 
     final filteredProds = catalogService.productos.where((p) {
-      return _productoMatchesQuery(p, _searchQuery);
+      return (!_showOnlyFavorites || p.esFavorito) &&
+          _productoMatchesQuery(p, _searchQuery);
     }).toList();
 
     return Column(
@@ -761,6 +763,28 @@ class _CatalogScreenState extends State<CatalogScreen>
                 ),
               ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FilterChip(
+              selected: _showOnlyFavorites,
+              avatar: Icon(
+                _showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                size: 18,
+                color:
+                    _showOnlyFavorites ? Colors.white : const Color(0xFFC23B4A),
+              ),
+              label: const Text('Mis favoritos'),
+              onSelected: (value) => setState(() => _showOnlyFavorites = value),
+              selectedColor: const Color(0xFFC23B4A),
+              labelStyle: TextStyle(
+                color: _showOnlyFavorites ? Colors.white : AppTheme.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ),
         if (catalogService.usingOfflineData)
@@ -1169,6 +1193,25 @@ class _CatalogScreenState extends State<CatalogScreen>
                 Positioned(
                   top: 10,
                   right: 10,
+                  child: IconButton.filled(
+                    tooltip: p.esFavorito
+                        ? 'Quitar de favoritos'
+                        : 'Guardar en favoritos',
+                    onPressed: () => _toggleFavorite(p),
+                    icon: Icon(
+                      p.esFavorito ? Icons.favorite : Icons.favorite_border,
+                      color: p.esFavorito
+                          ? const Color(0xFFC23B4A)
+                          : const Color(0xFF14263D),
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xF2FFFFFF),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 58,
+                  right: 10,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1387,6 +1430,19 @@ class _CatalogScreenState extends State<CatalogScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _toggleFavorite(Producto product) async {
+    try {
+      await Provider.of<CatalogService>(context, listen: false)
+          .toggleFavorite(product);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   void _handleAddToCart(Producto p) {

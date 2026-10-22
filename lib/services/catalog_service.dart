@@ -72,7 +72,7 @@ class CatalogService extends ChangeNotifier {
         url += '?sucursal_id=$_selectedSucursalId';
       }
 
-      final response = await _apiService.get(url, requireAuth: false);
+      final response = await _apiService.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -101,5 +101,25 @@ class CatalogService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> toggleFavorite(Producto product) async {
+    final response = product.esFavorito
+        ? await _apiService.delete(ApiConfig.favoritoUrl(product.codigo))
+        : await _apiService.post(ApiConfig.favoritoUrl(product.codigo));
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      String message = 'No se pudo actualizar favoritos.';
+      try {
+        message =
+            jsonDecode(utf8.decode(response.bodyBytes))['detail'] ?? message;
+      } catch (_) {}
+      throw Exception(message);
+    }
+    _productos = _productos
+        .map((item) => item.codigo == product.codigo
+            ? item.copyWith(esFavorito: !product.esFavorito)
+            : item)
+        .toList();
+    notifyListeners();
   }
 }
