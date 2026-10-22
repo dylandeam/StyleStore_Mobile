@@ -507,6 +507,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'ROL: ${(user?.role ?? "cliente").toUpperCase()}',
                         Icons.shield,
                         const Color(0xFFF59E0B)),
+                    _infoBadge(
+                        'CUPO SUCURSALES: ${_branches.where((b) => b['active'] != false).length} / ${_subscriptionData?['max_sucursales'] ?? (planCodigo.contains("profesional") ? 10 : (planCodigo.contains("intermedio") ? 5 : 2))}',
+                        Icons.store_mall_directory_outlined,
+                        const Color(0xFF38BDF8)),
+                    if (planCodigo.contains('profesional'))
+                      _infoBadge('IA + PREDICCIONES ACTIVAS',
+                          Icons.auto_awesome, const Color(0xFF10B981))
+                    else if (planCodigo.contains('intermedio'))
+                      _infoBadge('CHATBOT IA ACTIVO', Icons.chat_bubble_outline,
+                          const Color(0xFF10B981))
+                    else
+                      _infoBadge('SIN IA (PLAN BÁSICO)', Icons.lock_outline,
+                          AppTheme.textSecondary),
                   ],
                 ),
               ],
