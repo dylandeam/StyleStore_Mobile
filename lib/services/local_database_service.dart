@@ -247,4 +247,199 @@ class LocalDatabaseService {
       }
     });
   }
+
+  Future<void> saveLocalClient(String scope, Map<String, dynamic> client) async {
+    final db = await database;
+    await db.insert(
+      'local_clients',
+      {
+        'scope': scope,
+        'server_code': client['codigo'] ?? client['id']?.toString(),
+        'payload': jsonEncode(client),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> loadLocalClients(String scope) async {
+    final rows = await (await database).query(
+      'local_clients',
+      where: 'scope = ?',
+      whereArgs: [scope],
+    );
+    return rows
+        .map((row) => jsonDecode(row['payload'] as String) as Map<String, dynamic>)
+        .toList();
+  }
+
+  /// Limpia la caché local de catálogo, sucursales y clientes para un ámbito específico.
+  /// NO altera la cola de operaciones pendientes ni el historial de transacciones.
+  Future<int> clearScopeCache(String scope) async {
+    final db = await database;
+    int affected = 0;
+    await db.transaction((txn) async {
+      affected += await txn.delete('catalog_snapshots',
+          where: 'scope = ?', whereArgs: [scope]);
+      affected += await txn.delete('authorized_branches',
+          where: 'scope = ?', whereArgs: [scope]);
+      affected += await txn.delete('local_clients',
+          where: 'scope = ?', whereArgs: [scope]);
+    });
+    return affected;
+  }
+
+  /// Purga de forma segura las operaciones ya resueltas (confirmada, rechazada, conflicto).
+  /// Protege estrictamente las operaciones en estado 'pendiente' y 'sincronizando'.
+  Future<int> purgeResolvedOperations(String scope) async {
+    final db = await database;
+    int purgedCount = 0;
+    await db.transaction((txn) async {
+      final resolvedRows = await txn.query(
+        'sync_queue',
+        columns: ['operation_uuid'],
+        where: 'scope = ? AND status NOT IN (?, ?)',
+        whereArgs: [scope, 'pendiente', 'sincronizando'],
+      );
+
+      final uuids =
+          resolvedRows.map((r) => r['operation_uuid'] as String).toList();
+      if (uuids.isEmpty) return;
+
+      for (final uuid in uuids) {
+        await txn.delete('local_sale_details',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_sales',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_reservation_details',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_reservations',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('sync_queue',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        purgedCount++;
+      }
+    });
+    return purgedCount;
+  }
+
+  /// Elimina snapshots de catálogo y sucursales anteriores a maxAge para prevenir crecimiento desmedido.
+  Future<int> purgeExpiredCache(String scope,
+      {Duration maxAge = const Duration(days: 7)}) async {
+    final db = await database;
+    final threshold =
+        DateTime.now().toUtc().subtract(maxAge).toIso8601String();
+    int deleted = 0;
+    await db.transaction((txn) async {
+      deleted += await txn.delete(
+        'catalog_snapshots',
+        where: 'scope = ? AND synced_at < ?',
+        whereArgs: [scope, threshold],
+      );
+      deleted += await txn.delete(
+        'authorized_branches',
+        where: 'scope = ? AND synced_at < ?',
+        whereArgs: [scope, threshold],
+      );
+    });
+    return deleted;
+  }
+
+  /// Determina si existen transacciones pendientes en la cola local para el ámbito dado.
+  Future<bool> hasPendingTransactions(String scope) async {
+    final db = await database;
+    final rows = await db.query(
+      'sync_queue',
+      columns: ['operation_uuid'],
+      where: 'scope = ? AND status = ?',
+      whereArgs: [scope, 'pendiente'],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  /// Devuelve diagnósticos estructurados del almacenamiento SQLite para el ámbito especificado.
+  Future<Map<String, dynamic>> getStorageDiagnostics(String scope) async {
+    final db = await database;
+    final catalogsCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM catalog_snapshots WHERE scope = ?',
+            [scope])) ??
+        0;
+    final branchesCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM authorized_branches WHERE scope = ?',
+            [scope])) ??
+        0;
+    final clientsCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM local_clients WHERE scope = ?', [scope])) ??
+        0;
+    final pendingCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM sync_queue WHERE scope = ? AND status = ?',
+            [scope, 'pendiente'])) ??
+        0;
+    final syncingCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM sync_queue WHERE scope = ? AND status = ?',
+            [scope, 'sincronizando'])) ??
+        0;
+    final confirmedCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM sync_queue WHERE scope = ? AND status = ?',
+            [scope, 'confirmada'])) ??
+        0;
+    final conflictCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COUNT(*) FROM sync_queue WHERE scope = ? AND status IN (?, ?)',
+            [scope, 'conflicto', 'rechazada'])) ??
+        0;
+
+    return {
+      'scope': scope,
+      'catalogs_count': catalogsCount,
+      'branches_count': branchesCount,
+      'clients_count': clientsCount,
+      'pending_count': pendingCount,
+      'syncing_count': syncingCount,
+      'confirmed_count': confirmedCount,
+      'conflict_count': conflictCount,
+      'total_operations':
+          pendingCount + syncingCount + confirmedCount + conflictCount,
+    };
+  }
+
+  /// Elimina integralmente los datos del ámbito.
+  /// Si existen transacciones pendientes y forceEvenIfPending es false, lanza un error para prevenir pérdida de datos.
+  Future<void> safeWipeScope(String scope,
+      {bool forceEvenIfPending = false}) async {
+    final db = await database;
+    if (!forceEvenIfPending) {
+      final hasPending = await hasPendingTransactions(scope);
+      if (hasPending) {
+        throw StateError(
+            'No se puede purgar el ámbito "$scope" porque contiene operaciones pendientes no sincronizadas. '
+            'Sincronice primero o use forceEvenIfPending: true.');
+      }
+    }
+    await db.transaction((txn) async {
+      await txn.delete('catalog_snapshots',
+          where: 'scope = ?', whereArgs: [scope]);
+      await txn.delete('authorized_branches',
+          where: 'scope = ?', whereArgs: [scope]);
+      await txn.delete('local_clients',
+          where: 'scope = ?', whereArgs: [scope]);
+
+      final opRows = await txn.query('sync_queue',
+          columns: ['operation_uuid'],
+          where: 'scope = ?',
+          whereArgs: [scope]);
+      for (final row in opRows) {
+        final uuid = row['operation_uuid'] as String;
+        await txn.delete('local_sale_details',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_sales',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_reservation_details',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+        await txn.delete('local_reservations',
+            where: 'operation_uuid = ?', whereArgs: [uuid]);
+      }
+      await txn.delete('sync_queue', where: 'scope = ?', whereArgs: [scope]);
+    });
+  }
 }
+

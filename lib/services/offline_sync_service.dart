@@ -191,9 +191,30 @@ class OfflineSyncService extends ChangeNotifier {
     return _database.allOperations(await _storage.getOfflineScope());
   }
 
+  Future<String> currentScope() => _storage.getOfflineScope();
+
+  Future<int> purgeResolved() async {
+    final scope = await _storage.getOfflineScope();
+    final count = await _database.purgeResolvedOperations(scope);
+    await refreshPendingCount();
+    notifyListeners();
+    return count;
+  }
+
+  Future<int> clearCache() async {
+    final scope = await _storage.getOfflineScope();
+    return await _database.clearScopeCache(scope);
+  }
+
+  Future<Map<String, dynamic>> getDiagnostics() async {
+    final scope = await _storage.getOfflineScope();
+    return await _database.getStorageDiagnostics(scope);
+  }
+
   @override
   void dispose() {
     _connectivitySubscription?.cancel();
     super.dispose();
   }
 }
+

@@ -28,11 +28,108 @@ class _OfflineOperationsScreenState extends State<OfflineOperationsScreen> {
     }
   }
 
+  Future<void> _purgeResolved() async {
+    final count = await context.read<OfflineSyncService>().purgeResolved();
+    if (!mounted) return;
+    setState(
+        () => _operations = context.read<OfflineSyncService>().operations());
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(count == 0
+          ? 'No hay operaciones resueltas para purgar.'
+          : 'Se purgaron $count operaciones resueltas de la base de datos local.'),
+      backgroundColor: AppTheme.successGreen,
+    ));
+  }
+
+  Future<void> _clearCache() async {
+    final count = await context.read<OfflineSyncService>().clearCache();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Se limpiaron $count registros de caché local (catálogo/sucursales).'),
+      backgroundColor: AppTheme.accentIndigo,
+    ));
+  }
+
+  Future<void> _showDiagnostics() async {
+    final diag = await context.read<OfflineSyncService>().getDiagnostics();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Diagnóstico de Almacenamiento SQLite'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ámbito aislado:\n${diag['scope']}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Divider(),
+            Text('• Snapshots de catálogo: ${diag['catalogs_count']}'),
+            Text('• Sucursales cacheadas: ${diag['branches_count']}'),
+            Text('• Clientes locales: ${diag['clients_count']}'),
+            const Divider(),
+            Text('• Operaciones pendientes: ${diag['pending_count']}'),
+            Text('• Operaciones sincronizando: ${diag['syncing_count']}'),
+            Text('• Operaciones confirmadas: ${diag['confirmed_count']}'),
+            Text('• Conflictos/Rechazos: ${diag['conflict_count']}'),
+            Text('• Total en cola: ${diag['total_operations']}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sync = context.watch<OfflineSyncService>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Operaciones sin conexión')),
+      appBar: AppBar(
+        title: const Text('Operaciones sin conexión'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'Diagnóstico de almacenamiento',
+            onPressed: _showDiagnostics,
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Opciones de limpieza',
+            onSelected: (value) {
+              if (value == 'purge') _purgeResolved();
+              if (value == 'clear_cache') _clearCache();
+              if (value == 'diagnostics') _showDiagnostics();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'purge',
+                child: Row(
+                  children: [
+                    Icon(Icons.cleaning_services_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Purgar resueltas'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'clear_cache',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_sweep_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Limpiar caché'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: sync.syncing ? null : _sync,
         icon: sync.syncing
