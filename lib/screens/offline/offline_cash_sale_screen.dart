@@ -86,16 +86,143 @@ class _OfflineCashSaleScreenState extends State<OfflineCashSaleScreen> {
     );
     if (!mounted) return;
     setState(() => _submitting = false);
-    final receipt = result.queued
-        ? ' Comprobante LOCAL-${result.operationUuid.substring(0, 8).toUpperCase()}.'
-        : '';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${result.message}$receipt'),
-      backgroundColor: result.confirmed
-          ? AppTheme.successGreen
-          : (result.queued ? const Color(0xFFB7791F) : AppTheme.dangerRed),
-      duration: const Duration(seconds: 6),
-    ));
+    if (result.queued) {
+      final provCode =
+          'LOCAL-${result.operationUuid.substring(0, 8).toUpperCase()}';
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.receipt_long, color: Color(0xFFD97706)),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Comprobante Provisional',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Text(
+                  provCode,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFFB45309),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _receiptRow('Estado:', 'PROVISIONAL (OFFLINE)', isBadge: true),
+              _receiptRow(
+                  'Cliente:',
+                  _clientController.text.trim().isEmpty
+                      ? 'CLI-GENERAL'
+                      : _clientController.text.trim()),
+              _receiptRow('Prenda:',
+                  '${item['producto']} - ${item['color']} (${item['talla']})'),
+              _receiptRow('Cantidad:', '$_quantity un.'),
+              _receiptRow('Total a pagar:', 'Bs. ${_total.toStringAsFixed(2)}',
+                  isBold: true),
+              _receiptRow(
+                  'Efectivo recibido:', 'Bs. ${cash.toStringAsFixed(2)}'),
+              _receiptRow(
+                  'Cambio entregado:', 'Bs. ${(cash - _total).toStringAsFixed(2)}'),
+              const Divider(height: 20),
+              const Text(
+                'ℹ️ Comprobante emitido en modo local SQLite. La verificación autoritativa de stock y consolidación fiscal se completarán automáticamente al recuperar conexión con el servidor.',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                    height: 1.3),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _load();
+              },
+              child: const Text('Aceptar y Finalizar'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor:
+            result.confirmed ? AppTheme.successGreen : AppTheme.dangerRed,
+        duration: const Duration(seconds: 5),
+      ));
+    }
+  }
+
+  Widget _receiptRow(String label, String value,
+      {bool isBold = false, bool isBadge = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondary)),
+          if (isBadge)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                value,
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFB45309)),
+              ),
+            )
+          else
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -109,10 +236,40 @@ class _OfflineCashSaleScreenState extends State<OfflineCashSaleScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7E6),
-                        borderRadius: BorderRadius.circular(14)),
-                    child: const Text(
-                        'Solo efectivo. Sin conexión se emite un comprobante provisional y el stock se valida al sincronizar.'),
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF59E0B)),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.shield_outlined,
+                                color: Color(0xFFB45309), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Límites de Operación Offline (REQ-016)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF92400E),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '• En modo avión solo se admiten cobros en efectivo en caja POS local.\n'
+                          '• Pagos digitales (QR Simple, pasarelas, tarjetas) quedan bloqueados sin conexión.\n'
+                          '• Se emite un comprobante provisional LOCAL y el stock se consolida al reconectar.',
+                          style: TextStyle(
+                              color: Color(0xFF78350F),
+                              fontSize: 12,
+                              height: 1.35),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 18),
                   if (_options.isEmpty)

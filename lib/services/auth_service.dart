@@ -133,6 +133,26 @@ class AuthService extends ChangeNotifier {
     await fetchProfile();
   }
 
+  Future<Map<String, dynamic>?> getTenantDetails() async {
+    try {
+      final response = await _apiService.get(ApiConfig.miEmpresaUrl);
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getTenantSubscription() async {
+    try {
+      final response = await _apiService.get(ApiConfig.miContratacionUrl);
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>?;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<bool> login({
     required String email,
     required String password,

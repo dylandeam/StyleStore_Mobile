@@ -1,6 +1,7 @@
 class User {
   final int id;
   final int? empresaId;
+  final int? sucursalId;
   final String email;
   final String name;
   final String? apellido;
@@ -16,6 +17,7 @@ class User {
   User({
     required this.id,
     this.empresaId,
+    this.sucursalId,
     required this.email,
     required this.name,
     this.apellido,
@@ -33,6 +35,7 @@ class User {
     return User(
       id: json['id'] as int,
       empresaId: json['empresa_id'] as int?,
+      sucursalId: json['sucursal_id'] as int?,
       email: json['email'] as String,
       name: (json['name'] ?? json['nombre'] ?? '') as String,
       apellido: json['apellido'] as String?,
@@ -51,6 +54,7 @@ class User {
     return {
       'id': id,
       'empresa_id': empresaId,
+      'sucursal_id': sucursalId,
       'email': email,
       'name': name,
       'apellido': apellido,

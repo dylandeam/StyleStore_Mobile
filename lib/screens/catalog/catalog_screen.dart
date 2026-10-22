@@ -23,6 +23,7 @@ import 'product_detail_screen.dart';
 import 'delivery_tracking_screen.dart';
 import 'outfits_screen.dart';
 import 'chatbot_screen.dart';
+import '../../services/offline_sync_service.dart';
 
 class CatalogScreen extends StatefulWidget {
   final int initialTab;
@@ -2259,6 +2260,39 @@ class _CatalogScreenState extends State<CatalogScreen>
   // not expose QR payments.
   // ignore: unused_element
   void _showQrStoreModal(BuildContext context) {
+    final isOnline =
+        Provider.of<OfflineSyncService>(context, listen: false).isOnline;
+    if (!isOnline) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.signal_wifi_off, color: Color(0xFFDC2626)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Operación no disponible',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: const Text(
+            'El cobro por QR Simple no está disponible sin conexión. En modo avión solo se admiten cobros en efectivo en caja POS local.',
+            style: TextStyle(fontSize: 14, height: 1.35),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

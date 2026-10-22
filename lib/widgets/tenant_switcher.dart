@@ -126,8 +126,36 @@ class _TenantSwitcherState extends State<TenantSwitcher> {
               items: _tenants
                   .map((tenant) => DropdownMenuItem<int>(
                         value: int.tryParse(tenant['id'].toString()),
-                        child: Text(tenant['nombre'].toString(),
-                            overflow: TextOverflow.ellipsis),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                tenant['nombre'].toString(),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1A6366F1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                (tenant['codigo'] ?? '')
+                                    .toString()
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.accentIndigo,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ))
                   .toList(),
               onChanged: _switching
@@ -136,6 +164,22 @@ class _TenantSwitcherState extends State<TenantSwitcher> {
                       if (value != null) _select(value);
                     },
             ),
+          const SizedBox(height: 4),
+          const Row(
+            children: [
+              Icon(Icons.verified, size: 12, color: AppTheme.successGreen),
+              SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Aislamiento de catálogo, sucursales y operaciones activado.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (_switching) ...[
             const SizedBox(height: 6),
             const LinearProgressIndicator(),

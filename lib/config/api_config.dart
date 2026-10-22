@@ -108,4 +108,10 @@ class ApiConfig {
 
   // QR Config Mostrador (Punto Pagos QR)
   static String get qrConfigUrl => '$baseUrl/pagos/config-qr';
+
+  // Tenants, Empresa y Jerarquía SaaS (REQ-005)
+  static String get miEmpresaUrl => '$baseUrl/empresas/mia';
+  static String get miContratacionUrl => '$baseUrl/planes/mi-contratacion';
+  static String get authTenantsUrl => '$baseUrl/auth/tenants';
+  static String get authTenantsSelectUrl => '$baseUrl/auth/tenants/select';
 }

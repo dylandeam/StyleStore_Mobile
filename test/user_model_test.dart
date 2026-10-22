@@ -6,6 +6,8 @@ void main() {
     test('User fromJson parses correctly', () {
       final json = {
         'id': 1,
+        'empresa_id': 10,
+        'sucursal_id': 2,
         'email': 'user@example.com',
         'name': 'Juan Pérez',
         'is_active': true,
@@ -15,6 +17,8 @@ void main() {
       final user = User.fromJson(json);
 
       expect(user.id, 1);
+      expect(user.empresaId, 10);
+      expect(user.sucursalId, 2);
       expect(user.email, 'user@example.com');
       expect(user.name, 'Juan Pérez');
       expect(user.isActive, true);
@@ -24,6 +28,8 @@ void main() {
     test('User toJson serializes correctly', () {
       final user = User(
         id: 2,
+        empresaId: 10,
+        sucursalId: 3,
         email: 'maria@example.com',
         name: 'María Gómez',
         isActive: true,
@@ -33,6 +39,8 @@ void main() {
       final json = user.toJson();
 
       expect(json['id'], 2);
+      expect(json['empresa_id'], 10);
+      expect(json['sucursal_id'], 3);
       expect(json['email'], 'maria@example.com');
       expect(json['name'], 'María Gómez');
       expect(json['is_active'], true);
