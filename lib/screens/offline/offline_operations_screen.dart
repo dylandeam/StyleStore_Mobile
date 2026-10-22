@@ -51,30 +51,56 @@ class _OfflineOperationsScreenState extends State<OfflineOperationsScreen> {
   }
 
   Future<void> _showDiagnostics() async {
-    final diag = await context.read<OfflineSyncService>().getDiagnostics();
+    final syncService = context.read<OfflineSyncService>();
+    final diag = await syncService.getDiagnostics();
+    Map<String, dynamic>? remoteMetrics;
+    if (syncService.isOnline) {
+      remoteMetrics = await syncService.fetchRemoteSyncMetrics();
+    }
     if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Diagnóstico de Almacenamiento SQLite'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Ámbito aislado:\n${diag['scope']}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            const Divider(),
-            Text('• Snapshots de catálogo: ${diag['catalogs_count']}'),
-            Text('• Sucursales cacheadas: ${diag['branches_count']}'),
-            Text('• Clientes locales: ${diag['clients_count']}'),
-            const Divider(),
-            Text('• Operaciones pendientes: ${diag['pending_count']}'),
-            Text('• Operaciones sincronizando: ${diag['syncing_count']}'),
-            Text('• Operaciones confirmadas: ${diag['confirmed_count']}'),
-            Text('• Conflictos/Rechazos: ${diag['conflict_count']}'),
-            Text('• Total en cola: ${diag['total_operations']}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
+        title: const Text('Diagnóstico de Almacenamiento & Sincronización'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Ámbito aislado:\n${diag['scope']}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Divider(),
+              const Text('ALMACENAMIENTO SQLITE (LOCAL):',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: AppTheme.accentIndigo)),
+              const SizedBox(height: 4),
+              Text('• Snapshots de catálogo: ${diag['catalogs_count']}'),
+              Text('• Sucursales cacheadas: ${diag['branches_count']}'),
+              Text('• Clientes locales: ${diag['clients_count']}'),
+              Text('• Cola pendiente: ${diag['pending_count']}'),
+              Text('• Total en cola local: ${diag['total_operations']}'),
+              const Divider(),
+              const Text('MÉTRICAS DEL SERVIDOR (CENTRALIZADAS):',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: AppTheme.accentIndigo)),
+              const SizedBox(height: 4),
+              if (remoteMetrics != null) ...[
+                Text('• Operaciones registradas: ${remoteMetrics['total_operaciones'] ?? 0}'),
+                Text('• Confirmadas con éxito: ${remoteMetrics['total_confirmadas'] ?? 0}'),
+                Text('• Conflictos detectados: ${remoteMetrics['total_conflictos'] ?? 0}'),
+                Text('• Tasa de éxito: ${remoteMetrics['tasa_exito_porcentaje'] ?? 100}%'),
+                if (remoteMetrics['reembolsos_asociados'] != null)
+                  Text(
+                      '• Reembolsos asociados: ${remoteMetrics['reembolsos_asociados']['total_reembolsos']} (Bs ${remoteMetrics['reembolsos_asociados']['monto_total']})'),
+              ] else
+                const Text('• Sin conexión con el servidor o en modo avión.',
+                    style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+            ],
+          ),
         ),
         actions: [
           TextButton(

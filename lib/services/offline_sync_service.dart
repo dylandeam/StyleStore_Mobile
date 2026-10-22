@@ -28,17 +28,25 @@ class OfflineSyncService extends ChangeNotifier {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _syncing = false;
   int _pendingCount = 0;
+  bool _isOnline = true;
 
   OfflineSyncService(this._api, this._database, this._storage) {
+    Connectivity().checkConnectivity().then((results) {
+      _isOnline = !results.contains(ConnectivityResult.none);
+      notifyListeners();
+    });
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen((results) {
-      if (!results.contains(ConnectivityResult.none)) unawaited(syncPending());
+      _isOnline = !results.contains(ConnectivityResult.none);
+      notifyListeners();
+      if (_isOnline) unawaited(syncPending());
     });
     unawaited(refreshPendingCount());
   }
 
   int get pendingCount => _pendingCount;
   bool get syncing => _syncing;
+  bool get isOnline => _isOnline;
 
   Future<OfflineSubmitResult> submitReservation(
       Map<String, dynamic> payload) async {
@@ -209,6 +217,20 @@ class OfflineSyncService extends ChangeNotifier {
   Future<Map<String, dynamic>> getDiagnostics() async {
     final scope = await _storage.getOfflineScope();
     return await _database.getStorageDiagnostics(scope);
+  }
+
+  Future<Map<String, dynamic>?> fetchRemoteSyncMetrics({int? sucursalId}) async {
+    try {
+      final response = await _api.get(
+        ApiConfig.syncMetricasUrl(sucursalId: sucursalId),
+        requireAuth: true,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
   }
 
   @override

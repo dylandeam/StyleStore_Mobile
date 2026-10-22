@@ -69,6 +69,8 @@ class ApiConfig {
   static String reservasDisponibilidadUrl(int sucursalId, String fecha) =>
       '$baseUrl/reservas/disponibilidad?sucursal_id=$sucursalId&fecha=$fecha';
   static String get syncOperationsUrl => '$baseUrl/sync/operations';
+  static String syncMetricasUrl({int? sucursalId}) =>
+      '$baseUrl/sync/metricas${sucursalId != null ? '?sucursal_id=$sucursalId' : ''}';
 
   // Cambios y Devoluciones (v6 Punto 9)
   static String get cambiosUrl => '$baseUrl/cambios';

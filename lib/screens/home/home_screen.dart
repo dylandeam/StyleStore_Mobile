@@ -4,6 +4,7 @@ import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/tenant_switcher.dart';
+import '../../widgets/offline_connectivity_banner.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -41,14 +42,19 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       drawer: _buildNavigationDrawer(context, authService, user),
-      body: authService.status == AuthStatus.loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.accentIndigo),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        children: [
+          const OfflineConnectivityBanner(),
+          Expanded(
+            child: authService.status == AuthStatus.loading
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppTheme.accentIndigo),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Welcome Card
                   Container(
@@ -392,6 +398,9 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 
