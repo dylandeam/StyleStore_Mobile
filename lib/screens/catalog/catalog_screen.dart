@@ -53,6 +53,7 @@ class _CatalogScreenState extends State<CatalogScreen>
           ? widget.initialTab
           : 0,
     );
+    _tabController.addListener(_onCatalogTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CatalogService>(context, listen: false).fetchSucursales();
       Provider.of<CatalogService>(context, listen: false).fetchCatalog();
@@ -63,6 +64,13 @@ class _CatalogScreenState extends State<CatalogScreen>
       Provider.of<OrderService>(context, listen: false).fetchReservas();
       _fetchParaTi();
     });
+  }
+
+  void _onCatalogTabChanged() {
+    if (_tabController.index == 5 && !_tabController.indexIsChanging) {
+      Provider.of<OrderService>(context, listen: false).fetchOrders();
+      Provider.of<OrderService>(context, listen: false).fetchReservas();
+    }
   }
 
   Future<void> _fetchParaTi() async {
@@ -82,6 +90,7 @@ class _CatalogScreenState extends State<CatalogScreen>
 
   @override
   void dispose() {
+    _tabController.removeListener(_onCatalogTabChanged);
     _tabController.dispose();
     _discountCodeCtrl.dispose();
     super.dispose();
@@ -3357,6 +3366,25 @@ class _CatalogScreenState extends State<CatalogScreen>
               ),
             ),
 
+          if (order.estado.toLowerCase() == 'pendiente_pago')
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: ElevatedButton.icon(
+                onPressed: () => _procesarPagoPayPal(
+                  context,
+                  order.id,
+                  order.total,
+                  order.tokenSeguimiento,
+                ),
+                icon: const Icon(Icons.paypal, size: 18),
+                label: const Text('Reintentar pago con PayPal'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0070BA),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+
           // Botón ¿Le llegó su pedido?
           if (order.envioId != null && order.envioEstado != 'entregado')
             Padding(
@@ -4033,6 +4061,8 @@ class _CatalogScreenState extends State<CatalogScreen>
 
       final data = jsonDecode(utf8.decode(res.bodyBytes));
       final paypalOrderId = data['id'] as String?;
+      final paypalTotal = data['paypal_total']?.toString();
+      final paypalCurrency = data['paypal_currency']?.toString();
       String? approveUrl;
       for (final link in (data['links'] as List? ?? const [])) {
         if (link is Map &&
@@ -4060,7 +4090,9 @@ class _CatalogScreenState extends State<CatalogScreen>
           title: const Text('Completa el pago en PayPal'),
           content: Text(
             'Se abrió el sitio oficial de PayPal para la orden #$ordenId por '
-            'Bs. ${totalPagar.toStringAsFixed(2)}. Regresa aquí únicamente '
+            'Bs. ${totalPagar.toStringAsFixed(2)}.'
+            '${paypalTotal != null && paypalCurrency != null ? ' PayPal mostrará $paypalCurrency $paypalTotal según el tipo de cambio configurado.' : ''} '
+            'Regresa aquí únicamente '
             'después de aprobar el cobro.',
           ),
           actions: [
