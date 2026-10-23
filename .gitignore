@@ -30,6 +30,12 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Firebase credentials/configuration (keep local; never commit)
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+firebase-service-account*.json
+serviceAccountKey*.json
+
 # Symbol processing related exports
 app.*.symbols
 

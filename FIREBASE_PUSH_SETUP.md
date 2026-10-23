@@ -7,14 +7,20 @@ al backend una cuenta de servicio. Ninguna clave real debe guardarse en Git.
 
 ## 1. Firebase Console
 
-1. Crear o reutilizar un proyecto Firebase.
-2. Registrar la aplicación Android con el `applicationId` declarado en
-   `android/app/build.gradle.kts`.
+1. Proyecto creado: `StyleStore` (`stylestore-99387`, número `1006137634795`).
+2. Aplicación Android registrada con el `applicationId` declarado en
+   `android/app/build.gradle.kts`: `com.stylestore.stylestore_mobile`.
+   App ID: `1:1006137634795:android:1027e57e0ba51e8e75f3ae`.
 3. Activar Cloud Messaging.
 4. Copiar los valores de configuración de la aplicación: API key, App ID, Sender ID,
    Project ID y Storage Bucket.
 5. En Configuración del proyecto > Cuentas de servicio, generar una clave JSON exclusiva
    para el backend. Guardarla como secreto; nunca dentro de este repositorio.
+
+Los archivos nativos y las cuentas de servicio están excluidos explícitamente en
+`.gitignore`. La creación del proyecto y el registro Android están terminados; todavía se
+debe descargar la configuración local, instalar la credencial del backend en Railway y
+completar la prueba física antes de declarar FCM operativo de extremo a extremo.
 
 ## 2. Compilar la aplicación
 
