@@ -3386,7 +3386,11 @@ class _CatalogScreenState extends State<CatalogScreen>
             ),
 
           // Botón ¿Le llegó su pedido?
-          if (order.envioId != null && order.envioEstado != 'entregado')
+          if (order.envioId != null &&
+              order.envioEstado != 'entregado' &&
+              !{'pendiente_pago', 'cancelada'}.contains(
+                order.estado.toLowerCase(),
+              ))
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: ElevatedButton.icon(
