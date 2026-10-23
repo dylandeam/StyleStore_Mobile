@@ -38,7 +38,8 @@ class ApiService {
           if (candidateBase == ApiConfig.baseUrl) continue;
           try {
             final testUrl = candidateBase + path;
-            final response = await requestFn(testUrl).timeout(const Duration(seconds: 4));
+            final response =
+                await requestFn(testUrl).timeout(const Duration(seconds: 4));
             // Found working host! Switch baseUrl globally
             ApiConfig.baseUrl = candidateBase;
             return response;
@@ -69,14 +70,16 @@ class ApiService {
       final refreshToken = await _storageService.getRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return false;
 
-      final res = await http.post(
-        Uri.parse(ApiConfig.refreshUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'refresh_token': refreshToken}),
-      ).timeout(const Duration(seconds: 6));
+      final res = await http
+          .post(
+            Uri.parse(ApiConfig.refreshUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'refresh_token': refreshToken}),
+          )
+          .timeout(const Duration(seconds: 6));
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body);
@@ -210,10 +213,19 @@ class ApiService {
     return res;
   }
 
-  Future<http.Response> delete(String url, {bool requireAuth = true}) async {
+  Future<http.Response> delete(
+    String url, {
+    Map<String, dynamic>? body,
+    bool requireAuth = true,
+  }) async {
     Map<String, String> headers = await _getHeaders(requireAuth: requireAuth);
+    final encodedBody = body != null ? jsonEncode(body) : null;
     var res = await _executeWithFallback(
-      (targetUrl) => http.delete(Uri.parse(targetUrl), headers: headers),
+      (targetUrl) => http.delete(
+        Uri.parse(targetUrl),
+        headers: headers,
+        body: encodedBody,
+      ),
       url,
     );
     if (res.statusCode == 401 && requireAuth) {
@@ -221,7 +233,11 @@ class ApiService {
       if (refreshed) {
         headers = await _getHeaders(requireAuth: requireAuth);
         res = await _executeWithFallback(
-          (targetUrl) => http.delete(Uri.parse(targetUrl), headers: headers),
+          (targetUrl) => http.delete(
+            Uri.parse(targetUrl),
+            headers: headers,
+            body: encodedBody,
+          ),
           url,
         );
       }

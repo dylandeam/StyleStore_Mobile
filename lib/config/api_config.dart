@@ -55,6 +55,7 @@ class ApiConfig {
   static String get suscribirProximamenteUrl =>
       '$baseUrl/notificaciones/suscribir-proximamente';
   static String get notificacionesUrl => '$baseUrl/notificaciones';
+  static String get pushDevicesUrl => '$baseUrl/notificaciones/dispositivos';
 
   // Carrito de compras (CU12)
   static String get carritoUrl => '$baseUrl/carrito/mio';

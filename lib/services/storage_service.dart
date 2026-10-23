@@ -6,6 +6,8 @@ class StorageService {
 
   static const String _keyAccessToken = 'stylestore_access_token';
   static const String _keyRefreshToken = 'stylestore_refresh_token';
+  static const String _keyDeviceId = 'stylestore_device_id';
+  static const String _keyPushRegistration = 'stylestore_push_registration';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -32,6 +34,20 @@ class StorageService {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
   }
+
+  Future<String?> getDeviceId() => _storage.read(key: _keyDeviceId);
+
+  Future<void> saveDeviceId(String value) =>
+      _storage.write(key: _keyDeviceId, value: value);
+
+  Future<String?> getPushRegistration() =>
+      _storage.read(key: _keyPushRegistration);
+
+  Future<void> savePushRegistration(String value) =>
+      _storage.write(key: _keyPushRegistration, value: value);
+
+  Future<void> clearPushRegistration() =>
+      _storage.delete(key: _keyPushRegistration);
 
   Future<String> getOfflineScope() async {
     final token = await getAccessToken();

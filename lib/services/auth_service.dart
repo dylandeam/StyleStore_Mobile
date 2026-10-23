@@ -4,12 +4,14 @@ import '../config/api_config.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
+import 'push_notification_service.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading }
 
 class AuthService extends ChangeNotifier {
   final ApiService _apiService;
   final StorageService _storageService;
+  final PushNotificationService _pushNotifications;
 
   User? _currentUser;
   AuthStatus _status = AuthStatus.initial;
@@ -20,7 +22,7 @@ class AuthService extends ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   String? get errorMessage => _errorMessage;
 
-  AuthService(this._apiService, this._storageService) {
+  AuthService(this._apiService, this._storageService, this._pushNotifications) {
     checkAuthStatus();
   }
 
@@ -37,6 +39,8 @@ class AuthService extends ChangeNotifier {
 
     _status = AuthStatus.authenticated;
     notifyListeners();
+
+    await _pushNotifications.registerCurrentDevice();
 
     // Try fetching user profile without logging out on failure
     await fetchProfile();
@@ -130,6 +134,7 @@ class AuthService extends ChangeNotifier {
       accessToken: data['access_token'] as String,
       refreshToken: data['refresh_token'] as String,
     );
+    await _pushNotifications.registerCurrentDevice();
     await fetchProfile();
   }
 
@@ -137,7 +142,8 @@ class AuthService extends ChangeNotifier {
     try {
       final response = await _apiService.get(ApiConfig.miEmpresaUrl);
       if (response.statusCode == 200) {
-        return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        return jsonDecode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -147,7 +153,8 @@ class AuthService extends ChangeNotifier {
     try {
       final response = await _apiService.get(ApiConfig.miContratacionUrl);
       if (response.statusCode == 200) {
-        return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>?;
+        return jsonDecode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>?;
       }
     } catch (_) {}
     return null;
@@ -180,6 +187,8 @@ class AuthService extends ChangeNotifier {
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
+
+        await _pushNotifications.registerCurrentDevice();
 
         // Fetch user profile immediately
         await fetchProfile();
@@ -230,6 +239,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _pushNotifications.unregisterCurrentDevice();
     try {
       await _apiService.post(ApiConfig.logoutUrl);
     } catch (_) {

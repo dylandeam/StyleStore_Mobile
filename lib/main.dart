@@ -14,9 +14,11 @@ import 'services/order_service.dart';
 import 'services/storage_service.dart';
 import 'services/local_database_service.dart';
 import 'services/offline_sync_service.dart';
+import 'services/push_notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PushNotificationService.initializeFirebase();
   runApp(const StyleStoreApp());
 }
 
@@ -28,6 +30,8 @@ class StyleStoreApp extends StatelessWidget {
     final storageService = StorageService();
     final apiService = ApiService(storageService);
     final localDatabase = LocalDatabaseService();
+    final pushNotifications = PushNotificationService.instance;
+    pushNotifications.configure(apiService, storageService);
 
     return MultiProvider(
       providers: [
@@ -40,7 +44,8 @@ class StyleStoreApp extends StatelessWidget {
               OfflineSyncService(apiService, localDatabase, storageService),
         ),
         ChangeNotifierProvider<AuthService>(
-          create: (_) => AuthService(apiService, storageService),
+          create: (_) =>
+              AuthService(apiService, storageService, pushNotifications),
         ),
         ChangeNotifierProvider<CatalogService>(
           create: (_) =>
@@ -62,6 +67,7 @@ class StyleStoreApp extends StatelessWidget {
             title: 'StyleStore Mobile',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
+            navigatorKey: PushNotificationService.navigatorKey,
             routes: AppRoutes.routes,
             home: _getInitialScreen(authService),
           );

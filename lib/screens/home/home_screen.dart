@@ -16,11 +16,12 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.bgSecondary,
-        elevation: 0,
+        backgroundColor: AppTheme.bgCard,
+        elevation: 1,
         title: const Row(
           children: [
-            Icon(Icons.bolt, color: AppTheme.accentIndigo, size: 24),
+            Icon(Icons.storefront_rounded,
+                color: AppTheme.accentIndigo, size: 24),
             SizedBox(width: 8),
             Text(
               'StyleStore',
@@ -42,6 +43,32 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       drawer: _buildNavigationDrawer(context, authService, user),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        backgroundColor: AppTheme.bgCard,
+        indicatorColor: AppTheme.bgSecondary,
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            Navigator.pushNamed(context, AppRoutes.catalog);
+          } else if (index == 2) {
+            Navigator.pushNamed(context, AppRoutes.catalog, arguments: 5);
+          } else if (index == 3) {
+            Navigator.pushNamed(context, AppRoutes.profile);
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Inicio'),
+          NavigationDestination(
+              icon: Icon(Icons.checkroom_outlined), label: 'Catálogo'),
+          NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined), label: 'Pedidos'),
+          NavigationDestination(
+              icon: Icon(Icons.person_outline), label: 'Perfil'),
+        ],
+      ),
       body: Column(
         children: [
           const OfflineConnectivityBanner(),
@@ -53,351 +80,379 @@ class HomeScreen extends StatelessWidget {
                   )
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Welcome Card
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0x336366F1), Color(0x1AA855F7)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0x336366F1)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0x336366F1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.verified_user,
-                                  color: Color(0xFFA5B4FC), size: 14),
-                              SizedBox(width: 6),
-                              Text(
-                                'Sesión Segura',
-                                style: TextStyle(
-                                  color: Color(0xFFA5B4FC),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 960),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Welcome Card
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0x336366F1),
+                                    Color(0x1AA855F7)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
+                                borderRadius: BorderRadius.circular(20),
+                                border:
+                                    Border.all(color: const Color(0x336366F1)),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '¡Hola, ${user?.name ?? "Usuario"}!',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Has ingresado correctamente a través de la aplicación móvil de StyleStore.',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Accesos Rápidos para Celular (Módulos de la Tienda - Colapsable)
-                  Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.borderGlass),
-                      ),
-                      child: ExpansionTile(
-                        initiallyExpanded: true,
-                        tilePadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        childrenPadding: const EdgeInsets.only(
-                            left: 20, right: 20, bottom: 20),
-                        leading: const Icon(Icons.storefront,
-                            color: AppTheme.accentIndigo, size: 22),
-                        title: const Text(
-                          'Secciones de la Tienda',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        children: [
-                          const Divider(
-                              color: AppTheme.borderGlass, height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.checkroom,
-                                  title: 'Catálogo',
-                                  subtitle: 'Prendas y stock',
-                                  color: AppTheme.accentIndigo,
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.catalog,
-                                      arguments: 0),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.local_offer,
-                                  title: 'Promociones',
-                                  subtitle: 'Hasta 90% OFF',
-                                  color: const Color(0xFFE63946),
-                                  isBadge: true,
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.catalog,
-                                      arguments: 1),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.hourglass_top,
-                                  title: 'Próximamente',
-                                  subtitle: 'Alertas de estreno',
-                                  color: const Color(0xFFC5A880),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.catalog,
-                                      arguments: 3),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.shopping_cart_outlined,
-                                  title: 'Mi Carrito',
-                                  subtitle: 'Bolsa y pagos',
-                                  color: const Color(0xFFA855F7),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.catalog,
-                                      arguments: 4),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.shopping_bag_outlined,
-                                  title: 'Mis Pedidos',
-                                  subtitle: 'Seguimiento Yango',
-                                  color: const Color(0xFF10B981),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.catalog,
-                                      arguments: 5),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  context: context,
-                                  icon: Icons.camera_front,
-                                  title: 'Vestidor Virtual',
-                                  subtitle: 'Probador AR en vivo',
-                                  color: const Color(0xFFC8A97E),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, AppRoutes.vestidorVirtual),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Account Details Card (Colapsable)
-                  Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.borderGlass),
-                      ),
-                      child: ExpansionTile(
-                        initiallyExpanded: true,
-                        tilePadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        childrenPadding: const EdgeInsets.only(
-                            left: 20, right: 20, bottom: 20),
-                        leading: const Icon(Icons.person,
-                            color: AppTheme.accentIndigo, size: 22),
-                        title: const Text(
-                          'Detalles del Perfil',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        children: [
-                          const Divider(
-                              color: AppTheme.borderGlass, height: 16),
-                          _buildDataRow('ID de Usuario', '#${user?.id ?? "-"}'),
-                          _buildDataRow('Nombre', user?.name ?? '-'),
-                          _buildDataRow(
-                              'Correo Electrónico', user?.email ?? '-'),
-                          _buildDataRow('Rol', user?.role ?? 'cliente'),
-                          _buildDataRow(
-                            'Estado',
-                            user?.isActive == true ? 'Activo' : 'Inactivo',
-                            isSuccess: user?.isActive == true,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                        context, AppRoutes.catalog);
-                                  },
-                                  icon: const Icon(Icons.checkroom, size: 18),
-                                  label: const Text('Catálogo & Pedidos'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.accentIndigo,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x336366F1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.verified_user,
+                                            color: Color(0xFFA5B4FC), size: 14),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Sesión Segura',
+                                          style: TextStyle(
+                                            color: Color(0xFFA5B4FC),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                      context, AppRoutes.profile);
-                                },
-                                icon:
-                                    const Icon(Icons.person_outline, size: 16),
-                                label: const Text('Perfil'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.accentIndigo,
-                                  side: const BorderSide(
-                                      color: AppTheme.accentIndigo),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    '¡Hola, ${user?.name ?? "Usuario"}!',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                      context, AppRoutes.changePassword);
-                                },
-                                icon: const Icon(Icons.lock_outline, size: 16),
-                                label: const Text('Clave'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.accentIndigo,
-                                  side: const BorderSide(
-                                      color: AppTheme.accentIndigo),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Has ingresado correctamente a través de la aplicación móvil de StyleStore.',
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                            ),
+                            const SizedBox(height: 20),
 
-                  // System Information Card (Colapsable)
-                  Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.borderGlass),
-                      ),
-                      child: const ExpansionTile(
-                        initiallyExpanded: false,
-                        tilePadding:
-                            EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        childrenPadding:
-                            EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                        leading: Icon(Icons.security,
-                            color: AppTheme.successGreen, size: 22),
-                        title: Text(
-                          'Arquitectura y Seguridad',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
+                            // Accesos Rápidos para Celular (Módulos de la Tienda - Colapsable)
+                            Theme(
+                              data: Theme.of(context)
+                                  .copyWith(dividerColor: Colors.transparent),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgCard,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: AppTheme.borderGlass),
+                                ),
+                                child: ExpansionTile(
+                                  initiallyExpanded: true,
+                                  tilePadding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 8),
+                                  childrenPadding: const EdgeInsets.only(
+                                      left: 20, right: 20, bottom: 20),
+                                  leading: const Icon(Icons.storefront,
+                                      color: AppTheme.accentIndigo, size: 22),
+                                  title: const Text(
+                                    'Secciones de la Tienda',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  children: [
+                                    const Divider(
+                                        color: AppTheme.borderGlass,
+                                        height: 16),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.checkroom,
+                                            title: 'Catálogo',
+                                            subtitle: 'Prendas y stock',
+                                            color: AppTheme.accentIndigo,
+                                            onTap: () => Navigator.pushNamed(
+                                                context, AppRoutes.catalog,
+                                                arguments: 0),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.local_offer,
+                                            title: 'Promociones',
+                                            subtitle: 'Hasta 90% OFF',
+                                            color: const Color(0xFFE63946),
+                                            isBadge: true,
+                                            onTap: () => Navigator.pushNamed(
+                                                context, AppRoutes.catalog,
+                                                arguments: 1),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.hourglass_top,
+                                            title: 'Próximamente',
+                                            subtitle: 'Alertas de estreno',
+                                            color: const Color(0xFFC5A880),
+                                            onTap: () => Navigator.pushNamed(
+                                                context, AppRoutes.catalog,
+                                                arguments: 3),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.shopping_cart_outlined,
+                                            title: 'Mi Carrito',
+                                            subtitle: 'Bolsa y pagos',
+                                            color: const Color(0xFFA855F7),
+                                            onTap: () => Navigator.pushNamed(
+                                                context, AppRoutes.catalog,
+                                                arguments: 4),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.shopping_bag_outlined,
+                                            title: 'Mis Pedidos',
+                                            subtitle: 'Seguimiento de delivery',
+                                            color: const Color(0xFF10B981),
+                                            onTap: () => Navigator.pushNamed(
+                                                context, AppRoutes.catalog,
+                                                arguments: 5),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildQuickActionCard(
+                                            context: context,
+                                            icon: Icons.camera_front,
+                                            title: 'Vestidor Virtual',
+                                            subtitle: 'Probador AR en vivo',
+                                            color: const Color(0xFFC8A97E),
+                                            onTap: () => Navigator.pushNamed(
+                                                context,
+                                                AppRoutes.vestidorVirtual),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Account Details Card (Colapsable)
+                            Theme(
+                              data: Theme.of(context)
+                                  .copyWith(dividerColor: Colors.transparent),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgCard,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: AppTheme.borderGlass),
+                                ),
+                                child: ExpansionTile(
+                                  initiallyExpanded: true,
+                                  tilePadding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 8),
+                                  childrenPadding: const EdgeInsets.only(
+                                      left: 20, right: 20, bottom: 20),
+                                  leading: const Icon(Icons.person,
+                                      color: AppTheme.accentIndigo, size: 22),
+                                  title: const Text(
+                                    'Detalles del Perfil',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  children: [
+                                    const Divider(
+                                        color: AppTheme.borderGlass,
+                                        height: 16),
+                                    _buildDataRow(
+                                        'ID de Usuario', '#${user?.id ?? "-"}'),
+                                    _buildDataRow('Nombre', user?.name ?? '-'),
+                                    _buildDataRow('Correo Electrónico',
+                                        user?.email ?? '-'),
+                                    _buildDataRow(
+                                        'Rol', user?.role ?? 'cliente'),
+                                    _buildDataRow(
+                                      'Estado',
+                                      user?.isActive == true
+                                          ? 'Activo'
+                                          : 'Inactivo',
+                                      isSuccess: user?.isActive == true,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                                context, AppRoutes.catalog);
+                                          },
+                                          icon: const Icon(Icons.checkroom,
+                                              size: 18),
+                                          label:
+                                              const Text('Catálogo & Pedidos'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppTheme.accentIndigo,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        OutlinedButton.icon(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                                context, AppRoutes.profile);
+                                          },
+                                          icon: const Icon(Icons.person_outline,
+                                              size: 16),
+                                          label: const Text('Perfil'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor:
+                                                AppTheme.accentIndigo,
+                                            side: const BorderSide(
+                                                color: AppTheme.accentIndigo),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        OutlinedButton.icon(
+                                          onPressed: () {
+                                            Navigator.pushNamed(context,
+                                                AppRoutes.changePassword);
+                                          },
+                                          icon: const Icon(Icons.lock_outline,
+                                              size: 16),
+                                          label: const Text('Clave'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor:
+                                                AppTheme.accentIndigo,
+                                            side: const BorderSide(
+                                                color: AppTheme.accentIndigo),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // System Information Card (Colapsable)
+                            Theme(
+                              data: Theme.of(context)
+                                  .copyWith(dividerColor: Colors.transparent),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgCard,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: AppTheme.borderGlass),
+                                ),
+                                child: const ExpansionTile(
+                                  initiallyExpanded: false,
+                                  tilePadding: EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 8),
+                                  childrenPadding: EdgeInsets.only(
+                                      left: 20, right: 20, bottom: 20),
+                                  leading: Icon(Icons.security,
+                                      color: AppTheme.successGreen, size: 22),
+                                  title: Text(
+                                    'Arquitectura y Seguridad',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  children: [
+                                    Divider(
+                                        color: AppTheme.borderGlass,
+                                        height: 16),
+                                    _SecurityBullet(
+                                      title: 'FastAPI REST Backend',
+                                      subtitle:
+                                          'Conexión HTTPS y serialización rápida con Pydantic',
+                                      color: AppTheme.accentIndigo,
+                                    ),
+                                    SizedBox(height: 12),
+                                    _SecurityBullet(
+                                      title: 'Tokens Cifrados',
+                                      subtitle:
+                                          'Almacenamiento seguro con flutter_secure_storage',
+                                      color: AppTheme.accentPurple,
+                                    ),
+                                    SizedBox(height: 12),
+                                    _SecurityBullet(
+                                      title: 'Gestión de Estado Centralizada',
+                                      subtitle:
+                                          'Arquitectura Provider con actualización reactiva',
+                                      color: AppTheme.accentPink,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        children: [
-                          Divider(color: AppTheme.borderGlass, height: 16),
-                          _SecurityBullet(
-                            title: 'FastAPI REST Backend',
-                            subtitle:
-                                'Conexión HTTPS y serialización rápida con Pydantic',
-                            color: AppTheme.accentIndigo,
-                          ),
-                          SizedBox(height: 12),
-                          _SecurityBullet(
-                            title: 'Tokens Cifrados',
-                            subtitle:
-                                'Almacenamiento seguro con flutter_secure_storage',
-                            color: AppTheme.accentPurple,
-                          ),
-                          SizedBox(height: 12),
-                          _SecurityBullet(
-                            title: 'Gestión de Estado Centralizada',
-                            subtitle:
-                                'Arquitectura Provider con actualización reactiva',
-                            color: AppTheme.accentPink,
-                          ),
-                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -410,10 +465,13 @@ class HomeScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+            ),
           ),
+          const SizedBox(width: 12),
           if (isSuccess)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -431,12 +489,17 @@ class HomeScreen extends StatelessWidget {
               ),
             )
           else
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
         ],

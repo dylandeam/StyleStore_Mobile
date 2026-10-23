@@ -322,7 +322,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                             response['orden_id'] ??
                             response['id']) as int?;
                         if (orderId != null && mounted) {
-                          _procesarPagoPayPalSandbox(
+                          _procesarPagoPayPal(
                             context,
                             orderId,
                             cartService.total * (1 - _discountPercent / 100),
@@ -2999,7 +2999,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                           final trackingToken =
                               res['token_seguimiento'] as String?;
                           if (ordenId != null && mounted) {
-                            _procesarPagoPayPalSandbox(
+                            _procesarPagoPayPal(
                                 context, ordenId, totalPagar, trackingToken);
                           }
                         }
@@ -4008,16 +4008,13 @@ class _CatalogScreenState extends State<CatalogScreen>
     );
   }
 
-  Future<void> _procesarPagoPayPalSandbox(
+  Future<void> _procesarPagoPayPal(
     BuildContext context,
     int ordenId,
     double totalPagar,
     String? trackingToken,
   ) async {
     final apiService = Provider.of<ApiService>(context, listen: false);
-    String? paypalOrderId;
-    String? approveUrl;
-
     try {
       final res = await apiService.post(
         '${ApiConfig.baseUrl}/pagos/paypal/crear-orden',
@@ -4030,404 +4027,98 @@ class _CatalogScreenState extends State<CatalogScreen>
         requireAuth: true,
       );
 
-      if (res.statusCode == 200 || res.statusCode == 201) {
+      if (res.statusCode != 200 && res.statusCode != 201) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
-        paypalOrderId = data['id'] as String?;
-        if (data['links'] != null && data['links'] is List) {
-          for (final link in data['links']) {
-            if (link['rel'] == 'approve' || link['rel'] == 'payer-action') {
-              approveUrl = link['href'] as String?;
-              break;
-            }
-          }
+        throw Exception(data['detail'] ?? 'PayPal no pudo iniciar el cobro.');
+      }
+
+      final data = jsonDecode(utf8.decode(res.bodyBytes));
+      final paypalOrderId = data['id'] as String?;
+      String? approveUrl;
+      for (final link in (data['links'] as List? ?? const [])) {
+        if (link is Map &&
+            (link['rel'] == 'approve' || link['rel'] == 'payer-action')) {
+          approveUrl = link['href'] as String?;
+          break;
         }
       }
-    } catch (_) {}
+      if (paypalOrderId == null || approveUrl == null) {
+        throw Exception('PayPal no devolvió un enlace de aprobación válido.');
+      }
 
-    if (!context.mounted) return;
+      final opened = await launchUrl(
+        Uri.parse(approveUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) throw Exception('No se pudo abrir PayPal en el navegador.');
+      if (!context.mounted) return;
 
-    final emailCtrl =
-        TextEditingController(text: 'comprador.sandbox@stylestore.com');
-    final passwordCtrl = TextEditingController(text: 'SandboxPass2026!');
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(Icons.open_in_browser, color: Color(0xFF0070BA)),
+          title: const Text('Completa el pago en PayPal'),
+          content: Text(
+            'Se abrió el sitio oficial de PayPal para la orden #$ordenId por '
+            'Bs. ${totalPagar.toStringAsFixed(2)}. Regresa aquí únicamente '
+            'después de aprobar el cobro.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Ya aprobé el pago'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !context.mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      isDismissible: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (bCtx) {
-        bool procesando = false;
-        String? errorMsg;
+      final capRes = await apiService.post(
+        '${ApiConfig.baseUrl}/pagos/paypal/capturar-orden',
+        body: {
+          'paypal_order_id': paypalOrderId,
+          'orden_venta_id': ordenId,
+        },
+        requireAuth: true,
+      );
+      if (!context.mounted) return;
+      if (capRes.statusCode != 200 && capRes.statusCode != 201) {
+        final data = jsonDecode(utf8.decode(capRes.bodyBytes));
+        throw Exception(
+            data['detail'] ?? 'PayPal todavía no confirmó el cobro.');
+      }
 
-        return StatefulBuilder(
-          builder: (bCtx, setBState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 16,
-                bottom: MediaQuery.of(bCtx).viewInsets.bottom + 20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header con logo PayPal, badge SANDBOX OFICIAL y X
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'PayPal',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                fontStyle: FontStyle.italic,
-                                color: Color(0xFF003087),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF08A),
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                    Border.all(color: const Color(0xFFFDE047)),
-                              ),
-                              child: const Text(
-                                'SANDBOX OFICIAL',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF854D0E),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.grey),
-                          onPressed: () => Navigator.pop(bCtx),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 20),
-
-                    // Box con Comercio, Orden y Precio
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'STYLESTORE BOLIVIA',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF64748B),
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Orden #$ordenId',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Bs. ${totalPagar.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF003087),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      'Iniciar sesión con PayPal',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Utiliza tus credenciales de prueba del Sandbox de PayPal para completar la compra.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF64748B),
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Campo Email
-                    const Text(
-                      'Correo electrónico de prueba:',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF334155)),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: emailCtrl,
-                      style: const TextStyle(
-                          fontSize: 14, color: Color(0xFF0F172A)),
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Campo Password
-                    const Text(
-                      'Contraseña:',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF334155)),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: passwordCtrl,
-                      obscureText: true,
-                      style: const TextStyle(
-                          fontSize: 14, color: Color(0xFF0F172A)),
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Botón Cargar credenciales predeterminadas
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        emailCtrl.text = 'comprador.sandbox@stylestore.com';
-                        passwordCtrl.text = 'SandboxPass2026!';
-                      },
-                      icon: const Text('⚡', style: TextStyle(fontSize: 14)),
-                      label: const Text(
-                          'Cargar credenciales de prueba predeterminadas',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF003087),
-                        side: const BorderSide(
-                            color: Color(0xFF0070BA), style: BorderStyle.solid),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    if (errorMsg != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFCA5A5)),
-                        ),
-                        child: Text(
-                          '⚠️ $errorMsg',
-                          style: const TextStyle(
-                              color: Color(0xFF991B1B), fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-
-                    // Botón Iniciar Sesión en Sandbox
-                    ElevatedButton(
-                      onPressed: procesando
-                          ? null
-                          : () async {
-                              setBState(() {
-                                procesando = true;
-                                errorMsg = null;
-                              });
-
-                              try {
-                                final tokenAUsar =
-                                    paypalOrderId ?? 'MOCK_TOKEN_$ordenId';
-                                final capRes = await apiService.post(
-                                  '${ApiConfig.baseUrl}/pagos/paypal/capturar-orden',
-                                  body: {
-                                    'paypal_order_id': tokenAUsar,
-                                    'orden_venta_id': ordenId,
-                                  },
-                                  requireAuth: true,
-                                );
-
-                                if (!bCtx.mounted || !context.mounted) return;
-
-                                if (capRes.statusCode == 200 ||
-                                    capRes.statusCode == 201) {
-                                  Navigator.pop(bCtx);
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            '🎉 ¡Pago verificado y procesado exitosamente con PayPal!'),
-                                        backgroundColor: AppTheme.successGreen,
-                                        duration: Duration(seconds: 4),
-                                      ),
-                                    );
-                                    Provider.of<OrderService>(context,
-                                            listen: false)
-                                        .fetchOrders();
-                                    _tabController.animateTo(5); // Mis Pedidos
-
-                                    if (trackingToken != null &&
-                                        trackingToken.isNotEmpty) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              DeliveryTrackingScreen(
-                                                  token: trackingToken),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                } else {
-                                  final capData =
-                                      jsonDecode(utf8.decode(capRes.bodyBytes));
-                                  setBState(() {
-                                    procesando = false;
-                                    errorMsg = capData['detail'] ??
-                                        'No se pudo completar la verificación del pago en PayPal.';
-                                  });
-                                }
-                              } catch (e) {
-                                if (!bCtx.mounted) return;
-                                setBState(() {
-                                  procesando = false;
-                                  errorMsg =
-                                      'Error al procesar el pago con PayPal Sandbox: $e';
-                                });
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0070BA),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        elevation: 2,
-                      ),
-                      child: procesando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Text(
-                              'Iniciar Sesión en Sandbox →',
-                              style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Separador
-                    const Row(
-                      children: [
-                        Expanded(child: Divider()),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.circle_outlined,
-                              size: 8, color: Colors.grey),
-                        ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Abrir en ventana externa
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        final url =
-                            approveUrl ?? 'https://www.sandbox.paypal.com';
-                        launchUrl(Uri.parse(url),
-                            mode: LaunchMode.externalApplication);
-                      },
-                      icon: const Icon(Icons.language,
-                          size: 18, color: Color(0xFF0070BA)),
-                      label: const Text(
-                        'Abrir en ventana externa de sandbox.paypal.com',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0070BA)),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: Color(0xFF0070BA)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Footer
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('🔒 Entorno Seguro PayPal Sandbox API v2',
-                            style: TextStyle(fontSize: 10, color: Colors.grey)),
-                        Text('Documentación Sandbox',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF0070BA),
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pago confirmado por PayPal.'),
+          backgroundColor: AppTheme.successGreen,
+        ),
+      );
+      await Provider.of<OrderService>(context, listen: false).fetchOrders();
+      if (!context.mounted) return;
+      _tabController.animateTo(5);
+      if (trackingToken != null && trackingToken.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DeliveryTrackingScreen(token: trackingToken),
+          ),
         );
-      },
-    );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
   }
 
   Widget _buildTag(String text, Color color) {
