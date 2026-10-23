@@ -59,13 +59,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       // 1. Cargar detalle completo
       final resDetalle = await api.get(
         '${ApiConfig.catalogoUrl}/${widget.codigo}/detalle',
-        requireAuth: false,
       );
 
       // 2. Cargar recomendaciones IA Local
       final resRec = await api.get(
         '${ApiConfig.catalogoUrl}/${widget.codigo}/recomendados?limit=4',
-        requireAuth: false,
       );
 
       if (resDetalle.statusCode == 200) {
@@ -143,8 +141,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           seleccion['stock_inventario_id'] ?? seleccion['id'];
       _selectedSucursalId = seleccion['sucursal_id'] ?? 1;
       _availableStock = (seleccion['cantidad'] as num?)?.toInt() ?? 0;
-      _selectedVariantPrice = (seleccion['precio_variante'] as num?)?.toDouble();
-      _selectedMeasurements = Map<String, dynamic>.from(seleccion['medidas'] ?? const {});
+      _selectedVariantPrice =
+          (seleccion['precio_variante'] as num?)?.toDouble();
+      _selectedMeasurements =
+          Map<String, dynamic>.from(seleccion['medidas'] ?? const {});
       _quantity = _availableStock > 0 ? 1 : 0;
     } else {
       _selectedTallaId = null;
@@ -502,12 +502,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     children: [
                       Text(
                         'Bs. ${_selectedVariantPrice!.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF14263D)),
+                        style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF14263D)),
                       ),
-                      const Text('Precio de talla', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                      const Text('Precio de talla',
+                          style: TextStyle(
+                              fontSize: 10, color: AppTheme.textMuted)),
                     ],
                   )
-                else if (p['en_promocion'] == true && p['precio_descuento'] != null)
+                else if (p['en_promocion'] == true &&
+                    p['precio_descuento'] != null)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -878,8 +884,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   e['stock_inventario_id'] ?? e['id'];
                               _selectedSucursalId = e['sucursal_id'] ?? 1;
                               _availableStock = stock;
-                              _selectedVariantPrice = (e['precio_variante'] as num?)?.toDouble();
-                              _selectedMeasurements = Map<String, dynamic>.from(e['medidas'] ?? const {});
+                              _selectedVariantPrice =
+                                  (e['precio_variante'] as num?)?.toDouble();
+                              _selectedMeasurements = Map<String, dynamic>.from(
+                                  e['medidas'] ?? const {});
                               _quantity = 1;
                             });
                           },
@@ -964,16 +972,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Medidas de la prenda', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                    const Text('Medidas de la prenda',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _selectedMeasurements.entries.map((entry) => Chip(
-                        label: Text('${entry.key.replaceAll('_', ' ')}: ${entry.value} cm'),
-                        backgroundColor: AppTheme.bgSecondary,
-                        side: const BorderSide(color: AppTheme.borderGlass),
-                      )).toList(),
+                      children: _selectedMeasurements.entries
+                          .map((entry) => Chip(
+                                label: Text(
+                                    '${entry.key.replaceAll('_', ' ')}: ${entry.value} cm'),
+                                backgroundColor: AppTheme.bgSecondary,
+                                side: const BorderSide(
+                                    color: AppTheme.borderGlass),
+                              ))
+                          .toList(),
                     ),
                   ],
                 ),
@@ -1264,8 +1280,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return [];
     }
 
-    var bloques = await cargarBloques(
-        DateTime.now().add(Duration(days: diasReserva)));
+    var bloques =
+        await cargarBloques(DateTime.now().add(Duration(days: diasReserva)));
     String horaRetiro = bloques
             .cast<Map<String, dynamic>?>()
             .firstWhere((block) => block?['disponible'] == true,
@@ -1368,13 +1384,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       return DropdownMenuItem<String>(
                         value: disponible ? inicio : 'ocupado-$inicio',
                         enabled: disponible,
-                        child: Text('$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
+                        child: Text(
+                            '$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
                       );
                     }).toList(),
                     onChanged: cargandoBloques
                         ? null
-                        : (value) => setModalState(
-                            () => horaRetiro = value ?? ''),
+                        : (value) =>
+                            setModalState(() => horaRetiro = value ?? ''),
                   ),
                   Text(
                     'Horario de atención: $aperturaTexto – $cierreTexto',
@@ -1383,63 +1400,65 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: horaRetiro.isEmpty ? null : () async {
-                      Navigator.pop(ctx);
-                      final stockId = _selectedStockInventarioId;
-                      if (stockId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Selecciona una talla disponible para reservar.')),
-                        );
-                        return;
-                      }
-
-                      final result = await Provider.of<OfflineSyncService>(
-                              context,
-                              listen: false)
-                          .submitReservation(
-                        {
-                          'sucursal_id': sucursalSeleccionada,
-                          'fecha_limite': fechaLimite.toIso8601String(),
-                          'hora_retiro': '$horaRetiro:00',
-                          'items': [
-                            {
-                              'stock_inventario_id': stockId,
-                              'cantidad': _quantity,
+                    onPressed: horaRetiro.isEmpty
+                        ? null
+                        : () async {
+                            Navigator.pop(ctx);
+                            final stockId = _selectedStockInventarioId;
+                            if (stockId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Selecciona una talla disponible para reservar.')),
+                              );
+                              return;
                             }
-                          ],
-                        },
-                      );
 
-                      if (mounted) {
-                        if (result.confirmed) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
-                              backgroundColor: AppTheme.successGreen,
-                            ),
-                          );
-                          _loadProductData();
-                        } else if (result.queued) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
-                              backgroundColor: const Color(0xFFB7791F),
-                              duration: const Duration(seconds: 6),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(result.message),
-                                backgroundColor: AppTheme.dangerRed),
-                          );
-                        }
-                      }
-                    },
+                            final result =
+                                await Provider.of<OfflineSyncService>(context,
+                                        listen: false)
+                                    .submitReservation(
+                              {
+                                'sucursal_id': sucursalSeleccionada,
+                                'fecha_limite': fechaLimite.toIso8601String(),
+                                'hora_retiro': '$horaRetiro:00',
+                                'items': [
+                                  {
+                                    'stock_inventario_id': stockId,
+                                    'cantidad': _quantity,
+                                  }
+                                ],
+                              },
+                            );
+
+                            if (mounted) {
+                              if (result.confirmed) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
+                                    backgroundColor: AppTheme.successGreen,
+                                  ),
+                                );
+                                _loadProductData();
+                              } else if (result.queued) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
+                                    backgroundColor: const Color(0xFFB7791F),
+                                    duration: const Duration(seconds: 6),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(result.message),
+                                      backgroundColor: AppTheme.dangerRed),
+                                );
+                              }
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF14263D),
                       padding: const EdgeInsets.symmetric(vertical: 14),

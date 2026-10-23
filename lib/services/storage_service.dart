@@ -1,8 +1,38 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+abstract class SecureStorageStore {
+  Future<String?> read({required String key});
+  Future<void> write({required String key, required String? value});
+  Future<void> delete({required String key});
+  Future<void> deleteAll();
+}
+
+class FlutterSecureStorageStore implements SecureStorageStore {
+  const FlutterSecureStorageStore();
+
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+
+  @override
+  Future<String?> read({required String key}) => _storage.read(key: key);
+
+  @override
+  Future<void> write({required String key, required String? value}) =>
+      _storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete({required String key}) => _storage.delete(key: key);
+
+  @override
+  Future<void> deleteAll() => _storage.deleteAll();
+}
+
 class StorageService {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  StorageService({SecureStorageStore? storage})
+      : _storage = storage ?? const FlutterSecureStorageStore();
+
+  final SecureStorageStore _storage;
 
   static const String _keyAccessToken = 'stylestore_access_token';
   static const String _keyRefreshToken = 'stylestore_refresh_token';
@@ -18,11 +48,11 @@ class StorageService {
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: _keyAccessToken);
+    return _readSafely(_keyAccessToken);
   }
 
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: _keyRefreshToken);
+    return _readSafely(_keyRefreshToken);
   }
 
   Future<void> clearTokens() async {
@@ -35,19 +65,34 @@ class StorageService {
     return token != null && token.isNotEmpty;
   }
 
-  Future<String?> getDeviceId() => _storage.read(key: _keyDeviceId);
+  Future<String?> getDeviceId() => _readSafely(_keyDeviceId);
 
   Future<void> saveDeviceId(String value) =>
       _storage.write(key: _keyDeviceId, value: value);
 
-  Future<String?> getPushRegistration() =>
-      _storage.read(key: _keyPushRegistration);
+  Future<String?> getPushRegistration() => _readSafely(_keyPushRegistration);
 
   Future<void> savePushRegistration(String value) =>
       _storage.write(key: _keyPushRegistration, value: value);
 
   Future<void> clearPushRegistration() =>
       _storage.delete(key: _keyPushRegistration);
+
+  Future<String?> _readSafely(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } on PlatformException {
+      // Android puede restaurar preferencias cifradas sin la clave del Keystore
+      // después de reinstalar la app. Esos valores no son recuperables: limpiar el
+      // almacén permite volver al login en vez de bloquear el arranque para siempre.
+      try {
+        await _storage.deleteAll();
+      } on PlatformException {
+        // Si el plugin tampoco puede limpiar, el valor se trata como inexistente.
+      }
+      return null;
+    }
+  }
 
   Future<String> getOfflineScope() async {
     final token = await getAccessToken();

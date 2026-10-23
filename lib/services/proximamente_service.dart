@@ -25,7 +25,7 @@ class ProximamenteService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _apiService.get(ApiConfig.proximamenteUrl, requireAuth: false);
+      final res = await _apiService.get(ApiConfig.proximamenteUrl);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
         _items = data.map((json) => ProximamenteItem.fromJson(json)).toList();
@@ -66,13 +66,15 @@ class ProximamenteService extends ChangeNotifier {
         return {
           'success': true,
           'subscribed': true,
-          'message': data['mensaje'] ?? '¡Anotado! Te avisaremos por notificación emergente y correo cuando esté disponible.',
+          'message': data['mensaje'] ??
+              '¡Anotado! Te avisaremos por notificación emergente y correo cuando esté disponible.',
         };
       } else {
         return {
           'success': true,
           'subscribed': true,
-          'message': '¡Anotado! Te avisaremos tan pronto el producto sea activado en tienda.',
+          'message':
+              '¡Anotado! Te avisaremos tan pronto el producto sea activado en tienda.',
         };
       }
     } catch (e) {

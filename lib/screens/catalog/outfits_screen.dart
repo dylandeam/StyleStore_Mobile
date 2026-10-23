@@ -39,7 +39,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
     final apiService = Provider.of<ApiService>(context, listen: false);
 
     try {
-      final res = await apiService.get(ApiConfig.outfitsUrl, requireAuth: false);
+      final res = await apiService.get(ApiConfig.outfitsUrl);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         _outfits = data.map((e) => e as Map<String, dynamic>).toList();
@@ -51,10 +51,13 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       try {
         List<Producto> prods = widget.availableProducts ?? [];
         if (prods.isEmpty) {
-          final resCat = await apiService.get(ApiConfig.catalogoUrl, requireAuth: false);
+          final resCat = await apiService.get(ApiConfig.catalogoUrl);
           if (resCat.statusCode == 200) {
-            final List<dynamic> list = jsonDecode(utf8.decode(resCat.bodyBytes));
-            prods = list.map((item) => Producto.fromJson(item as Map<String, dynamic>)).toList();
+            final List<dynamic> list =
+                jsonDecode(utf8.decode(resCat.bodyBytes));
+            prods = list
+                .map((item) => Producto.fromJson(item as Map<String, dynamic>))
+                .toList();
           }
         }
         if (prods.isNotEmpty) {
@@ -79,7 +82,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
     if (prods.isEmpty) return [];
 
     final list = <Map<String, dynamic>>[];
-    final prodsConFoto = prods.where((p) => p.foto != null && p.foto!.isNotEmpty).toList();
+    final prodsConFoto =
+        prods.where((p) => p.foto != null && p.foto!.isNotEmpty).toList();
     final pool = prodsConFoto.isNotEmpty ? prodsConFoto : prods;
 
     if (pool.length >= 2) {
@@ -90,7 +94,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       list.add({
         'id': 1001,
         'nombre': 'Look StyleStore Urbano',
-        'descripcion': 'Combinación moderna ideal para salidas casuales o universitarias.',
+        'descripcion':
+            'Combinación moderna ideal para salidas casuales o universitarias.',
         'total': total,
         'items': [
           {
@@ -126,7 +131,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       list.add({
         'id': 1002,
         'nombre': 'Estilo Completo Weekend',
-        'descripcion': 'Conjunto premium seleccionado para ocasiones especiales de fin de semana.',
+        'descripcion':
+            'Conjunto premium seleccionado para ocasiones especiales de fin de semana.',
         'total': total,
         'items': [
           {
@@ -182,7 +188,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
           await cartService.fetchCart();
           scaffold.showSnackBar(
             SnackBar(
-              content: Text(resData['message'] ?? '¡Outfit agregado al carrito!'),
+              content:
+                  Text(resData['message'] ?? '¡Outfit agregado al carrito!'),
               backgroundColor: AppTheme.successGreen,
             ),
           );
@@ -206,12 +213,14 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                   })
               .toList(),
         };
-        final resCreate = await apiService.post(ApiConfig.outfitsUrl, body: createPayload, requireAuth: true);
+        final resCreate = await apiService.post(ApiConfig.outfitsUrl,
+            body: createPayload, requireAuth: true);
         if (resCreate.statusCode == 200 || resCreate.statusCode == 201) {
           final createdData = jsonDecode(resCreate.body);
           final newId = createdData['id'];
           if (newId != null) {
-            await apiService.post(ApiConfig.outfitComprarUrl(newId), requireAuth: true);
+            await apiService.post(ApiConfig.outfitComprarUrl(newId),
+                requireAuth: true);
             await cartService.fetchCart();
             scaffold.showSnackBar(
               const SnackBar(
@@ -238,12 +247,14 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgPrimary,
       appBar: AppBar(
-        title: const Text('Combinaciones de Outfits', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: const Text('Combinaciones de Outfits',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         backgroundColor: AppTheme.bgSecondary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppTheme.accentGold),
+            icon: const Icon(Icons.add_circle_outline,
+                color: AppTheme.accentGold),
             tooltip: 'Crear Outfit Personalizado',
             onPressed: () => _showCreateOutfitModal(context),
           ),
@@ -254,7 +265,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accentIndigo))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.accentIndigo))
           : _errorMessage != null && _outfits.isEmpty
               ? Center(
                   child: Padding(
@@ -262,19 +274,22 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.style_outlined, size: 54, color: AppTheme.textSecondary),
+                        const Icon(Icons.style_outlined,
+                            size: 54, color: AppTheme.textSecondary),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary),
+                          style: const TextStyle(
+                              fontSize: 15, color: AppTheme.textPrimary),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _fetchOutfits,
                           icon: const Icon(Icons.refresh),
                           label: const Text('Reintentar'),
-                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentIndigo),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentIndigo),
                         ),
                       ],
                     ),
@@ -332,13 +347,15 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         desc,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFC5A880).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -366,10 +383,14 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 itemBuilder: (context, i) {
                   final it = items[i] as Map<String, dynamic>;
                   final prodNom = it['producto_nombre'] ?? 'Prenda';
-                  final prodFotoRaw = (it['producto_foto'] ?? it['foto_url']) as String?;
+                  final prodFotoRaw =
+                      (it['producto_foto'] ?? it['foto_url']) as String?;
                   final prodFoto = ApiConfig.resolveImageUrl(prodFotoRaw);
-                  final tipo = (it['tipo_prenda'] ?? 'Prenda').toString().toUpperCase();
-                  final precio = (it['producto_precio'] as num?)?.toDouble() ?? (it['precio'] as num?)?.toDouble() ?? 0.0;
+                  final tipo =
+                      (it['tipo_prenda'] ?? 'Prenda').toString().toUpperCase();
+                  final precio = (it['producto_precio'] as num?)?.toDouble() ??
+                      (it['precio'] as num?)?.toDouble() ??
+                      0.0;
 
                   return Container(
                     width: 105,
@@ -386,7 +407,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
                             color: AppTheme.accentIndigo.withValues(alpha: 0.1),
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12)),
                           ),
                           child: Text(
                             tipo,
@@ -407,25 +429,35 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                     child: Image.network(
                                       prodFoto,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.checkroom, color: AppTheme.textSecondary),
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.checkroom,
+                                          color: AppTheme.textSecondary),
                                     ),
                                   )
-                                : const Icon(Icons.checkroom, color: AppTheme.textSecondary, size: 36),
+                                : const Icon(Icons.checkroom,
+                                    color: AppTheme.textSecondary, size: 36),
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 4),
                           child: Text(
                             prodNom,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                            style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary),
                           ),
                         ),
                         Text(
                           'Bs ${precio.toStringAsFixed(1)}',
-                          style: const TextStyle(fontSize: 10, color: AppTheme.accentIndigo, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.accentIndigo,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                       ],
@@ -446,7 +478,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                   backgroundColor: AppTheme.accentIndigo,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ),
@@ -462,10 +495,12 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
 
     if (catalog.isEmpty) {
       try {
-        final resCat = await apiService.get(ApiConfig.catalogoUrl, requireAuth: false);
+        final resCat = await apiService.get(ApiConfig.catalogoUrl);
         if (resCat.statusCode == 200) {
           final List<dynamic> list = jsonDecode(utf8.decode(resCat.bodyBytes));
-          catalog = list.map((item) => Producto.fromJson(item as Map<String, dynamic>)).toList();
+          catalog = list
+              .map((item) => Producto.fromJson(item as Map<String, dynamic>))
+              .toList();
         }
       } catch (_) {}
     }
@@ -481,8 +516,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       return;
     }
 
-    final nameCtrl = TextEditingController(text: 'Mi Outfit Estilo ${DateTime.now().minute % 100}');
-    final descCtrl = TextEditingController(text: 'Combinación personalizada creada desde StyleStore App');
+    final nameCtrl = TextEditingController(
+        text: 'Mi Outfit Estilo ${DateTime.now().minute % 100}');
+    final descCtrl = TextEditingController(
+        text: 'Combinación personalizada creada desde StyleStore App');
     final List<Producto> selectedProds = [];
     bool isSaving = false;
 
@@ -499,7 +536,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final double currentTotal = selectedProds.fold(0.0, (sum, p) => sum + p.precio);
+            final double currentTotal =
+                selectedProds.fold(0.0, (sum, p) => sum + p.precio);
 
             return Padding(
               padding: EdgeInsets.only(
@@ -531,7 +569,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                          icon: const Icon(Icons.close,
+                              color: AppTheme.textSecondary),
                           onPressed: () => Navigator.pop(ctx),
                         ),
                       ],
@@ -539,25 +578,30 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: nameCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         labelText: 'Nombre del Outfit',
                         labelStyle: const TextStyle(color: AppTheme.accentGold),
                         filled: true,
                         fillColor: AppTheme.bgPrimary,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: descCtrl,
-                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary, fontSize: 13),
                       decoration: InputDecoration(
                         labelText: 'Descripción / Estilo',
-                        labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                        labelStyle:
+                            const TextStyle(color: AppTheme.textSecondary),
                         filled: true,
                         fillColor: AppTheme.bgPrimary,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -566,10 +610,14 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                       children: [
                         const Text(
                           'Selecciona las Prendas (1-4):',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppTheme.accentGold.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
@@ -592,15 +640,20 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                         itemCount: catalog.length,
                         itemBuilder: (context, idx) {
                           final prod = catalog[idx];
-                          final isSelected = selectedProds.any((p) => p.codigo == prod.codigo);
+                          final isSelected =
+                              selectedProds.any((p) => p.codigo == prod.codigo);
                           final foto = ApiConfig.resolveImageUrl(prod.foto);
 
                           return Card(
-                            color: isSelected ? AppTheme.accentIndigo.withValues(alpha: 0.2) : AppTheme.bgPrimary,
+                            color: isSelected
+                                ? AppTheme.accentIndigo.withValues(alpha: 0.2)
+                                : AppTheme.bgPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
-                                color: isSelected ? AppTheme.accentIndigo : Colors.white12,
+                                color: isSelected
+                                    ? AppTheme.accentIndigo
+                                    : Colors.white12,
                               ),
                             ),
                             margin: const EdgeInsets.only(bottom: 8),
@@ -613,7 +666,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                         width: 44,
                                         height: 44,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.checkroom),
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.checkroom),
                                       )
                                     : const Icon(Icons.checkroom),
                               ),
@@ -621,11 +675,15 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                 prod.nombre,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary),
                               ),
                               subtitle: Text(
                                 '${prod.tipoPrenda.toUpperCase()} • Bs ${prod.precio.toStringAsFixed(2)}',
-                                style: const TextStyle(fontSize: 11, color: AppTheme.accentGold),
+                                style: const TextStyle(
+                                    fontSize: 11, color: AppTheme.accentGold),
                               ),
                               trailing: Checkbox(
                                 value: isSelected,
@@ -635,7 +693,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                     if (val == true) {
                                       if (!isSelected) selectedProds.add(prod);
                                     } else {
-                                      selectedProds.removeWhere((p) => p.codigo == prod.codigo);
+                                      selectedProds.removeWhere(
+                                          (p) => p.codigo == prod.codigo);
                                     }
                                   });
                                 },
@@ -654,7 +713,9 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                             : () async {
                                 setModalState(() => isSaving = true);
                                 final payload = {
-                                  'nombre': nameCtrl.text.trim().isEmpty ? 'Mi Outfit Personalizado' : nameCtrl.text.trim(),
+                                  'nombre': nameCtrl.text.trim().isEmpty
+                                      ? 'Mi Outfit Personalizado'
+                                      : nameCtrl.text.trim(),
                                   'descripcion': descCtrl.text.trim(),
                                   'items': selectedProds
                                       .map((p) => {
@@ -676,24 +737,30 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
 
                                   if (ctx.mounted && mounted) {
                                     Navigator.pop(ctx);
-                                    if (res.statusCode == 200 || res.statusCode == 201) {
+                                    if (res.statusCode == 200 ||
+                                        res.statusCode == 201) {
                                       scaffoldMessenger.showSnackBar(
                                         const SnackBar(
-                                          content: Text('✨ ¡Outfit guardado exitosamente!'),
-                                          backgroundColor: AppTheme.successGreen,
+                                          content: Text(
+                                              '✨ ¡Outfit guardado exitosamente!'),
+                                          backgroundColor:
+                                              AppTheme.successGreen,
                                         ),
                                       );
                                       _fetchOutfits();
                                     } else {
                                       scaffoldMessenger.showSnackBar(
                                         const SnackBar(
-                                          content: Text('⚠️ Se guardó el outfit localmente en tu sesión.'),
-                                          backgroundColor: AppTheme.accentIndigo,
+                                          content: Text(
+                                              '⚠️ Se guardó el outfit localmente en tu sesión.'),
+                                          backgroundColor:
+                                              AppTheme.accentIndigo,
                                         ),
                                       );
                                       setState(() {
                                         _outfits.insert(0, {
-                                          'id': DateTime.now().millisecondsSinceEpoch,
+                                          'id': DateTime.now()
+                                              .millisecondsSinceEpoch,
                                           'nombre': payload['nombre'],
                                           'descripcion': payload['descripcion'],
                                           'total': currentTotal,
@@ -715,23 +782,33 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                                     Navigator.pop(ctx);
                                     scaffoldMessenger.showSnackBar(
                                       const SnackBar(
-                                        content: Text('✨ Outfit añadido a tus combinaciones.'),
+                                        content: Text(
+                                            '✨ Outfit añadido a tus combinaciones.'),
                                         backgroundColor: AppTheme.successGreen,
                                       ),
                                     );
                                   }
                                 }
                               },
-                        icon: isSaving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
+                        icon: isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save_outlined),
                         label: Text(
-                          isSaving ? 'Guardando...' : 'Guardar Outfit (${selectedProds.length} prendas)',
+                          isSaving
+                              ? 'Guardando...'
+                              : 'Guardar Outfit (${selectedProds.length} prendas)',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accentGold,
                           foregroundColor: const Color(0xFF0F172A),
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),

@@ -67,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bool fromOffline = false;
 
       try {
-        final res = await api.get(ApiConfig.sucursalesUrl, requireAuth: false);
+        final res = await api.get(ApiConfig.sucursalesUrl);
         if (res.statusCode == 200) {
           final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
           branches =
@@ -126,9 +126,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'nombre': _nameController.text.trim(),
           'apellido': _apellidoController.text.trim(),
           'email': _emailController.text.trim(),
-          'telefono': _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
-          'direccion': _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
-          'foto': _photoController.text.trim().isNotEmpty ? _photoController.text.trim() : null,
+          'telefono': _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          'direccion': _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
+          'foto': _photoController.text.trim().isNotEmpty
+              ? _photoController.text.trim()
+              : null,
         },
         requireAuth: true,
       );
@@ -184,7 +190,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? NetworkImage(_photoController.text)
                       : null,
                   child: _photoController.text.isEmpty
-                      ? const Icon(Icons.person, size: 48, color: AppTheme.accentIndigo)
+                      ? const Icon(Icons.person,
+                          size: 48, color: AppTheme.accentIndigo)
                       : null,
                 ),
               ),
@@ -200,12 +207,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppTheme.successGreen, size: 20),
+                      const Icon(Icons.check_circle,
+                          color: AppTheme.successGreen, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _successMessage!,
-                          style: const TextStyle(color: AppTheme.successGreen, fontSize: 13),
+                          style: const TextStyle(
+                              color: AppTheme.successGreen, fontSize: 13),
                         ),
                       ),
                     ],
@@ -224,12 +233,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: AppTheme.dangerRed, size: 20),
+                      const Icon(Icons.error_outline,
+                          color: AppTheme.dangerRed, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: AppTheme.dangerRed, fontSize: 13),
+                          style: const TextStyle(
+                              color: AppTheme.dangerRed, fontSize: 13),
                         ),
                       ),
                     ],
@@ -249,7 +260,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   helperText: '🔒 Inmutable por seguridad de identidad',
                   filled: true,
                   fillColor: const Color(0x14FFFFFF),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 14),
@@ -263,9 +275,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.person_outline),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Ingrese su nombre' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Ingrese su nombre'
+                    : null,
               ),
               const SizedBox(height: 14),
 
@@ -278,9 +293,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.badge_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Ingrese su apellido' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Ingrese su apellido'
+                    : null,
               ),
               const SizedBox(height: 14),
 
@@ -293,9 +311,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Ingrese su correo' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Ingrese su correo'
+                    : null,
               ),
               const SizedBox(height: 14),
 
@@ -308,7 +329,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.phone_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 14),
@@ -322,7 +344,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.location_on_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 14),
@@ -336,7 +359,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.image_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -350,7 +374,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: AppTheme.accentIndigo,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
 
@@ -552,8 +577,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     SizedBox(width: 4),
                     Text(
                       'SQLite local',
-                      style:
-                          TextStyle(fontSize: 10, color: Color(0xFFF59E0B)),
+                      style: TextStyle(fontSize: 10, color: Color(0xFFF59E0B)),
                     ),
                   ],
                 ),
@@ -573,8 +597,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             )
           else
             ..._branches.map((branch) {
-              final isAssigned = user?.sucursalId != null &&
-                  branch['id'] == user?.sucursalId;
+              final isAssigned =
+                  user?.sucursalId != null && branch['id'] == user?.sucursalId;
               final direccion =
                   (branch['direccion'] ?? branch['ciudad'] ?? 'Sin dirección')
                       .toString();

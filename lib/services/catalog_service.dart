@@ -40,8 +40,10 @@ class CatalogService extends ChangeNotifier {
 
   Future<void> fetchSucursales() async {
     try {
-      final res =
-          await _apiService.get(ApiConfig.sucursalesUrl, requireAuth: false);
+      // La app siempre opera con sesión iniciada. Enviar el JWT también en
+      // lecturas públicas permite que el backend resuelva el tenant activo en
+      // vez de caer en la empresa pública predeterminada.
+      final res = await _apiService.get(ApiConfig.sucursalesUrl);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         _sucursales = data.map((e) => e as Map<String, dynamic>).toList();

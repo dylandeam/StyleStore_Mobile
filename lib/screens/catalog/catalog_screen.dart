@@ -68,8 +68,7 @@ class _CatalogScreenState extends State<CatalogScreen>
   Future<void> _fetchParaTi() async {
     try {
       final api = Provider.of<ApiService>(context, listen: false);
-      final res =
-          await api.get(ApiConfig.catalogoParaTiUrl, requireAuth: false);
+      final res = await api.get(ApiConfig.catalogoParaTiUrl);
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
         if (mounted) {
