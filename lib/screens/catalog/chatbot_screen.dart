@@ -38,6 +38,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   bool _isListening = false;
+  String _aiMode = 'online_local';
   final stt.SpeechToText _speech = stt.SpeechToText();
 
   Future<void> _toggleVoiceRecording() async {
@@ -51,7 +52,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (!status.isGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se requieren permisos de micrófono para dictar tus consultas por voz.')),
+          const SnackBar(
+              content: Text(
+                  'Se requieren permisos de micrófono para dictar tus consultas por voz.')),
         );
       }
       return;
@@ -78,7 +81,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           if (mounted && val.recognizedWords.isNotEmpty) {
             setState(() {
               _textController.text = val.recognizedWords;
-              _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+              _textController.selection =
+                  TextSelection.collapsed(offset: _textController.text.length);
             });
           }
         },
@@ -86,7 +90,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('El reconocimiento de voz no está disponible en este dispositivo.')),
+          const SnackBar(
+              content: Text(
+                  'El reconocimiento de voz no está disponible en este dispositivo.')),
         );
       }
     }
@@ -114,12 +120,39 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         time: DateTime.now(),
         isIa: true,
         chips: [
-          {'label': '👗 Ver Catálogo', 'action': 'navigate', 'route': '/catalogo'},
-          {'label': '✨ Outfits Recomendados', 'action': 'navigate', 'route': '/outfits'},
-          {'label': '🛵 Rastrear Pedido', 'action': 'navigate', 'route': '/pedidos'},
+          {
+            'label': '👗 Ver Catálogo',
+            'action': 'navigate',
+            'route': '/catalogo'
+          },
+          {
+            'label': '✨ Outfits Recomendados',
+            'action': 'navigate',
+            'route': '/outfits'
+          },
+          {
+            'label': '🛵 Rastrear Pedido',
+            'action': 'navigate',
+            'route': '/pedidos'
+          },
         ],
       ),
     );
+    _loadAiStatus();
+  }
+
+  Future<void> _loadAiStatus() async {
+    try {
+      final api = Provider.of<ApiService>(context, listen: false);
+      final response = await api.get('${ApiConfig.baseUrl}/chatbot/estado',
+          requireAuth: false);
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        setState(() => _aiMode = data['modo_preferido'] ?? 'online_local');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _aiMode = 'offline_local');
+    }
   }
 
   @override
@@ -169,11 +202,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final respText = data['respuesta'] ?? 'Entendido.';
-        final chipsList = (data['chips'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList();
+        final chipsList = (data['chips'] as List<dynamic>?)
+            ?.map((e) => e as Map<String, dynamic>)
+            .toList();
 
         if (mounted) {
           setState(() {
             _isTyping = false;
+            _aiMode = data['modo_ia'] ?? 'online_local';
             _messages.add(
               ChatMessage(
                 text: respText,
@@ -199,18 +235,45 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (!mounted) return;
     setState(() {
       _isTyping = false;
+      _aiMode = 'offline_local';
       _messages.add(
         ChatMessage(
-          text: 'Entendido. En StyleStore contamos con prendas de alta calidad, envíos con rastreo GPS en vivo y combinaciones de moda.',
+          text: _localOfflineAnswer(query),
           isUser: false,
           time: DateTime.now(),
           chips: [
-            {'label': '👗 Ir al Catálogo', 'action': 'navigate', 'route': '/catalogo'},
-            {'label': '🛵 Ver Mis Pedidos', 'action': 'navigate', 'route': '/pedidos'},
+            {
+              'label': '👗 Ir al Catálogo',
+              'action': 'navigate',
+              'route': '/catalogo'
+            },
+            {
+              'label': '🛵 Ver Mis Pedidos',
+              'action': 'navigate',
+              'route': '/pedidos'
+            },
           ],
         ),
       );
     });
+  }
+
+  String _localOfflineAnswer(String query) {
+    final normalized = query.toLowerCase();
+    if (normalized.contains('delivery') ||
+        normalized.contains('envío') ||
+        normalized.contains('envio')) {
+      return '🛵 Sin conexión puedo orientarte: en el checkout elige Delivery, comparte tu GPS y la tarifa se calculará desde la sucursal. La cotización y el pago requieren conexión.';
+    }
+    if (normalized.contains('pago') || normalized.contains('paypal')) {
+      return '💳 Los pagos online se procesan con PayPal Sandbox y necesitan conexión. No se confirma ninguna compra ni se descuenta stock sin respuesta del servidor.';
+    }
+    if (normalized.contains('sucursal') ||
+        normalized.contains('stock') ||
+        normalized.contains('precio')) {
+      return '📦 Estás en modo local. Para proteger el aislamiento entre empresas no inventaré stock, precios ni sucursales: vuelve a conectarte para consultar datos actuales de tu tenant.';
+    }
+    return 'Estoy funcionando en modo local sin conexión. Puedo orientarte sobre el uso de la app, pero las recomendaciones con catálogo, stock y sucursales actuales requieren conexión.';
   }
 
   Future<void> _handleChipAction(Map<String, dynamic> chip) async {
@@ -227,14 +290,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         if (ok) {
           scaffold.showSnackBar(
             const SnackBar(
-              content: Text('🛒 ¡Producto añadido al carrito desde el Chatbot!'),
+              content:
+                  Text('🛒 ¡Producto añadido al carrito desde el Chatbot!'),
               backgroundColor: AppTheme.successGreen,
             ),
           );
         } else {
           scaffold.showSnackBar(
             const SnackBar(
-              content: Text('No se pudo añadir la prenda (sin stock suficiente).'),
+              content:
+                  Text('No se pudo añadir la prenda (sin stock suficiente).'),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -265,19 +330,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgPrimary,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Text('🤖 ', style: TextStyle(fontSize: 20)),
+            const Text('🤖 ', style: TextStyle(fontSize: 20)),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Asesor de Moda IA',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 Text(
-                  'StyleStore Intelligence en vivo',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF10B981)),
+                  _aiMode == 'online_groq'
+                      ? 'Groq · datos en vivo del tenant'
+                      : _aiMode == 'offline_local'
+                          ? 'Modo local sin conexión'
+                          : 'Motor local · datos en vivo',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _aiMode == 'offline_local'
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFF10B981),
+                  ),
                 ),
               ],
             ),
@@ -310,12 +384,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   SizedBox(
                     width: 14,
                     height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentIndigo),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.accentIndigo),
                   ),
                   SizedBox(width: 8),
                   Text(
                     'Asistente IA pensando...',
-                    style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.textSecondary),
                   ),
                 ],
               ),
@@ -332,9 +410,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               itemBuilder: (context, i) {
                 final sug = _quickSuggestions[i];
                 return ActionChip(
-                  label: Text(sug, style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+                  label: Text(sug,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textPrimary)),
                   backgroundColor: AppTheme.bgSecondary,
-                  side: BorderSide(color: AppTheme.accentIndigo.withValues(alpha: 0.3)),
+                  side: BorderSide(
+                      color: AppTheme.accentIndigo.withValues(alpha: 0.3)),
                   onPressed: () => _sendMessage(sug),
                 );
               },
@@ -357,7 +438,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   if (_isListening) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0x3310B981),
                         borderRadius: BorderRadius.circular(16),
@@ -370,7 +452,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           SizedBox(width: 6),
                           Text(
                             '🎙️ Escuchando tu voz... Transcribiendo en tiempo real',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF10B981)),
                           ),
                         ],
                       ),
@@ -381,11 +466,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       Expanded(
                         child: TextField(
                           controller: _textController,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Pregunta sobre moda, tallas, pedidos...',
-                            hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            hintStyle: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 13),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             filled: true,
                             fillColor: AppTheme.bgPrimary,
                             border: OutlineInputBorder(
@@ -402,9 +490,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       IconButton(
                         icon: Icon(
                           _isListening ? Icons.mic : Icons.mic_none,
-                          color: _isListening ? const Color(0xFFEF4444) : AppTheme.accentIndigo,
+                          color: _isListening
+                              ? const Color(0xFFEF4444)
+                              : AppTheme.accentIndigo,
                         ),
-                        tooltip: _isListening ? 'Detener Micrófono' : 'Dictar por Voz IA',
+                        tooltip: _isListening
+                            ? 'Detener Micrófono'
+                            : 'Dictar por Voz IA',
                         onPressed: _toggleVoiceRecording,
                       ),
                       const SizedBox(width: 4),
@@ -414,7 +506,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                          icon: const Icon(Icons.send,
+                              color: Colors.white, size: 20),
                           onPressed: () {
                             if (_isListening) _speech.stop();
                             _sendMessage(_textController.text);
@@ -437,17 +530,24 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
         child: Column(
-          crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: msg.isUser ? AppTheme.accentIndigo : AppTheme.bgSecondary,
+                color:
+                    msg.isUser ? AppTheme.accentIndigo : AppTheme.bgSecondary,
                 borderRadius: BorderRadius.circular(16).copyWith(
-                  bottomRight: msg.isUser ? const Radius.circular(0) : const Radius.circular(16),
-                  bottomLeft: !msg.isUser ? const Radius.circular(0) : const Radius.circular(16),
+                  bottomRight: msg.isUser
+                      ? const Radius.circular(0)
+                      : const Radius.circular(16),
+                  bottomLeft: !msg.isUser
+                      ? const Radius.circular(0)
+                      : const Radius.circular(16),
                 ),
                 border: msg.isUser ? null : Border.all(color: Colors.white10),
               ),
@@ -471,7 +571,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   final label = chip['label'] ?? 'Acción';
                   final isAddCart = chip['action'] == 'add_to_cart';
                   return ActionChip(
-                    avatar: isAddCart ? const Icon(Icons.add_shopping_cart, size: 14, color: Colors.white) : null,
+                    avatar: isAddCart
+                        ? const Icon(Icons.add_shopping_cart,
+                            size: 14, color: Colors.white)
+                        : null,
                     label: Text(
                       label,
                       style: TextStyle(
@@ -480,9 +583,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         color: isAddCart ? Colors.white : AppTheme.accentIndigo,
                       ),
                     ),
-                    backgroundColor: isAddCart ? const Color(0xFF10B981) : AppTheme.accentIndigo.withValues(alpha: 0.15),
+                    backgroundColor: isAddCart
+                        ? const Color(0xFF10B981)
+                        : AppTheme.accentIndigo.withValues(alpha: 0.15),
                     side: BorderSide(
-                      color: isAddCart ? const Color(0xFF10B981) : AppTheme.accentIndigo,
+                      color: isAddCart
+                          ? const Color(0xFF10B981)
+                          : AppTheme.accentIndigo,
                     ),
                     onPressed: () => _handleChipAction(chip),
                   );
