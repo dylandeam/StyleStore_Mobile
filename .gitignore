@@ -44,5 +44,6 @@ app.*.map.json
 
 # Android Studio will create this folder on import
 .gradle/
+android/.kotlin/
 
 *.hprof
