@@ -18,21 +18,30 @@ al backend una cuenta de servicio. Ninguna clave real debe guardarse en Git.
    para el backend. Guardarla como secreto; nunca dentro de este repositorio.
 
 Los archivos nativos y las cuentas de servicio están excluidos explícitamente en
-`.gitignore`. La creación del proyecto y el registro Android están terminados; todavía se
-debe descargar la configuración local, instalar la credencial del backend en Railway y
-completar la prueba física antes de declarar FCM operativo de extremo a extremo.
+`.gitignore`. La creación del proyecto, el registro Android, la configuración local y la
+credencial protegida del backend en Railway quedaron terminados el 23 de octubre de 2026.
+La inicialización de Firebase Admin también fue verificada. Solo falta completar y documentar
+la recepción física en primer plano, segundo plano y con la aplicación cerrada.
+
+La configuración Android local se obtiene con la CLI oficial y el complemento nativo ya
+está activado en Gradle:
+
+```powershell
+firebase apps:sdkconfig ANDROID `
+  1:1006137634795:android:1027e57e0ba51e8e75f3ae `
+  --out android/app/google-services.json
+```
+
+Ese archivo permanece ignorado por Git. Con él presente, `Firebase.initializeApp()` usa la
+configuración nativa y no hace falta pasar secretos mediante `--dart-define` en Android.
 
 ## 2. Compilar la aplicación
 
-Ejemplo para Android (sustituir todos los valores):
+Con `android/app/google-services.json` presente localmente, Android se compila sin valores
+Firebase en la línea de comandos:
 
 ```powershell
-flutter build apk --release `
-  --dart-define=FIREBASE_API_KEY=... `
-  --dart-define=FIREBASE_APP_ID=... `
-  --dart-define=FIREBASE_MESSAGING_SENDER_ID=... `
-  --dart-define=FIREBASE_PROJECT_ID=... `
-  --dart-define=FIREBASE_STORAGE_BUCKET=...
+flutter build apk --release
 ```
 
 Para iOS también se puede proporcionar `FIREBASE_IOS_BUNDLE_ID`. Si se usan los archivos
@@ -41,15 +50,15 @@ inicialización automática también es compatible.
 
 ## 3. Configurar Railway
 
-Codificar el JSON de la cuenta de servicio en Base64 y definir en Railway:
+La producción usa la siguiente variable protegida en Railway:
 
 ```text
 FIREBASE_SERVICE_ACCOUNT_B64=<json_completo_en_base64>
 ```
 
 Como alternativa se puede usar `FIREBASE_SERVICE_ACCOUNT_JSON` con el JSON completo. Usar
-solo una de las dos variables. Al redeplegar, el backend inicializa Firebase Admin y envía
-notificaciones a los dispositivos registrados del usuario y tenant correspondientes.
+solo una de las dos variables. La variable Base64 ya está instalada, el despliegue terminó
+correctamente y se validó la inicialización de Firebase Admin sin exponer la credencial.
 
 ## 4. Prueba física obligatoria
 
