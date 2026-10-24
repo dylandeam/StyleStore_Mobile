@@ -20,8 +20,10 @@ al backend una cuenta de servicio. Ninguna clave real debe guardarse en Git.
 Los archivos nativos y las cuentas de servicio están excluidos explícitamente en
 `.gitignore`. La creación del proyecto, el registro Android, la configuración local y la
 credencial protegida del backend en Railway quedaron terminados el 23 de octubre de 2026.
-La inicialización de Firebase Admin también fue verificada. Solo falta completar y documentar
-la recepción física en primer plano, segundo plano y con la aplicación cerrada.
+La inicialización de Firebase Admin también fue verificada. La recepción física en primer
+plano quedó comprobada en el Samsung el 23 de octubre de 2026, incluida la aparición en la
+barra de notificaciones. Falta repetir y documentar la prueba en segundo plano y con la
+aplicación cerrada.
 
 La configuración Android local se obtiene con la CLI oficial y el complemento nativo ya
 está activado en Gradle:
@@ -68,6 +70,10 @@ correctamente y se validó la inicialización de Firebase Admin sin exponer la c
 4. Completar una compra/reserva que genere una notificación.
 5. Verificar recepción con la app abierta, en segundo plano y cerrada.
 6. Cerrar sesión y confirmar que el dispositivo queda desregistrado.
+
+Para una demostración repetible, abrir **Perfil** y pulsar **Probar notificación push**. El
+endpoint autenticado solo envía la prueba al usuario y tenant activos; no modifica compras,
+inventario, reservas ni delivery.
 
 El código funciona de forma degradada cuando Firebase no está configurado: el inicio de
 sesión y las notificaciones internas continúan, pero no se afirma que haya push real hasta
