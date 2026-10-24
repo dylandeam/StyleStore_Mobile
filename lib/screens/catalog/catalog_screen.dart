@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
@@ -2217,53 +2218,6 @@ class _CatalogScreenState extends State<CatalogScreen>
     );
   }
 
-  Map<String, double>? _extraerCoordsMaps(String input) {
-    if (input.trim().isEmpty) return null;
-    try {
-      final str = Uri.decodeComponent(input.trim());
-      final candidates = [str, input.trim()];
-      for (final t in candidates) {
-        final m1 = RegExp(r'@(-?\d+\.\d+),(-?\d+\.\d+)').firstMatch(t);
-        if (m1 != null) {
-          return {
-            'lat': double.parse(m1.group(1)!),
-            'lon': double.parse(m1.group(2)!)
-          };
-        }
-
-        final mEmbed = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)').firstMatch(t);
-        if (mEmbed != null) {
-          return {
-            'lat': double.parse(mEmbed.group(1)!),
-            'lon': double.parse(mEmbed.group(2)!)
-          };
-        }
-
-        final m2 = RegExp(
-                r'[?&](?:q|ll|sll|query|center|daddr|destination|saddr)=(?:loc:)?(-?\d+\.\d+),(-?\d+\.\d+)',
-                caseSensitive: false)
-            .firstMatch(t);
-        if (m2 != null) {
-          return {
-            'lat': double.parse(m2.group(1)!),
-            'lon': double.parse(m2.group(2)!)
-          };
-        }
-
-        final m3 = RegExp(r'(-?\d{1,2}\.\d{3,})\s*[,; ]\s*(-?\d{1,3}\.\d{3,})')
-            .firstMatch(t);
-        if (m3 != null) {
-          final lat = double.parse(m3.group(1)!);
-          final lon = double.parse(m3.group(2)!);
-          if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-            return {'lat': lat, 'lon': lon};
-          }
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
   // Kept only for staff QR configuration compatibility; online checkout does
   // not expose QR payments.
   // ignore: unused_element
@@ -2603,9 +2557,14 @@ class _CatalogScreenState extends State<CatalogScreen>
       await _showPickupCheckoutModal(cartService);
       return;
     }
-    final addressCtrl = TextEditingController(text: 'Av. América #450');
+    final addressCtrl = TextEditingController();
     final mapsCtrl = TextEditingController();
-    double distanciaKm = 4.5;
+    double? distanciaKm;
+    double? costoEnvioCotizado;
+    double? latDestino;
+    double? lonDestino;
+    bool cotizando = false;
+    String? errorCotizacion;
 
     final catalogService = Provider.of<CatalogService>(context, listen: false);
     final sucursalId = cartService.items.isNotEmpty
@@ -2635,6 +2594,97 @@ class _CatalogScreenState extends State<CatalogScreen>
             ? (branch['maps_url'] ?? branch['ubicacion_url'])
             : null);
 
+    Future<void> cotizarUbicacion(
+      StateSetter setModalState, {
+      double? lat,
+      double? lon,
+      String? mapsUrl,
+    }) async {
+      setModalState(() {
+        cotizando = true;
+        errorCotizacion = null;
+      });
+      try {
+        final apiService = Provider.of<ApiService>(context, listen: false);
+        final response = await apiService.post(
+          '${ApiConfig.baseUrl}/envios/cotizar-distancia',
+          body: {
+            'sucursal_id': sucursalId,
+            if (lat != null) 'lat': lat,
+            if (lon != null) 'lon': lon,
+            if (mapsUrl != null && mapsUrl.trim().isNotEmpty)
+              'ubicacion_url': mapsUrl.trim(),
+            'direccion': addressCtrl.text.trim(),
+            'ciudad': branch != null
+                ? (branch['ciudad'] ?? 'Santa Cruz')
+                : 'Santa Cruz',
+          },
+          requireAuth: true,
+        );
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (response.statusCode != 200) {
+          throw Exception(data['detail'] ?? 'No se pudo calcular el delivery.');
+        }
+        final destino = data['destino'] as Map<String, dynamic>?;
+        setModalState(() {
+          distanciaKm = (data['distancia_km'] as num).toDouble();
+          costoEnvioCotizado = (data['costo_envio'] as num).toDouble();
+          latDestino = (destino?['lat'] as num?)?.toDouble() ?? lat;
+          lonDestino = (destino?['lon'] as num?)?.toDouble() ?? lon;
+          cotizando = false;
+        });
+      } catch (error) {
+        setModalState(() {
+          distanciaKm = null;
+          costoEnvioCotizado = null;
+          latDestino = null;
+          lonDestino = null;
+          cotizando = false;
+          errorCotizacion = error.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+
+    Future<void> usarUbicacionActual(StateSetter setModalState) async {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        setModalState(() => errorCotizacion =
+            'Activa la ubicación del teléfono para calcular el delivery.');
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setModalState(() => errorCotizacion = permission ==
+                LocationPermission.deniedForever
+            ? 'El permiso de ubicación está bloqueado. Actívalo en Ajustes.'
+            : 'Necesitamos permiso de ubicación para calcular la distancia real.');
+        return;
+      }
+      setModalState(() {
+        cotizando = true;
+        errorCotizacion = null;
+      });
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.high),
+        );
+        final lat = double.parse(position.latitude.toStringAsFixed(6));
+        final lon = double.parse(position.longitude.toStringAsFixed(6));
+        mapsCtrl.text = 'https://www.google.com/maps?q=$lat,$lon';
+        await cotizarUbicacion(setModalState, lat: lat, lon: lon);
+      } catch (_) {
+        setModalState(() {
+          cotizando = false;
+          errorCotizacion =
+              'No se pudo leer el GPS. Intenta nuevamente o pega un enlace de Maps.';
+        });
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2644,7 +2694,7 @@ class _CatalogScreenState extends State<CatalogScreen>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            final double costoEnvio = 5.0 + (distanciaKm * 0.60);
+            final double costoEnvio = costoEnvioCotizado ?? 0;
             final double totalPagar =
                 cartService.total * (1 - _discountPercent / 100) + costoEnvio;
 
@@ -2747,40 +2797,8 @@ class _CatalogScreenState extends State<CatalogScreen>
 
                     TextField(
                       controller: addressCtrl,
-                      onChanged: (val) async {
-                        if (val.trim().isNotEmpty) {
-                          try {
-                            final apiService =
-                                Provider.of<ApiService>(context, listen: false);
-                            final resQuote = await apiService.post(
-                              '${ApiConfig.baseUrl}/envios/cotizar-distancia',
-                              body: {
-                                'sucursal_id': sucursalId,
-                                'ubicacion_url': mapsCtrl.text.trim().isNotEmpty
-                                    ? mapsCtrl.text.trim()
-                                    : null,
-                                'direccion': val.trim(),
-                                'ciudad': branch != null
-                                    ? (branch['ciudad'] ?? 'Santa Cruz')
-                                    : 'Santa Cruz',
-                              },
-                              requireAuth: false,
-                            );
-                            if (resQuote.statusCode == 200) {
-                              final qData =
-                                  jsonDecode(utf8.decode(resQuote.bodyBytes));
-                              if (qData['distancia_km'] != null) {
-                                setModalState(() {
-                                  distanciaKm =
-                                      (qData['distancia_km'] as num).toDouble();
-                                });
-                              }
-                            }
-                          } catch (_) {}
-                        }
-                      },
                       decoration: InputDecoration(
-                        labelText: 'Dirección o Referencia de Entrega',
+                        labelText: 'Dirección y referencia de entrega',
                         hintText:
                             'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
                         border: OutlineInputBorder(
@@ -2792,37 +2810,17 @@ class _CatalogScreenState extends State<CatalogScreen>
 
                     TextField(
                       controller: mapsCtrl,
-                      onChanged: (val) async {
-                        try {
-                          final apiService =
-                              Provider.of<ApiService>(context, listen: false);
-                          final resQuote = await apiService.post(
-                            '${ApiConfig.baseUrl}/envios/cotizar-distancia',
-                            body: {
-                              'sucursal_id': sucursalId,
-                              'ubicacion_url':
-                                  val.trim().isNotEmpty ? val.trim() : null,
-                              'direccion': addressCtrl.text.trim().isNotEmpty
-                                  ? addressCtrl.text.trim()
-                                  : 'Santa Cruz',
-                              'ciudad': branch != null
-                                  ? (branch['ciudad'] ?? 'Santa Cruz')
-                                  : 'Santa Cruz',
-                            },
-                            requireAuth: false,
-                          );
-                          if (resQuote.statusCode == 200) {
-                            final qData =
-                                jsonDecode(utf8.decode(resQuote.bodyBytes));
-                            if (qData['distancia_km'] != null) {
-                              setModalState(() {
-                                distanciaKm =
-                                    (qData['distancia_km'] as num).toDouble();
-                              });
-                            }
-                          }
-                        } catch (_) {}
-                      },
+                      onChanged: (_) => setModalState(() {
+                        distanciaKm = null;
+                        costoEnvioCotizado = null;
+                        latDestino = null;
+                        lonDestino = null;
+                        errorCotizacion = null;
+                      }),
+                      onSubmitted: (value) => cotizarUbicacion(
+                        setModalState,
+                        mapsUrl: value,
+                      ),
                       decoration: InputDecoration(
                         labelText:
                             'Enlace de Google Maps (Ubicación exacta del cliente)',
@@ -2834,9 +2832,46 @@ class _CatalogScreenState extends State<CatalogScreen>
                         filled: true,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      onPressed: cotizando
+                          ? null
+                          : () => usarUbicacionActual(setModalState),
+                      icon: cotizando
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(cotizando
+                          ? 'Calculando ruta…'
+                          : 'Usar mi ubicación y calcular tarifa'),
+                    ),
+                    if (mapsCtrl.text.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: cotizando
+                            ? null
+                            : () => cotizarUbicacion(
+                                  setModalState,
+                                  mapsUrl: mapsCtrl.text,
+                                ),
+                        icon: const Icon(Icons.calculate_outlined),
+                        label: const Text('Calcular desde enlace de Maps'),
+                      ),
+                    ],
+                    if (errorCotizacion != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorCotizacion!,
+                        style: const TextStyle(
+                            color: Colors.redAccent, fontSize: 12),
+                      ),
+                    ],
                     const SizedBox(height: 14),
 
-                    // Selector dinámico de distancia y desglose de tarifa
+                    // Resultado calculado por el servidor desde ambas coordenadas.
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -2854,27 +2889,23 @@ class _CatalogScreenState extends State<CatalogScreen>
                                   style: TextStyle(
                                       fontSize: 13,
                                       color: AppTheme.textSecondary)),
-                              Text('${distanciaKm.toStringAsFixed(1)} km',
+                              Text(
+                                  distanciaKm == null
+                                      ? 'Pendiente'
+                                      : '${distanciaKm!.toStringAsFixed(2)} km',
                                   style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: AppTheme.accentIndigo)),
                             ],
                           ),
-                          Slider(
-                            value: distanciaKm.clamp(1.0, 35.0),
-                            min: 1.0,
-                            max: 35.0,
-                            divisions: 68,
-                            activeColor: AppTheme.accentIndigo,
-                            label: '${distanciaKm.toStringAsFixed(1)} km',
-                            onChanged: (val) {
-                              setModalState(() {
-                                distanciaKm =
-                                    double.parse(val.toStringAsFixed(1));
-                              });
-                            },
+                          const SizedBox(height: 10),
+                          const Text(
+                            'La distancia no se puede editar: se obtiene por GPS y se vuelve a validar en el servidor.',
+                            style: TextStyle(
+                                fontSize: 11, color: AppTheme.textSecondary),
                           ),
+                          const SizedBox(height: 10),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -2954,64 +2985,59 @@ class _CatalogScreenState extends State<CatalogScreen>
                     const SizedBox(height: 18),
 
                     ElevatedButton(
-                      onPressed: () async {
-                        final address = addressCtrl.text.trim();
-                        final mapsUrl = mapsCtrl.text.trim();
-                        if (address.isEmpty && mapsUrl.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Por favor ingresa la dirección de entrega o enlace de Maps.')),
-                          );
-                          return;
-                        }
+                      onPressed: distanciaKm == null ||
+                              costoEnvioCotizado == null ||
+                              latDestino == null ||
+                              lonDestino == null
+                          ? null
+                          : () async {
+                              final address = addressCtrl.text.trim();
+                              final mapsUrl = mapsCtrl.text.trim();
+                              if (address.isEmpty && mapsUrl.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Por favor ingresa la dirección de entrega o enlace de Maps.')),
+                                );
+                                return;
+                              }
 
-                        Navigator.pop(ctx);
-                        final direccionCompleta = mapsUrl.isNotEmpty
-                            ? (address.isNotEmpty
-                                ? '$address | Maps: $mapsUrl'
-                                : mapsUrl)
-                            : address;
+                              Navigator.pop(ctx);
+                              final direccionCompleta = mapsUrl.isNotEmpty
+                                  ? (address.isNotEmpty
+                                      ? '$address | Maps: $mapsUrl'
+                                      : mapsUrl)
+                                  : address;
 
-                        // Extraer coordenadas GPS del enlace si existen
-                        double? latDestino;
-                        double? lonDestino;
-                        if (mapsUrl.isNotEmpty) {
-                          final coords = _extraerCoordsMaps(mapsUrl);
-                          if (coords != null) {
-                            latDestino = coords['lat'];
-                            lonDestino = coords['lon'];
-                          }
-                        }
+                              final res = await cartService.checkout(
+                                metodoPago: 'paypal',
+                                distanciaKm: distanciaKm,
+                                direccionEnvio: direccionCompleta,
+                                latitudDestino: latDestino,
+                                longitudDestino: lonDestino,
+                                ubicacionUrl:
+                                    mapsUrl.isNotEmpty ? mapsUrl : null,
+                                ciudad: branch != null
+                                    ? (branch['ciudad'] ?? 'Santa Cruz')
+                                    : 'Santa Cruz',
+                                sucursalId: sucursalId,
+                                codigoDescuento: _appliedDiscountCode.isNotEmpty
+                                    ? _appliedDiscountCode
+                                    : null,
+                              );
 
-                        final res = await cartService.checkout(
-                          metodoPago: 'paypal',
-                          distanciaKm: distanciaKm,
-                          direccionEnvio: direccionCompleta,
-                          latitudDestino: latDestino,
-                          longitudDestino: lonDestino,
-                          ubicacionUrl: mapsUrl.isNotEmpty ? mapsUrl : null,
-                          ciudad: branch != null
-                              ? (branch['ciudad'] ?? 'Santa Cruz')
-                              : 'Santa Cruz',
-                          sucursalId: sucursalId,
-                          codigoDescuento: _appliedDiscountCode.isNotEmpty
-                              ? _appliedDiscountCode
-                              : null,
-                        );
-
-                        if (res != null) {
-                          final ordenId = (res['orden_venta_id'] ??
-                              res['orden_id'] ??
-                              res['id']) as int?;
-                          final trackingToken =
-                              res['token_seguimiento'] as String?;
-                          if (ordenId != null && mounted) {
-                            _procesarPagoPayPal(
-                                context, ordenId, totalPagar, trackingToken);
-                          }
-                        }
-                      },
+                              if (res != null) {
+                                final ordenId = (res['orden_venta_id'] ??
+                                    res['orden_id'] ??
+                                    res['id']) as int?;
+                                final trackingToken =
+                                    res['token_seguimiento'] as String?;
+                                if (ordenId != null && mounted) {
+                                  _procesarPagoPayPal(context, ordenId,
+                                      totalPagar, trackingToken);
+                                }
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF14263D),
                         padding: const EdgeInsets.symmetric(vertical: 14),
