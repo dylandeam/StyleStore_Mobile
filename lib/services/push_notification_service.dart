@@ -77,6 +77,9 @@ class PushNotificationService {
   Future<void> configure(ApiService api, StorageService storage) async {
     _api = api;
     _storage = storage;
+    if (_firebaseReady) {
+      _ensureMessagingListeners();
+    }
     if (!_localReady) {
       try {
         const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -97,11 +100,8 @@ class PushNotificationService {
       }
     }
 
-    if (!await initializeFirebase() || _listenersReady) return;
-    _listenersReady = true;
-    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
-    FirebaseMessaging.onMessageOpenedApp.listen(_openMessage);
-    FirebaseMessaging.instance.onRegistered.listen(_registerToken);
+    if (!await initializeFirebase()) return;
+    _ensureMessagingListeners();
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       WidgetsBinding.instance
@@ -109,15 +109,29 @@ class PushNotificationService {
     }
   }
 
+  void _ensureMessagingListeners() {
+    if (_listenersReady) return;
+    _listenersReady = true;
+    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+    FirebaseMessaging.onMessageOpenedApp.listen(_openMessage);
+    FirebaseMessaging.instance.onRegistered.listen(_registerToken);
+  }
+
   Future<void> registerCurrentDevice() async {
     if (_api == null || _storage == null || !await initializeFirebase()) return;
-    final permission = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    if (permission.authorizationStatus == AuthorizationStatus.denied) return;
-    await FirebaseMessaging.instance.register();
+    _ensureMessagingListeners();
+    try {
+      final permission = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (permission.authorizationStatus == AuthorizationStatus.denied) return;
+      await FirebaseMessaging.instance.register();
+    } catch (error) {
+      // Push is optional: a temporary FCM failure must never break session restore.
+      debugPrint('No se pudo activar el dispositivo push: $error');
+    }
   }
 
   Future<void> _registerToken(String token) async {

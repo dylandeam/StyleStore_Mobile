@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _photoController;
 
   bool _isLoading = false;
+  bool _testingPush = false;
   String? _errorMessage;
   String? _successMessage;
 
@@ -159,6 +160,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error de conexión con el servidor ($e)';
+      });
+    }
+  }
+
+  Future<void> _testPushNotification() async {
+    setState(() {
+      _testingPush = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    try {
+      final response = await context.read<ApiService>().post(
+        ApiConfig.pushTestUrl,
+        body: const {},
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (!mounted) return;
+      setState(() {
+        _testingPush = false;
+        if (response.statusCode == 200 && data['sent'] == 1) {
+          _successMessage =
+              'Notificación enviada. Revisa la barra de notificaciones.';
+        } else {
+          _errorMessage = data['message'] ??
+              data['detail'] ??
+              'No se pudo enviar la notificación de prueba.';
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _testingPush = false;
+        _errorMessage = 'No se pudo probar la notificación ($error)';
       });
     }
   }
@@ -376,6 +410,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _testingPush ? null : _testPushNotification,
+                icon: _testingPush
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.notifications_active_outlined),
+                label: Text(
+                  _testingPush
+                      ? 'Enviando prueba...'
+                      : 'Probar notificación push',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.accentIndigo,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppTheme.accentIndigo),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
 
