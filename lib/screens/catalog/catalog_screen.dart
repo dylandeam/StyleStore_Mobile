@@ -2567,18 +2567,33 @@ class _CatalogScreenState extends State<CatalogScreen>
     String? errorCotizacion;
 
     final catalogService = Provider.of<CatalogService>(context, listen: false);
-    final sucursalId = cartService.items.isNotEmpty
-        ? cartService.items.first.sucursalId
+    final cartItem =
+        cartService.items.isNotEmpty ? cartService.items.first : null;
+    int? sucursalId = cartItem != null && cartItem.sucursalId > 0
+        ? cartItem.sucursalId
         : catalogService.selectedSucursalId;
     Map<String, dynamic>? branch;
     if (catalogService.sucursales.isNotEmpty) {
+      final cartBranchName = cartItem?.sucursalNombre?.trim().toLowerCase();
       try {
         branch = catalogService.sucursales.firstWhere(
-          (s) => s['id'] == sucursalId,
+          (s) =>
+              (s['id'] == sucursalId) ||
+              (cartBranchName != null &&
+                  cartBranchName.isNotEmpty &&
+                  (s['nombre'] ?? s['name'] ?? '')
+                          .toString()
+                          .trim()
+                          .toLowerCase() ==
+                      cartBranchName),
           orElse: () => catalogService.sucursales.first,
         );
       } catch (_) {
         branch = catalogService.sucursales.first;
+      }
+      final resolvedBranchId = branch['id'];
+      if ((sucursalId == null || sucursalId <= 0) && resolvedBranchId is num) {
+        sucursalId = resolvedBranchId.toInt();
       }
     }
     final branchName = (cartService.items.isNotEmpty &&
