@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _isLoading = false;
   bool _testingPush = false;
+  bool _uploadingPhoto = false;
   String? _errorMessage;
   String? _successMessage;
 
@@ -35,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _subscriptionData;
   List<Map<String, dynamic>> _branches = [];
   bool _loadingTenant = true;
+  bool _tenantLoadFailed = false;
   bool _offlineBranches = false;
 
   @override
@@ -89,10 +92,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _branches = branches;
           _offlineBranches = fromOffline;
           _loadingTenant = false;
+          _tenantLoadFailed = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingTenant = false);
+      if (mounted) {
+        setState(() {
+          _loadingTenant = false;
+          _tenantLoadFailed = true;
+        });
+      }
     }
   }
 
@@ -124,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final response = await apiService.patch(
         ApiConfig.meUrl,
         body: {
-          'nombre': _nameController.text.trim(),
+          'name': _nameController.text.trim(),
           'apellido': _apellidoController.text.trim(),
           'email': _emailController.text.trim(),
           'telefono': _phoneController.text.trim().isNotEmpty
@@ -153,7 +162,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final err = jsonDecode(response.body);
         setState(() {
           _isLoading = false;
-          _errorMessage = err['detail'] ?? 'Error al actualizar perfil.';
+          final detail = err['detail'];
+          _errorMessage = detail is String
+              ? detail
+              : detail is List
+                  ? detail
+                      .map((item) => item is Map
+                          ? (item['msg'] ?? item['message'] ?? '').toString()
+                          : item.toString())
+                      .where((message) => message.isNotEmpty)
+                      .join(' · ')
+                  : 'Error al actualizar perfil.';
         });
       }
     } catch (e) {
@@ -161,6 +180,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
         _errorMessage = 'Error de conexión con el servidor ($e)';
       });
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final api = context.read<ApiService>();
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 88,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _uploadingPhoto = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    try {
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) {
+        throw Exception('La imagen supera el máximo de 5 MB.');
+      }
+      final response = await api.uploadImage(
+        ApiConfig.uploadsUrl,
+        bytes: bytes,
+        filename: picked.name,
+      );
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        throw Exception(error['detail'] ?? 'No se pudo subir la foto.');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _photoController.text = data['url']?.toString() ?? '';
+      if (mounted) {
+        setState(() {
+          _uploadingPhoto = false;
+          _successMessage =
+              'Foto cargada. Presiona Guardar cambios para aplicarla.';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _uploadingPhoto = false;
+          _errorMessage = error.toString().replaceFirst('Exception: ', '');
+        });
+      }
     }
   }
 
@@ -217,16 +282,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               // Avatar
               Center(
-                child: CircleAvatar(
-                  radius: 44,
-                  backgroundColor: AppTheme.bgCard,
-                  backgroundImage: _photoController.text.isNotEmpty
-                      ? NetworkImage(_photoController.text)
-                      : null,
-                  child: _photoController.text.isEmpty
-                      ? const Icon(Icons.person,
-                          size: 48, color: AppTheme.accentIndigo)
-                      : null,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: AppTheme.bgCard,
+                      backgroundImage: _photoController.text.isNotEmpty &&
+                              ApiConfig.resolveImageUrl(
+                                      _photoController.text) !=
+                                  null
+                          ? NetworkImage(
+                              ApiConfig.resolveImageUrl(_photoController.text)!)
+                          : null,
+                      child: _photoController.text.isEmpty
+                          ? const Icon(Icons.person,
+                              size: 48, color: AppTheme.accentIndigo)
+                          : null,
+                    ),
+                    Positioned(
+                      right: -8,
+                      bottom: -8,
+                      child: IconButton.filled(
+                        tooltip: 'Elegir foto de perfil',
+                        onPressed: _uploadingPhoto ? null : _pickAndUploadPhoto,
+                        icon: _uploadingPhoto
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.photo_camera_outlined),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -384,19 +474,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Foto URL
+              // Ruta persistente generada por el selector superior.
               TextFormField(
                 controller: _photoController,
+                readOnly: true,
                 style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
-                  labelText: 'URL Foto de Perfil',
+                  labelText: 'Foto de perfil guardada',
                   prefixIcon: const Icon(Icons.image_outlined),
                   filled: true,
                   fillColor: AppTheme.bgCard,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 24),
 
@@ -448,17 +538,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildTenantHierarchySection() {
     final user = Provider.of<AuthService>(context).currentUser;
-    final empresaNombre = _tenantData?['nombre'] ?? 'Empresa Activa';
-    final empresaCodigo = _tenantData?['codigo'] ?? 'stylestore';
-    final isTenantActive = _tenantData?['active'] as bool? ?? true;
+    final empresaNombre = _tenantData?['nombre'] ?? 'Información no disponible';
+    final empresaCodigo = _tenantData?['codigo'] ?? 'sin-datos';
+    final isTenantActive = _tenantData?['active'] as bool? ?? false;
     final planCodigo = (_subscriptionData?['plan_codigo'] ??
             _subscriptionData?['plan']?['codigo'] ??
-            'profesional')
+            'desconocido')
         .toString()
         .toLowerCase();
     final planNombre = (_subscriptionData?['plan_nombre'] ??
             _subscriptionData?['plan']?['nombre'] ??
-            'Plan Profesional')
+            'Plan no disponible')
         .toString();
 
     Color planColor;
@@ -524,6 +614,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          if (_tenantLoadFailed) ...[
+            const Text(
+              'No se pudo consultar la empresa ni el plan. Verifica tu conexión; no se mostrarán permisos estimados.',
+              style: TextStyle(color: AppTheme.dangerRed, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+          ],
           // Empresa Card
           Container(
             padding: const EdgeInsets.all(12),
@@ -591,7 +688,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Icons.shield,
                         const Color(0xFFF59E0B)),
                     _infoBadge(
-                        'CUPO SUCURSALES: ${_branches.where((b) => b['active'] != false).length} / ${_subscriptionData?['max_sucursales'] ?? (planCodigo.contains("profesional") ? 10 : (planCodigo.contains("intermedio") ? 5 : 2))}',
+                        'CUPO SUCURSALES: ${_branches.where((b) => b['active'] != false).length} / ${_subscriptionData?['max_sucursales'] ?? "?"}',
                         Icons.store_mall_directory_outlined,
                         const Color(0xFF38BDF8)),
                     if (planCodigo.contains('profesional'))
@@ -600,8 +697,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     else if (planCodigo.contains('intermedio'))
                       _infoBadge('CHATBOT IA ACTIVO', Icons.chat_bubble_outline,
                           const Color(0xFF10B981))
-                    else
+                    else if (planCodigo.contains('basico'))
                       _infoBadge('SIN IA (PLAN BÁSICO)', Icons.lock_outline,
+                          AppTheme.textSecondary)
+                    else
+                      _infoBadge('CAPACIDADES NO DISPONIBLES', Icons.cloud_off,
                           AppTheme.textSecondary),
                   ],
                 ),

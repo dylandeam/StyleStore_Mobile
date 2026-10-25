@@ -244,4 +244,35 @@ class ApiService {
     }
     return res;
   }
+
+  Future<http.Response> uploadImage(
+    String url, {
+    required List<int> bytes,
+    required String filename,
+    String folder = 'perfiles',
+  }) async {
+    Future<http.Response> send() async {
+      final headers = await _getHeaders();
+      headers.remove('Content-Type');
+      final parsed = Uri.parse(url);
+      final uri = parsed.replace(queryParameters: {
+        ...parsed.queryParameters,
+        'folder': folder,
+      });
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(headers)
+        ..files.add(
+          http.MultipartFile.fromBytes('file', bytes, filename: filename),
+        );
+      return http.Response.fromStream(
+        await request.send().timeout(const Duration(seconds: 20)),
+      );
+    }
+
+    var response = await send();
+    if (response.statusCode == 401 && await _tryRefreshToken()) {
+      response = await send();
+    }
+    return response;
+  }
 }

@@ -44,6 +44,7 @@ class ApiConfig {
 
   // User & Profile endpoints (CU6)
   static String get meUrl => '$baseUrl/users/me';
+  static String get uploadsUrl => '$baseUrl/uploads';
 
   // Catálogo y Próximamente (CU11, CU14)
   static String get catalogoUrl => '$baseUrl/catalogo';
