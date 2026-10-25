@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1010,10 +1011,10 @@ class _CatalogScreenState extends State<CatalogScreen>
                                 width: double.infinity,
                                 color: AppTheme.bgSecondary,
                                 child: fotoUrl != null
-                                    ? Image.network(
-                                        fotoUrl,
+                                    ? CachedNetworkImage(
+                                        imageUrl: fotoUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
+                                        errorWidget: (_, __, ___) =>
                                             const Center(
                                           child: Icon(Icons.checkroom,
                                               color: AppTheme.textMuted,
@@ -1156,10 +1157,10 @@ class _CatalogScreenState extends State<CatalogScreen>
                   SizedBox(
                     height: 180,
                     width: double.infinity,
-                    child: Image.network(
-                      imageUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
+                      errorWidget: (context, error, stackTrace) =>
                           _buildImagePlaceholder(p),
                     ),
                   )
@@ -1694,12 +1695,12 @@ class _CatalogScreenState extends State<CatalogScreen>
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(18)),
                       child: imageUrl != null
-                          ? Image.network(
-                              imageUrl,
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
                               height: 180,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
+                              errorWidget: (_, __, ___) =>
                                   _buildNoImagePlaceholder(),
                             )
                           : _buildNoImagePlaceholder(),
@@ -1954,7 +1955,10 @@ class _CatalogScreenState extends State<CatalogScreen>
 
   Widget _buildCartTab() {
     final cartService = Provider.of<CartService>(context);
+    final offlineSync = Provider.of<OfflineSyncService>(context);
     final discountAmount = cartService.total * _discountPercent / 100;
+    final checkoutBlocked =
+        !offlineSync.isOnline || cartService.pendingLocalItems > 0;
 
     if (cartService.isLoading) {
       return const Center(
@@ -1980,6 +1984,33 @@ class _CatalogScreenState extends State<CatalogScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (cartService.usingOfflineData) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningOrange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.45)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.offline_bolt, color: AppTheme.warningOrange),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      cartService.pendingLocalItems > 0
+                          ? '${cartService.pendingLocalItems} prenda(s) pendiente(s) de sincronizar. El pago se habilitará al reconectar.'
+                          : 'Mostrando el último carrito guardado. Reconecta para confirmar stock y pagar.',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           ...cartService.items.map((item) => _buildCartItemCard(item)),
           const SizedBox(height: 16),
 
@@ -2065,28 +2096,36 @@ class _CatalogScreenState extends State<CatalogScreen>
                   ),
                 ],
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                const Row(
                   children: [
-                    const Text('Delivery StyleStore (5Bs + 0.6Bs/km):',
-                        style: TextStyle(color: AppTheme.textSecondary)),
-                    Text('Bs. ${(5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
-                        style: const TextStyle(
+                    Expanded(
+                      child: Text('Delivery StyleStore:',
+                          style: TextStyle(color: AppTheme.textSecondary)),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Se calcula con tu ubicación',
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary)),
+                            color: AppTheme.textPrimary),
+                      ),
+                    ),
                   ],
                 ),
                 const Divider(color: AppTheme.borderGlass, height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total a Pagar:',
+                    const Text('Total previo:',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF14263D))),
                     Text(
-                        'Bs. ${(cartService.total - discountAmount + 5.0 + (4.5 * 0.60)).toStringAsFixed(2)}',
+                        'Bs. ${(cartService.total - discountAmount).toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -2095,9 +2134,13 @@ class _CatalogScreenState extends State<CatalogScreen>
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () => _showCheckoutModal(cartService),
+                  onPressed: checkoutBlocked
+                      ? null
+                      : () => _showCheckoutModal(cartService),
                   icon: const Icon(Icons.payment),
-                  label: const Text('Proceder al Pago / Checkout'),
+                  label: Text(checkoutBlocked
+                      ? 'Reconecta para confirmar y pagar'
+                      : 'Calcular delivery y continuar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF14263D),
                     foregroundColor: Colors.white,

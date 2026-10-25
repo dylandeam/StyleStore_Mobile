@@ -9,7 +9,7 @@ class LocalDatabaseService {
     if (_instance != null) return _instance!;
     _instance = await openDatabase(
       path.join(await getDatabasesPath(), 'stylestore_offline.db'),
-      version: 1,
+      version: 2,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, _) async {
         await db.execute(
@@ -30,9 +30,22 @@ class LocalDatabaseService {
             'CREATE TABLE sync_queue (operation_uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, operation_type TEXT NOT NULL, payload_version INTEGER NOT NULL, payload TEXT NOT NULL, client_created_at TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, result_id INTEGER)');
         await db.execute(
             'CREATE INDEX ix_sync_queue_scope_status ON sync_queue(scope, status)');
+        await _createOfflineCartTables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createOfflineCartTables(db);
+        }
       },
     );
     return _instance!;
+  }
+
+  static Future<void> _createOfflineCartTables(DatabaseExecutor db) async {
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS cart_snapshots (scope TEXT PRIMARY KEY, payload TEXT NOT NULL, synced_at TEXT NOT NULL)');
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS local_cart_additions (scope TEXT NOT NULL, stock_id INTEGER NOT NULL, payload TEXT NOT NULL, quantity INTEGER NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(scope, stock_id))');
   }
 
   Future<void> close() async {
@@ -63,6 +76,110 @@ class LocalDatabaseService {
     return (
       payload: jsonDecode(rows.first['payload'] as String) as List<dynamic>,
       syncedAt: DateTime.parse(rows.first['synced_at'] as String)
+    );
+  }
+
+  Future<({Map<String, dynamic> product, DateTime syncedAt})?>
+      findCachedProduct(String scope, int? branchId, String productCode) async {
+    final preferred = await loadCatalog(scope, branchId);
+    final fallback = branchId == null ? null : await loadCatalog(scope, null);
+    for (final snapshot in [preferred, fallback]) {
+      if (snapshot == null) continue;
+      for (final raw in snapshot.payload) {
+        final product = Map<String, dynamic>.from(raw as Map);
+        if (product['codigo']?.toString() == productCode) {
+          return (product: product, syncedAt: snapshot.syncedAt);
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<void> saveCartSnapshot(
+      String scope, Map<String, dynamic> payload) async {
+    await (await database).insert(
+      'cart_snapshots',
+      {
+        'scope': scope,
+        'payload': jsonEncode(payload),
+        'synced_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<({Map<String, dynamic> payload, DateTime syncedAt})?> loadCartSnapshot(
+      String scope) async {
+    final rows = await (await database).query(
+      'cart_snapshots',
+      where: 'scope = ?',
+      whereArgs: [scope],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return (
+      payload:
+          jsonDecode(rows.first['payload'] as String) as Map<String, dynamic>,
+      syncedAt: DateTime.parse(rows.first['synced_at'] as String),
+    );
+  }
+
+  Future<void> addLocalCartItem({
+    required String scope,
+    required int stockId,
+    required int quantity,
+    required Map<String, dynamic> payload,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'local_cart_additions',
+        columns: ['quantity'],
+        where: 'scope = ? AND stock_id = ?',
+        whereArgs: [scope, stockId],
+        limit: 1,
+      );
+      final previous = existing.isEmpty
+          ? 0
+          : (existing.first['quantity'] as num?)?.toInt() ?? 0;
+      await txn.insert(
+        'local_cart_additions',
+        {
+          'scope': scope,
+          'stock_id': stockId,
+          'payload': jsonEncode(payload),
+          'quantity': previous + quantity,
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> loadLocalCartAdditions(
+      String scope) async {
+    final rows = await (await database).query(
+      'local_cart_additions',
+      where: 'scope = ?',
+      whereArgs: [scope],
+      orderBy: 'created_at ASC',
+    );
+    return rows.map((row) {
+      final payload =
+          jsonDecode(row['payload'] as String) as Map<String, dynamic>;
+      return {
+        ...payload,
+        'stock_inventario_id': row['stock_id'],
+        'cantidad': row['quantity'],
+      };
+    }).toList();
+  }
+
+  Future<void> deleteLocalCartAddition(String scope, int stockId) async {
+    await (await database).delete(
+      'local_cart_additions',
+      where: 'scope = ? AND stock_id = ?',
+      whereArgs: [scope, stockId],
     );
   }
 
@@ -248,7 +365,8 @@ class LocalDatabaseService {
     });
   }
 
-  Future<void> saveLocalClient(String scope, Map<String, dynamic> client) async {
+  Future<void> saveLocalClient(
+      String scope, Map<String, dynamic> client) async {
     final db = await database;
     await db.insert(
       'local_clients',
@@ -268,22 +386,25 @@ class LocalDatabaseService {
       whereArgs: [scope],
     );
     return rows
-        .map((row) => jsonDecode(row['payload'] as String) as Map<String, dynamic>)
+        .map((row) =>
+            jsonDecode(row['payload'] as String) as Map<String, dynamic>)
         .toList();
   }
 
-  /// Limpia la caché local de catálogo, sucursales y clientes para un ámbito específico.
-  /// NO altera la cola de operaciones pendientes ni el historial de transacciones.
+  /// Limpia cachés reconstruibles. Conserva la cola y las adiciones de carrito
+  /// todavía no sincronizadas para no perder acciones realizadas sin conexión.
   Future<int> clearScopeCache(String scope) async {
     final db = await database;
     int affected = 0;
     await db.transaction((txn) async {
-      affected += await txn.delete('catalog_snapshots',
-          where: 'scope = ?', whereArgs: [scope]);
+      affected += await txn
+          .delete('catalog_snapshots', where: 'scope = ?', whereArgs: [scope]);
       affected += await txn.delete('authorized_branches',
           where: 'scope = ?', whereArgs: [scope]);
-      affected += await txn.delete('local_clients',
-          where: 'scope = ?', whereArgs: [scope]);
+      affected += await txn
+          .delete('local_clients', where: 'scope = ?', whereArgs: [scope]);
+      affected += await txn
+          .delete('cart_snapshots', where: 'scope = ?', whereArgs: [scope]);
     });
     return affected;
   }
@@ -326,8 +447,7 @@ class LocalDatabaseService {
   Future<int> purgeExpiredCache(String scope,
       {Duration maxAge = const Duration(days: 7)}) async {
     final db = await database;
-    final threshold =
-        DateTime.now().toUtc().subtract(maxAge).toIso8601String();
+    final threshold = DateTime.now().toUtc().subtract(maxAge).toIso8601String();
     int deleted = 0;
     await db.transaction((txn) async {
       deleted += await txn.delete(
@@ -387,6 +507,10 @@ class LocalDatabaseService {
             'SELECT COUNT(*) FROM sync_queue WHERE scope = ? AND status IN (?, ?)',
             [scope, 'conflicto', 'rechazada'])) ??
         0;
+    final pendingCartCount = Sqflite.firstIntValue(await db.rawQuery(
+            'SELECT COALESCE(SUM(quantity), 0) FROM local_cart_additions WHERE scope = ?',
+            [scope])) ??
+        0;
 
     return {
       'scope': scope,
@@ -397,6 +521,7 @@ class LocalDatabaseService {
       'syncing_count': syncingCount,
       'confirmed_count': confirmedCount,
       'conflict_count': conflictCount,
+      'pending_cart_count': pendingCartCount,
       'total_operations':
           pendingCount + syncingCount + confirmedCount + conflictCount,
     };
@@ -416,17 +541,18 @@ class LocalDatabaseService {
       }
     }
     await db.transaction((txn) async {
-      await txn.delete('catalog_snapshots',
-          where: 'scope = ?', whereArgs: [scope]);
+      await txn
+          .delete('catalog_snapshots', where: 'scope = ?', whereArgs: [scope]);
       await txn.delete('authorized_branches',
           where: 'scope = ?', whereArgs: [scope]);
-      await txn.delete('local_clients',
+      await txn.delete('local_clients', where: 'scope = ?', whereArgs: [scope]);
+      await txn
+          .delete('cart_snapshots', where: 'scope = ?', whereArgs: [scope]);
+      await txn.delete('local_cart_additions',
           where: 'scope = ?', whereArgs: [scope]);
 
       final opRows = await txn.query('sync_queue',
-          columns: ['operation_uuid'],
-          where: 'scope = ?',
-          whereArgs: [scope]);
+          columns: ['operation_uuid'], where: 'scope = ?', whereArgs: [scope]);
       for (final row in opRows) {
         final uuid = row['operation_uuid'] as String;
         await txn.delete('local_sale_details',
@@ -442,4 +568,3 @@ class LocalDatabaseService {
     });
   }
 }
-

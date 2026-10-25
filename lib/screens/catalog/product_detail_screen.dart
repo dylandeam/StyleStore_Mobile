@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../config/api_config.dart';
@@ -27,6 +28,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Map<String, dynamic>? _producto;
   List<dynamic> _recomendados = [];
   bool _showBackPhoto = false;
+  bool _usingOfflineData = false;
+  DateTime? _cachedAt;
 
   // Variantes seleccionadas
   int? _selectedColorId;
@@ -54,6 +57,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
 
     final api = Provider.of<ApiService>(context, listen: false);
+    final catalog = Provider.of<CatalogService>(context, listen: false);
 
     try {
       // 1. Cargar detalle completo
@@ -61,56 +65,96 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         '${ApiConfig.catalogoUrl}/${widget.codigo}/detalle',
       );
 
-      // 2. Cargar recomendaciones IA Local
-      final resRec = await api.get(
-        '${ApiConfig.catalogoUrl}/${widget.codigo}/recomendados?limit=4',
-      );
-
       if (resDetalle.statusCode == 200) {
         final prodData = jsonDecode(utf8.decode(resDetalle.bodyBytes))
             as Map<String, dynamic>;
         List<dynamic> recData = [];
-        if (resRec.statusCode == 200) {
-          final recJson = jsonDecode(utf8.decode(resRec.bodyBytes));
-          if (recJson is List) {
-            recData = recJson;
-          } else if (recJson is Map) {
-            recData = recJson['recomendaciones'] ?? recJson['items'] ?? [];
-          }
-        }
-
-        if (mounted) {
-          setState(() {
-            _producto = prodData;
-            _recomendados = recData;
-            _isLoading = false;
-
-            // Auto-seleccionar primer color disponible
-            final variantes = (prodData['variantes'] as List<dynamic>?) ?? [];
-            if (variantes.isNotEmpty) {
-              final primerColor = variantes.first;
-              _selectedColorId = primerColor['producto_color_id'];
-              _actualizarTallasParaColor(primerColor);
+        try {
+          final resRec = await api.get(
+            '${ApiConfig.catalogoUrl}/${widget.codigo}/recomendados?limit=4',
+          );
+          if (resRec.statusCode == 200) {
+            final recJson = jsonDecode(utf8.decode(resRec.bodyBytes));
+            if (recJson is List) {
+              recData = recJson;
+            } else if (recJson is Map) {
+              recData = recJson['recomendaciones'] ?? recJson['items'] ?? [];
             }
-          });
-        }
+          }
+        } catch (_) {}
+        _applyProduct(prodData, recData: recData);
       } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage =
-                'No se pudo cargar la prenda (${resDetalle.statusCode}).';
-            _isLoading = false;
-          });
-        }
+        await _loadCachedProduct(catalog);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Error al cargar detalle de prenda: $e';
-          _isLoading = false;
-        });
+    } catch (_) {
+      await _loadCachedProduct(catalog);
+    }
+  }
+
+  void _applyProduct(Map<String, dynamic> prodData,
+      {List<dynamic> recData = const [],
+      bool offline = false,
+      DateTime? cachedAt}) {
+    if (!mounted) return;
+    setState(() {
+      _producto = prodData;
+      _recomendados = recData;
+      _usingOfflineData = offline;
+      _cachedAt = cachedAt;
+      _isLoading = false;
+      _errorMessage = null;
+      final variantes = (prodData['variantes'] as List<dynamic>?) ?? [];
+      if (variantes.isNotEmpty) {
+        final primerColor = variantes.first;
+        _selectedColorId = primerColor['producto_color_id'];
+        _actualizarTallasParaColor(primerColor);
+      }
+    });
+  }
+
+  Future<void> _loadCachedProduct(CatalogService catalog) async {
+    final cached = await catalog.findCachedProduct(widget.codigo);
+    if (cached != null) {
+      _applyProduct(cached.product, offline: true, cachedAt: cached.syncedAt);
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _errorMessage =
+          'Sin conexión y sin detalle descargado. Abre el catálogo una vez con internet para guardarlo.';
+      _isLoading = false;
+    });
+  }
+
+  String _formatCachedAt(DateTime value) {
+    final local = value.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day/$month $hour:$minute';
+  }
+
+  Map<String, dynamic>? _selectedVariant() {
+    final variants = (_producto?['variantes'] as List<dynamic>?) ?? const [];
+    for (final raw in variants) {
+      final variant = Map<String, dynamic>.from(raw as Map);
+      if (variant['producto_color_id'] == _selectedColorId) return variant;
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _selectedExistence() {
+    final variant = _selectedVariant();
+    final stocks = (variant?['existencias'] as List<dynamic>?) ?? const [];
+    for (final raw in stocks) {
+      final stock = Map<String, dynamic>.from(raw as Map);
+      if ((stock['stock_inventario_id'] ?? stock['id']) ==
+          _selectedStockInventarioId) {
+        return stock;
       }
     }
+    return null;
   }
 
   void _actualizarTallasParaColor(dynamic varianteColor) {
@@ -185,12 +229,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     final cartService = Provider.of<CartService>(context, listen: false);
+    final variant = _selectedVariant();
+    final existence = _selectedExistence();
+    final unitPrice = _selectedVariantPrice ??
+        double.tryParse(_producto?['precio']?.toString() ?? '0') ??
+        0;
     final ok = await cartService.addToCart(
       productoColorId: _selectedColorId!,
       tallaId: _selectedTallaId!,
       sucursalId: _selectedSucursalId,
       cantidad: _quantity,
       stockInventarioId: _selectedStockInventarioId,
+      productoNombre: _producto?['nombre']?.toString(),
+      colorNombre: (variant?['color_nombre'] ?? variant?['nombre'])?.toString(),
+      tallaNombre:
+          (existence?['talla_nombre'] ?? existence?['talla'])?.toString(),
+      foto: _producto?['foto']?.toString(),
+      precioUnitario: unitPrice,
+      sucursalNombre: existence?['sucursal_nombre']?.toString(),
+      sucursalCiudad: existence?['sucursal_ciudad']?.toString(),
+      sucursalMapsUrl: existence?['sucursal_maps_url']?.toString(),
     );
 
     if (!mounted) return;
@@ -198,8 +256,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡${_producto?['nombre']} agregado al carrito!'),
-          backgroundColor: AppTheme.successGreen,
+          content: Text(cartService.usingOfflineData
+              ? 'Guardado en el carrito offline. Se sincronizará al reconectar.'
+              : '¡${_producto?['nombre']} agregado al carrito!'),
+          backgroundColor: cartService.usingOfflineData
+              ? AppTheme.warningOrange
+              : AppTheme.successGreen,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -335,6 +397,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_usingOfflineData) ...[
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.warningOrange.withValues(alpha: 0.45)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.offline_bolt,
+                        color: AppTheme.warningOrange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Detalle guardado en el dispositivo${_cachedAt == null ? '' : ' · ${_formatCachedAt(_cachedAt!)}'}. El stock se confirmará al reconectar.',
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             // Galería / Imagen de portada
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -343,10 +433,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: double.infinity,
                 color: AppTheme.bgCard,
                 child: imageUrl != null
-                    ? Image.network(
-                        imageUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                        errorWidget: (_, __, ___) => _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
@@ -1119,10 +1209,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     width: double.infinity,
                                     color: AppTheme.bgSecondary,
                                     child: recImg != null
-                                        ? Image.network(
-                                            recImg,
+                                        ? CachedNetworkImage(
+                                            imageUrl: recImg,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
+                                            errorWidget: (_, __, ___) =>
                                                 const Icon(Icons.checkroom,
                                                     color: AppTheme.textMuted),
                                           )

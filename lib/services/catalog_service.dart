@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../config/api_config.dart';
 import '../models/producto.dart';
 import 'api_service.dart';
@@ -27,6 +29,15 @@ class CatalogService extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   DateTime? get lastSync => _lastSync;
   bool get usingOfflineData => _usingOfflineData;
+
+  Future<({Map<String, dynamic> product, DateTime syncedAt})?>
+      findCachedProduct(String productCode) async {
+    return _localDatabase.findCachedProduct(
+      await _storage.getOfflineScope(),
+      _selectedSucursalId,
+      productCode,
+    );
+  }
 
   void resetTenantState() {
     _productos = [];
@@ -81,6 +92,7 @@ class CatalogService extends ChangeNotifier {
         _productos = data.map((json) => Producto.fromJson(json)).toList();
         await _localDatabase.saveCatalog(
             await _storage.getOfflineScope(), _selectedSucursalId, data);
+        unawaited(_cacheProductImages(data));
         _lastSync = DateTime.now();
         _usingOfflineData = false;
       } else {
@@ -103,6 +115,29 @@ class CatalogService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _cacheProductImages(List<dynamic> products) async {
+    final urls = <String>{};
+    for (final raw in products) {
+      final product = Map<String, dynamic>.from(raw as Map);
+      for (final key in const [
+        'foto',
+        'foto_trasera',
+        'foto_vestidor_frontal',
+        'foto_vestidor_trasera'
+      ]) {
+        final resolved = ApiConfig.resolveImageUrl(product[key]?.toString());
+        if (resolved != null && resolved.isNotEmpty) urls.add(resolved);
+      }
+    }
+    await Future.wait(urls.map((url) async {
+      try {
+        await DefaultCacheManager().downloadFile(url);
+      } catch (_) {
+        // El catálogo sigue siendo válido aunque una imagen puntual falle.
+      }
+    }));
   }
 
   Future<void> toggleFavorite(Producto product) async {

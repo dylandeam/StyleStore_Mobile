@@ -55,7 +55,7 @@ class StyleStoreApp extends StatelessWidget {
           create: (_) => ProximamenteService(apiService),
         ),
         ChangeNotifierProvider<CartService>(
-          create: (_) => CartService(apiService),
+          create: (_) => CartService(apiService, localDatabase, storageService),
         ),
         ChangeNotifierProvider<OrderService>(
           create: (_) => OrderService(apiService),
