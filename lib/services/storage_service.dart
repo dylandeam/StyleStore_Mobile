@@ -38,6 +38,7 @@ class StorageService {
   static const String _keyRefreshToken = 'stylestore_refresh_token';
   static const String _keyDeviceId = 'stylestore_device_id';
   static const String _keyPushRegistration = 'stylestore_push_registration';
+  static const String _keyTenantPortal = 'stylestore_tenant_portal';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -77,6 +78,13 @@ class StorageService {
 
   Future<void> clearPushRegistration() =>
       _storage.delete(key: _keyPushRegistration);
+
+  Future<String?> getTenantPortal() => _readSafely(_keyTenantPortal);
+
+  Future<void> saveTenantPortal(String value) =>
+      _storage.write(key: _keyTenantPortal, value: value);
+
+  Future<void> clearTenantPortal() => _storage.delete(key: _keyTenantPortal);
 
   Future<String?> _readSafely(String key) async {
     try {

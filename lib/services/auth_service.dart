@@ -51,7 +51,7 @@ class AuthService extends ChangeNotifier {
     String? apellido,
     required String email,
     required String password,
-    required List<String> empresaCodigos,
+    required String empresaCodigo,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -66,14 +66,8 @@ class AuthService extends ChangeNotifier {
       if (apellido != null && apellido.trim().isNotEmpty) {
         body['apellido'] = apellido.trim();
       }
-      body['empresa_codigos'] = empresaCodigos
-          .map((code) => code.trim().toLowerCase())
-          .where((code) => code.isNotEmpty)
-          .toSet()
-          .toList();
-
       final response = await _apiService.post(
-        ApiConfig.registerUrl,
+        ApiConfig.tenantRegisterUrl(empresaCodigo.trim().toLowerCase()),
         body: body,
         requireAuth: false,
       );
@@ -163,6 +157,7 @@ class AuthService extends ChangeNotifier {
   Future<bool> login({
     required String email,
     required String password,
+    required String empresaCodigo,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -174,6 +169,7 @@ class AuthService extends ChangeNotifier {
         body: {
           'email': email,
           'password': password,
+          'empresa_codigo': empresaCodigo.trim().toLowerCase(),
         },
         requireAuth: false,
       );

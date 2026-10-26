@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/tenant_portal_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,40 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _apellidoController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  List<Map<String, dynamic>> _companies = const [];
-  final Set<String> _selectedCompanyCodes = {};
-  bool _loadingCompanies = true;
-  bool _companiesRequested = false;
-  String? _companiesError;
   bool _obscurePassword = true;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_companiesRequested) {
-      _companiesRequested = true;
-      _loadCompanies();
-    }
-  }
-
-  Future<void> _loadCompanies() async {
-    try {
-      final companies =
-          await context.read<AuthService>().getRegistrationCompanies();
-      if (!mounted) return;
-      setState(() {
-        _companies = companies;
-        _loadingCompanies = false;
-        _companiesError = null;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loadingCompanies = false;
-        _companiesError = error.toString().replaceFirst('Exception: ', '');
-      });
-    }
-  }
 
   @override
   void dispose() {
@@ -63,21 +31,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedCompanyCodes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Selecciona al menos una empresa.'),
-        backgroundColor: AppTheme.dangerRed,
-      ));
-      return;
-    }
-
     final authService = Provider.of<AuthService>(context, listen: false);
+    final portal = context.read<TenantPortalService>().portal;
+    if (portal == null) return;
     final success = await authService.register(
       name: _nameController.text.trim(),
       apellido: _apellidoController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      empresaCodigos: _selectedCompanyCodes.toList(),
+      empresaCodigo: portal.codigo,
     );
 
     if (success && mounted) {
@@ -95,6 +57,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
+    final portal = context.watch<TenantPortalService>().portal;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: SafeArea(
@@ -158,15 +122,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   .withValues(alpha: 0.25)),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.stars,
+                            const Icon(Icons.stars,
                                 color: AppTheme.accentIndigo, size: 16),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              'StyleStore Auth',
-                              style: TextStyle(
+                              portal?.nombreMarca ?? 'StyleStore Auth',
+                              style: const TextStyle(
                                 color: AppTheme.accentIndigo,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -189,74 +153,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Regístrate para comenzar a utilizar StyleStore',
+                    Text(
+                      'Crea tu cuenta exclusivamente en ${portal?.nombreMarca ?? 'esta tienda'}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 28),
 
-                    InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Empresas donde deseas registrarte *',
-                        prefixIcon: Icon(Icons.business_outlined,
-                            color: AppTheme.textMuted),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: .07),
+                        border: Border.all(
+                            color: colors.primary.withValues(alpha: .22)),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: _loadingCompanies
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Center(child: CircularProgressIndicator()),
-                            )
-                          : _companiesError != null
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_companiesError!,
-                                        style: const TextStyle(
-                                            color: AppTheme.dangerRed)),
-                                    TextButton.icon(
-                                      onPressed: () {
-                                        setState(() {
-                                          _loadingCompanies = true;
-                                          _companiesError = null;
-                                        });
-                                        _loadCompanies();
-                                      },
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Reintentar'),
-                                    ),
-                                  ],
-                                )
-                              : Column(
-                                  children: _companies.map((company) {
-                                    final code = company['codigo'].toString();
-                                    return CheckboxListTile(
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      value:
-                                          _selectedCompanyCodes.contains(code),
-                                      title: Text(company['nombre'].toString()),
-                                      subtitle: Text(code),
-                                      onChanged: (checked) => setState(() {
-                                        if (checked == true) {
-                                          _selectedCompanyCodes.add(code);
-                                        } else {
-                                          _selectedCompanyCodes.remove(code);
-                                        }
-                                      }),
-                                    );
-                                  }).toList(),
+                      child: Row(
+                        children: [
+                          Icon(Icons.storefront_outlined,
+                              color: colors.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  portal?.nombreMarca ?? 'Tienda seleccionada',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
                                 ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Puedes elegir una o varias; la primera será tu tienda inicial.',
-                        style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12),
+                                Text(
+                                  'Código: ${portal?.codigo.toUpperCase() ?? ''}',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.lock_outline, size: 18),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),

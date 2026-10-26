@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'config/routes.dart';
 import 'config/theme.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/tenant_entry_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
@@ -15,6 +16,7 @@ import 'services/storage_service.dart';
 import 'services/local_database_service.dart';
 import 'services/offline_sync_service.dart';
 import 'services/push_notification_service.dart';
+import 'services/tenant_portal_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +49,9 @@ class StyleStoreApp extends StatelessWidget {
           create: (_) =>
               AuthService(apiService, storageService, pushNotifications),
         ),
+        ChangeNotifierProvider<TenantPortalService>(
+          create: (_) => TenantPortalService(apiService, storageService),
+        ),
         ChangeNotifierProvider<CatalogService>(
           create: (_) =>
               CatalogService(apiService, localDatabase, storageService),
@@ -61,27 +66,40 @@ class StyleStoreApp extends StatelessWidget {
           create: (_) => OrderService(apiService),
         ),
       ],
-      child: Consumer<AuthService>(
-        builder: (context, authService, _) {
+      child: Consumer2<AuthService, TenantPortalService>(
+        builder: (context, authService, tenantPortal, _) {
+          if (authService.status == AuthStatus.authenticated &&
+              !tenantPortal.hasTenant &&
+              !tenantPortal.restoring) {
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => tenantPortal.syncAuthenticatedTenant(),
+            );
+          }
           return MaterialApp(
-            title: 'StyleStore Mobile',
+            title: tenantPortal.portal?.nombreMarca ?? 'StyleStore Mobile',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.forTenant(tenantPortal.portal),
             navigatorKey: PushNotificationService.navigatorKey,
             routes: AppRoutes.routes,
-            home: _getInitialScreen(authService),
+            home: _getInitialScreen(authService, tenantPortal),
           );
         },
       ),
     );
   }
 
-  Widget _getInitialScreen(AuthService authService) {
+  Widget _getInitialScreen(
+      AuthService authService, TenantPortalService tenantPortal) {
+    if (tenantPortal.restoring) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     switch (authService.status) {
       case AuthStatus.authenticated:
         return const HomeScreen();
       case AuthStatus.unauthenticated:
-        return const LoginScreen();
+        return tenantPortal.hasTenant
+            ? const LoginScreen()
+            : const TenantEntryScreen();
       case AuthStatus.loading:
       case AuthStatus.initial:
         return const Scaffold(

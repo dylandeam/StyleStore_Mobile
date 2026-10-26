@@ -117,4 +117,8 @@ class ApiConfig {
   static String get miContratacionUrl => '$baseUrl/planes/mi-contratacion';
   static String get authTenantsUrl => '$baseUrl/auth/tenants';
   static String get authTenantsSelectUrl => '$baseUrl/auth/tenants/select';
+  static String tenantPortalUrl(String code) =>
+      '$baseUrl/empresas/publicas/${Uri.encodeComponent(code)}/portal';
+  static String tenantRegisterUrl(String code) =>
+      '$baseUrl/auth/register/tenant/${Uri.encodeComponent(code)}';
 }

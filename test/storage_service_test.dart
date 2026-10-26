@@ -66,4 +66,17 @@ void main() {
     await service.clearTokens();
     expect(await service.hasToken(), isFalse);
   });
+
+  test('conserva la identidad del tenant aunque se cierre la sesión', () async {
+    final memory = MemorySecureStorage();
+    final service = StorageService(storage: memory);
+
+    await service.saveTenantPortal('{"codigo":"varones"}');
+    await service.saveTokens(accessToken: 'access', refreshToken: 'refresh');
+    await service.clearTokens();
+
+    expect(await service.getTenantPortal(), '{"codigo":"varones"}');
+    await service.clearTenantPortal();
+    expect(await service.getTenantPortal(), isNull);
+  });
 }

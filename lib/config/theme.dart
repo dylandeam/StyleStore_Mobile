@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/tenant_portal.dart';
 
 class AppTheme {
   // Paleta Oficial StyleStore: Beige & Navy
@@ -86,4 +87,52 @@ class AppTheme {
 
   // Alias para retrocompatibilidad
   static ThemeData get darkTheme => lightTheme;
+
+  static ThemeData forTenant(TenantPortal? portal) {
+    if (portal == null) return lightTheme;
+    final primary = portal.primaryColor;
+    final secondary = portal.accentColor;
+    final surface = portal.secondaryColor;
+    final background = portal.backgroundColor;
+    final text = portal.textColor;
+    return lightTheme.copyWith(
+      scaffoldBackgroundColor: background,
+      primaryColor: primary,
+      cardColor: surface,
+      colorScheme: ColorScheme.light(
+        primary: primary,
+        secondary: secondary,
+        surface: surface,
+        error: dangerRed,
+        onPrimary:
+            ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF111827),
+        onSurface: text,
+      ),
+      textTheme:
+          GoogleFonts.plusJakartaSansTextTheme(ThemeData.light().textTheme)
+              .apply(bodyColor: text, displayColor: text),
+      appBarTheme: AppBarTheme(
+        backgroundColor: surface,
+        foregroundColor: text,
+        elevation: 0,
+        iconTheme: IconThemeData(color: primary),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor:
+              ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+                  ? Colors.white
+                  : const Color(0xFF111827),
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
 }

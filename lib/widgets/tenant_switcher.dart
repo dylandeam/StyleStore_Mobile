@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/cart_service.dart';
 import '../services/catalog_service.dart';
 import '../services/order_service.dart';
+import '../services/tenant_portal_service.dart';
 
 class TenantSwitcher extends StatefulWidget {
   const TenantSwitcher({super.key});
@@ -59,6 +60,14 @@ class _TenantSwitcherState extends State<TenantSwitcher> {
     });
     try {
       await context.read<AuthService>().selectTenant(empresaId);
+      final selected = _tenants.cast<Map<String, dynamic>?>().firstWhere(
+            (item) => int.tryParse(item?['id'].toString() ?? '') == empresaId,
+            orElse: () => null,
+          );
+      final code = selected?['codigo']?.toString();
+      if (code != null && code.isNotEmpty && mounted) {
+        await context.read<TenantPortalService>().selectByCode(code);
+      }
       if (!mounted) return;
       context.read<CartService>().resetTenantState();
       context.read<CatalogService>().resetTenantState();
