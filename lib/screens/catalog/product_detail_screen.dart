@@ -1832,154 +1832,169 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         List<Map<String, dynamic>>.from(_reviews?['resenas'] ?? const []);
     final average = (summary['promedio'] as num?)?.toDouble() ?? 0;
     final canComment = _reviews?['puede_comentar'] == true;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          const Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text('Opiniones que ayudan a elegir',
-                    style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary)),
-                SizedBox(height: 4),
-                Text('Experiencias e interés de la comunidad',
-                    style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-              ])),
-          Text(average.toStringAsFixed(1),
-              style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF14263D))),
-          const Padding(
-              padding: EdgeInsets.only(bottom: 5, left: 3),
-              child: Text('/ 5', style: TextStyle(color: AppTheme.textMuted))),
-        ]),
-        const SizedBox(height: 14),
-        Row(children: [
-          ...List.generate(
-              5,
-              (index) => Icon(
-                  index < average.round()
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  color: const Color(0xFFD99B24),
-                  size: 23)),
-          const SizedBox(width: 9),
-          Text('${summary['total'] ?? 0} opiniones',
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-        ]),
-        if (canComment) ...[
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _openReviewComposer,
-            icon: const Icon(Icons.edit_note_rounded),
-            label: Text(_reviews?['mi_resena'] == null
-                ? 'Escribir una opinión'
-                : 'Editar mi opinión'),
-            style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF14263D),
-                side: const BorderSide(color: Color(0xFF14263D)),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14))),
-          ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x1F000000), blurRadius: 22, offset: Offset(0, 8)),
         ],
-        const SizedBox(height: 18),
-        if (reviews.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-                color: AppTheme.bgCard,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.borderGlass)),
-            child: const Row(children: [
-              Icon(Icons.forum_outlined, color: AppTheme.accentIndigo),
-              SizedBox(width: 12),
-              Expanded(
-                  child: Text(
-                      'Sé la primera persona en contar qué te gusta de esta prenda.',
-                      style: TextStyle(
-                          color: AppTheme.textSecondary, height: 1.4)))
-            ]),
-          )
-        else
-          ...reviews.take(6).map((review) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: AppTheme.bgCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.borderGlass)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            const Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        CircleAvatar(
-                            radius: 18,
-                            backgroundColor: const Color(0xFF14263D),
-                            foregroundColor: Colors.white,
-                            child: Text(
-                                _initials(
-                                    review['autor_nombre']?.toString() ?? 'C'),
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold))),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: Text(
-                                review['autor_nombre']?.toString() ?? 'Cliente',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary))),
-                        ...List.generate(
-                            5,
-                            (index) => Icon(
-                                index <
-                                        ((review['puntuacion'] as num?)
-                                                ?.toInt() ??
-                                            0)
-                                    ? Icons.star_rounded
-                                    : Icons.star_outline_rounded,
-                                color: const Color(0xFFD99B24),
-                                size: 16)),
+                  Text('Opiniones que ayudan a elegir',
+                      style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('Experiencias e interés de la comunidad',
+                      style: TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 12)),
+                ])),
+            Text(average.toStringAsFixed(1),
+                style: const TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF14263D))),
+            const Padding(
+                padding: EdgeInsets.only(bottom: 5, left: 3),
+                child:
+                    Text('/ 5', style: TextStyle(color: AppTheme.textMuted))),
+          ]),
+          const SizedBox(height: 14),
+          Row(children: [
+            ...List.generate(
+                5,
+                (index) => Icon(
+                    index < average.round()
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: const Color(0xFFD99B24),
+                    size: 23)),
+            const SizedBox(width: 9),
+            Text('${summary['total'] ?? 0} opiniones',
+                style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600)),
+          ]),
+          if (canComment) ...[
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _openReviewComposer,
+              icon: const Icon(Icons.edit_note_rounded),
+              label: Text(_reviews?['mi_resena'] == null
+                  ? 'Escribir una opinión'
+                  : 'Editar mi opinión'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF14263D),
+                  side: const BorderSide(color: Color(0xFF14263D)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+            ),
+          ],
+          const SizedBox(height: 18),
+          if (reviews.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: AppTheme.bgCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.borderGlass)),
+              child: const Row(children: [
+                Icon(Icons.forum_outlined, color: AppTheme.accentIndigo),
+                SizedBox(width: 12),
+                Expanded(
+                    child: Text(
+                        'Sé la primera persona en contar qué te gusta de esta prenda.',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, height: 1.4)))
+              ]),
+            )
+          else
+            ...reviews.take(6).map((review) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.borderGlass)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          CircleAvatar(
+                              radius: 18,
+                              backgroundColor: const Color(0xFF14263D),
+                              foregroundColor: Colors.white,
+                              child: Text(
+                                  _initials(
+                                      review['autor_nombre']?.toString() ??
+                                          'C'),
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold))),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(
+                                  review['autor_nombre']?.toString() ??
+                                      'Cliente',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary))),
+                          ...List.generate(
+                              5,
+                              (index) => Icon(
+                                  index <
+                                          ((review['puntuacion'] as num?)
+                                                  ?.toInt() ??
+                                              0)
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  color: const Color(0xFFD99B24),
+                                  size: 16)),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text(review['comentario']?.toString() ?? '',
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary, height: 1.45)),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Icon(
+                              review['compra_verificada'] == true
+                                  ? Icons.verified_outlined
+                                  : Icons.favorite_border_rounded,
+                              size: 15,
+                              color: review['compra_verificada'] == true
+                                  ? AppTheme.successGreen
+                                  : const Color(0xFF9A6B27)),
+                          const SizedBox(width: 5),
+                          Text(
+                              review['compra_verificada'] == true
+                                  ? 'Compra verificada'
+                                  : 'Cliente interesado',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: review['compra_verificada'] == true
+                                      ? AppTheme.successGreen
+                                      : const Color(0xFF9A6B27))),
+                        ]),
                       ]),
-                      const SizedBox(height: 12),
-                      Text(review['comentario']?.toString() ?? '',
-                          style: const TextStyle(
-                              color: AppTheme.textPrimary, height: 1.45)),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Icon(
-                            review['compra_verificada'] == true
-                                ? Icons.verified_outlined
-                                : Icons.favorite_border_rounded,
-                            size: 15,
-                            color: review['compra_verificada'] == true
-                                ? AppTheme.successGreen
-                                : const Color(0xFF9A6B27)),
-                        const SizedBox(width: 5),
-                        Text(
-                            review['compra_verificada'] == true
-                                ? 'Compra verificada'
-                                : 'Cliente interesado',
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: review['compra_verificada'] == true
-                                    ? AppTheme.successGreen
-                                    : const Color(0xFF9A6B27))),
-                      ]),
-                    ]),
-              )),
-      ],
+                )),
+        ],
+      ),
     );
   }
 
