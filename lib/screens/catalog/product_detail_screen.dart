@@ -232,10 +232,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     labelText: 'Tu comentario',
                     hintText:
                         'Habla del diseño, el material o por qué te gustaría comprarla…',
+                    labelStyle: TextStyle(color: Color(0xFF42536A)),
+                    hintStyle: TextStyle(color: Color(0xFF6F756F)),
+                    counterStyle: TextStyle(color: Color(0xFF6F756F)),
+                    filled: true,
+                    fillColor: Color(0xFFF7F2E9),
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(14))),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                      borderSide: BorderSide(color: Color(0xFFD9D0BF)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                      borderSide:
+                          BorderSide(color: Color(0xFF14263D), width: 2),
+                    ),
                   ),
+                  style: const TextStyle(color: Color(0xFF172536)),
                   onChanged: (_) => setSheetState(() {}),
                 ),
                 const SizedBox(height: 12),
