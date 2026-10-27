@@ -30,6 +30,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _showBackPhoto = false;
   bool _usingOfflineData = false;
   DateTime? _cachedAt;
+  Map<String, dynamic>? _reviews;
+  bool _reviewsLoading = true;
+  String? _reviewsError;
+  int _reviewScore = 0;
+  final TextEditingController _reviewController = TextEditingController();
 
   // Variantes seleccionadas
   int? _selectedColorId;
@@ -48,6 +53,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final catService = Provider.of<CatalogService>(context, listen: false);
     _filtroSucursalId = catService.selectedSucursalId;
     _loadProductData();
+  }
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProductData() async {
@@ -83,12 +94,171 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           }
         } catch (_) {}
         _applyProduct(prodData, recData: recData);
+        _loadReviews();
       } else {
         await _loadCachedProduct(catalog);
       }
     } catch (_) {
       await _loadCachedProduct(catalog);
     }
+  }
+
+  Future<void> _loadReviews() async {
+    if (mounted) {
+      setState(() {
+        _reviewsLoading = true;
+        _reviewsError = null;
+      });
+    }
+    final api = Provider.of<ApiService>(context, listen: false);
+    try {
+      final response = await api
+          .get('${ApiConfig.baseUrl}/productos/${widget.codigo}/resenas');
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+      final data =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final own = data['mi_resena'] as Map<String, dynamic>?;
+      if (!mounted) return;
+      setState(() {
+        _reviews = data;
+        _reviewsLoading = false;
+        _reviewScore = (own?['puntuacion'] as num?)?.toInt() ?? 0;
+        _reviewController.text = own?['comentario']?.toString() ?? '';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _reviewsLoading = false;
+        _reviewsError =
+            'No pudimos cargar las opiniones. Comprueba tu conexión.';
+      });
+    }
+  }
+
+  Future<void> _saveReview(StateSetter setSheetState) async {
+    final comment = _reviewController.text.trim();
+    if (_reviewScore < 1 || comment.length < 4) return;
+    final api = Provider.of<ApiService>(context, listen: false);
+    final response = await api.put(
+      '${ApiConfig.baseUrl}/productos/${widget.codigo}/resenas/mia',
+      body: {'puntuacion': _reviewScore, 'comentario': comment},
+    );
+    if (!mounted) return;
+    if (response.statusCode == 200) {
+      Navigator.pop(context);
+      await _loadReviews();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Tu opinión ya está publicada.'),
+        backgroundColor: AppTheme.successGreen,
+      ));
+      return;
+    }
+    String message = 'No pudimos publicar tu opinión.';
+    try {
+      message =
+          jsonDecode(utf8.decode(response.bodyBytes))['detail'] ?? message;
+    } catch (_) {}
+    setSheetState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppTheme.dangerRed));
+  }
+
+  void _openReviewComposer() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 18, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                    child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: AppTheme.borderGlass,
+                            borderRadius: BorderRadius.circular(4)))),
+                const SizedBox(height: 20),
+                Text(
+                    _reviews?['mi_resena'] == null
+                        ? 'Comparte tu opinión'
+                        : 'Actualiza tu opinión',
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary)),
+                const SizedBox(height: 6),
+                const Text(
+                    'Tu experiencia o interés puede ayudar a alguien a decidir.',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, height: 1.4)),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final score = index + 1;
+                    return IconButton(
+                      tooltip:
+                          '$score ${score == 1 ? 'estrella' : 'estrellas'}',
+                      onPressed: () =>
+                          setSheetState(() => _reviewScore = score),
+                      iconSize: 38,
+                      color: const Color(0xFFD99B24),
+                      icon: Icon(score <= _reviewScore
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _reviewController,
+                  minLines: 4,
+                  maxLines: 7,
+                  maxLength: 1200,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Tu comentario',
+                    hintText:
+                        'Habla del diseño, el material o por qué te gustaría comprarla…',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(14))),
+                  ),
+                  onChanged: (_) => setSheetState(() {}),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: _reviewScore > 0 &&
+                          _reviewController.text.trim().length >= 4
+                      ? () => _saveReview(setSheetState)
+                      : null,
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF14263D),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14))),
+                  child: Text(_reviews?['mi_resena'] == null
+                      ? 'Publicar opinión'
+                      : 'Guardar cambios'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _applyProduct(Map<String, dynamic> prodData,
@@ -1128,6 +1298,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const Divider(color: AppTheme.borderGlass, height: 28),
             ],
 
+            _buildReviewsSection(),
+            const SizedBox(height: 28),
+
             // SECCIÓN DE IA LOCAL: RECOMENDACIONES INTELIGENTES
             if (_recomendados.isNotEmpty) ...[
               Row(
@@ -1628,6 +1801,196 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
+
+  Widget _buildReviewsSection() {
+    if (_reviewsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 22),
+        child: Center(
+            child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
+      );
+    }
+    if (_reviewsError != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: AppTheme.bgCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.borderGlass)),
+        child: Row(children: [
+          const Icon(Icons.rate_review_outlined, color: AppTheme.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Text(_reviewsError!,
+                  style: const TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: _loadReviews, child: const Text('Reintentar')),
+        ]),
+      );
+    }
+    final summary = Map<String, dynamic>.from(_reviews?['resumen'] ?? const {});
+    final reviews =
+        List<Map<String, dynamic>>.from(_reviews?['resenas'] ?? const []);
+    final average = (summary['promedio'] as num?)?.toDouble() ?? 0;
+    final canComment = _reviews?['puede_comentar'] == true;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          const Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('Opiniones que ayudan a elegir',
+                    style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary)),
+                SizedBox(height: 4),
+                Text('Experiencias e interés de la comunidad',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              ])),
+          Text(average.toStringAsFixed(1),
+              style: const TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF14263D))),
+          const Padding(
+              padding: EdgeInsets.only(bottom: 5, left: 3),
+              child: Text('/ 5', style: TextStyle(color: AppTheme.textMuted))),
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          ...List.generate(
+              5,
+              (index) => Icon(
+                  index < average.round()
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  color: const Color(0xFFD99B24),
+                  size: 23)),
+          const SizedBox(width: 9),
+          Text('${summary['total'] ?? 0} opiniones',
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+        ]),
+        if (canComment) ...[
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _openReviewComposer,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: Text(_reviews?['mi_resena'] == null
+                ? 'Escribir una opinión'
+                : 'Editar mi opinión'),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF14263D),
+                side: const BorderSide(color: Color(0xFF14263D)),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14))),
+          ),
+        ],
+        const SizedBox(height: 18),
+        if (reviews.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                color: AppTheme.bgCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderGlass)),
+            child: const Row(children: [
+              Icon(Icons.forum_outlined, color: AppTheme.accentIndigo),
+              SizedBox(width: 12),
+              Expanded(
+                  child: Text(
+                      'Sé la primera persona en contar qué te gusta de esta prenda.',
+                      style: TextStyle(
+                          color: AppTheme.textSecondary, height: 1.4)))
+            ]),
+          )
+        else
+          ...reviews.take(6).map((review) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: AppTheme.bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.borderGlass)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        CircleAvatar(
+                            radius: 18,
+                            backgroundColor: const Color(0xFF14263D),
+                            foregroundColor: Colors.white,
+                            child: Text(
+                                _initials(
+                                    review['autor_nombre']?.toString() ?? 'C'),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Text(
+                                review['autor_nombre']?.toString() ?? 'Cliente',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textPrimary))),
+                        ...List.generate(
+                            5,
+                            (index) => Icon(
+                                index <
+                                        ((review['puntuacion'] as num?)
+                                                ?.toInt() ??
+                                            0)
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                color: const Color(0xFFD99B24),
+                                size: 16)),
+                      ]),
+                      const SizedBox(height: 12),
+                      Text(review['comentario']?.toString() ?? '',
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary, height: 1.45)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Icon(
+                            review['compra_verificada'] == true
+                                ? Icons.verified_outlined
+                                : Icons.favorite_border_rounded,
+                            size: 15,
+                            color: review['compra_verificada'] == true
+                                ? AppTheme.successGreen
+                                : const Color(0xFF9A6B27)),
+                        const SizedBox(width: 5),
+                        Text(
+                            review['compra_verificada'] == true
+                                ? 'Compra verificada'
+                                : 'Cliente interesado',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: review['compra_verificada'] == true
+                                    ? AppTheme.successGreen
+                                    : const Color(0xFF9A6B27))),
+                      ]),
+                    ]),
+              )),
+      ],
+    );
+  }
+
+  String _initials(String name) => name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .take(2)
+      .map((part) => part[0])
+      .join()
+      .toUpperCase();
 
   Widget _buildPlaceholder() {
     return const Center(
