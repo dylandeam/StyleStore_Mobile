@@ -45,6 +45,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _availableStock = 0;
   int _quantity = 1;
   double? _selectedVariantPrice;
+  double? _selectedOriginalPrice;
   Map<String, dynamic> _selectedMeasurements = {};
 
   @override
@@ -368,8 +369,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           seleccion['stock_inventario_id'] ?? seleccion['id'];
       _selectedSucursalId = seleccion['sucursal_id'] ?? 1;
       _availableStock = (seleccion['cantidad'] as num?)?.toInt() ?? 0;
-      _selectedVariantPrice =
+      _selectedVariantPrice = (seleccion['precio'] as num?)?.toDouble() ??
           (seleccion['precio_variante'] as num?)?.toDouble();
+      _selectedOriginalPrice =
+          (seleccion['precio_original'] as num?)?.toDouble() ??
+              (seleccion['precio_variante'] as num?)?.toDouble();
       _selectedMeasurements =
           Map<String, dynamic>.from(seleccion['medidas'] ?? const {});
       _quantity = _availableStock > 0 ? 1 : 0;
@@ -378,6 +382,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _selectedStockInventarioId = null;
       _availableStock = 0;
       _selectedVariantPrice = null;
+      _selectedOriginalPrice = null;
       _selectedMeasurements = {};
       _quantity = 0;
     }
@@ -773,6 +778,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      if (_selectedOriginalPrice != null &&
+                          _selectedOriginalPrice! > _selectedVariantPrice!)
+                        Text(
+                          'Bs. ${_selectedOriginalPrice!.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       Text(
                         'Bs. ${_selectedVariantPrice!.toStringAsFixed(2)}',
                         style: const TextStyle(
@@ -780,8 +796,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF14263D)),
                       ),
-                      const Text('Precio de talla',
-                          style: TextStyle(
+                      Text(
+                          _selectedTallaId == null
+                              ? 'Precio vigente'
+                              : 'Precio para la talla seleccionada',
+                          style: const TextStyle(
                               fontSize: 10, color: AppTheme.textMuted)),
                     ],
                   )
@@ -1157,8 +1176,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   e['stock_inventario_id'] ?? e['id'];
                               _selectedSucursalId = e['sucursal_id'] ?? 1;
                               _availableStock = stock;
-                              _selectedVariantPrice =
+                              _selectedVariantPrice = (e['precio'] as num?)
+                                      ?.toDouble() ??
                                   (e['precio_variante'] as num?)?.toDouble();
+                              _selectedOriginalPrice =
+                                  (e['precio_original'] as num?)?.toDouble() ??
+                                      (e['precio_variante'] as num?)
+                                          ?.toDouble();
                               _selectedMeasurements = Map<String, dynamic>.from(
                                   e['medidas'] ?? const {});
                               _quantity = 1;
@@ -1189,6 +1213,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isOutOfStock
+                                      ? AppTheme.textMuted
+                                      : AppTheme.textPrimary),
+                            ),
+                          ),
+                          Text(
+                            'Bs. ${((e['precio'] as num?)?.toDouble() ?? (e['precio_variante'] as num?)?.toDouble() ?? (_producto?['precio'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
                               color: isSelected
                                   ? Colors.white
                                   : (isOutOfStock
