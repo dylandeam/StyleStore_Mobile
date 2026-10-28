@@ -124,7 +124,9 @@ class _CatalogScreenState extends State<CatalogScreen>
             Tab(icon: Icon(Icons.style_outlined), text: 'Outfits'),
             Tab(icon: Icon(Icons.rocket_launch_outlined), text: 'Próximamente'),
             Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Mi Carrito'),
-            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Mis Pedidos'),
+            Tab(
+                icon: Icon(Icons.receipt_long_outlined),
+                text: 'Compras y reservas'),
           ],
         ),
       ),
@@ -871,7 +873,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                             await _fetchParaTi();
                           },
                           child: ListView(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
                             children: [
                               _buildParaTiSection(),
                               if (_paraTiItems.isNotEmpty)
@@ -1468,7 +1470,10 @@ class _CatalogScreenState extends State<CatalogScreen>
   void _handleReserveProduct(Producto p) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ProductDetailScreen(codigo: p.codigo),
+        builder: (_) => ProductDetailScreen(
+          codigo: p.codigo,
+          openReservationOnLoad: true,
+        ),
       ),
     );
   }

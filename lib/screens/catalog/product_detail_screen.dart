@@ -11,17 +11,24 @@ import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/catalog_service.dart';
 import '../../services/offline_sync_service.dart';
+import '../../utils/reservation_slots.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String codigo;
+  final bool openReservationOnLoad;
 
-  const ProductDetailScreen({super.key, required this.codigo});
+  const ProductDetailScreen({
+    super.key,
+    required this.codigo,
+    this.openReservationOnLoad = false,
+  });
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  bool _reservationPromptOpened = false;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -294,6 +301,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         _actualizarTallasParaColor(primerColor);
       }
     });
+    if (widget.openReservationOnLoad && !_reservationPromptOpened) {
+      _reservationPromptOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _availableStock > 0) _abrirModalReserva(prodData);
+      });
+    }
   }
 
   Future<void> _loadCachedProduct(CatalogService catalog) async {
@@ -1511,31 +1524,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _abrirModalReserva(Map<String, dynamic> p) async {
     final api = Provider.of<ApiService>(context, listen: false);
     final catalogService = Provider.of<CatalogService>(context, listen: false);
+    final offlineSync = Provider.of<OfflineSyncService>(context, listen: false);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-          child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
-    );
-
-    bool puedeReservar = false;
-    String mensaje = '';
-    try {
-      final res =
-          await api.get(ApiConfig.reservasElegibilidadUrl, requireAuth: true);
-      if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        puedeReservar = data['puede_reservar'] == true;
-        mensaje = data['mensaje'] ?? '';
+    bool puedeReservar = true;
+    String mensaje = offlineSync.isOnline
+        ? ''
+        : 'Sin conexión: la reserva quedará pendiente hasta validar horario y stock.';
+    if (offlineSync.isOnline) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+            child: CircularProgressIndicator(color: AppTheme.accentIndigo)),
+      );
+      try {
+        final res =
+            await api.get(ApiConfig.reservasElegibilidadUrl, requireAuth: true);
+        if (res.statusCode == 200) {
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
+          puedeReservar = data['puede_reservar'] != false;
+          mensaje = data['mensaje'] ?? '';
+        }
+      } catch (_) {
+        puedeReservar = true;
+        mensaje =
+            'Conexión inestable: la reserva quedará pendiente hasta validar horario y stock.';
       }
-    } catch (_) {
-      puedeReservar = true;
-      mensaje =
-          'Sin conexión: la elegibilidad y el stock se validarán al sincronizar.';
+      if (mounted) Navigator.pop(context);
     }
-
-    if (mounted) Navigator.pop(context);
 
     if (!puedeReservar) {
       if (!mounted) return;
@@ -1577,7 +1593,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final cierreTexto = (selectedBranch?['hora_cierre'] ?? '18:00').toString();
     String formatDate(DateTime value) =>
         '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    bool horarioProvisional = false;
     Future<List<Map<String, dynamic>>> cargarBloques(DateTime fecha) async {
+      if (!offlineSync.isOnline) {
+        horarioProvisional = true;
+        return buildProvisionalReservationSlots(aperturaTexto, cierreTexto);
+      }
       try {
         final response = await api.get(
           ApiConfig.reservasDisponibilidadUrl(
@@ -1586,10 +1607,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
         if (response.statusCode == 200) {
           final data = jsonDecode(utf8.decode(response.bodyBytes));
+          horarioProvisional = false;
           return List<Map<String, dynamic>>.from(data['bloques'] ?? const []);
         }
       } catch (_) {}
-      return [];
+      horarioProvisional = true;
+      return buildProvisionalReservationSlots(aperturaTexto, cierreTexto);
     }
 
     var bloques =
@@ -1618,168 +1641,185 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 left: 20,
                 right: 20,
                 top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                    MediaQuery.of(ctx).viewPadding.bottom +
+                    20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('Reservar Prenda en Tienda',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary)),
-                  const SizedBox(height: 8),
-                  Text('Prenda: ${p['nombre']}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF14263D))),
-                  const SizedBox(height: 12),
-                  const Text('Fecha de recogida (hasta 3 días):',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    children: [1, 2, 3].map((d) {
-                      final sel = diasReserva == d;
-                      return ChoiceChip(
-                        label: Text('$d días'),
-                        selected: sel,
-                        selectedColor: const Color(0xFFC5A880),
-                        onSelected: (_) async {
-                          setModalState(() {
-                            diasReserva = d;
-                            cargandoBloques = true;
-                            horaRetiro = '';
-                          });
-                          final nuevos = await cargarBloques(
-                              DateTime.now().add(Duration(days: d)));
-                          if (!ctx.mounted) return;
-                          setModalState(() {
-                            bloques = nuevos;
-                            horaRetiro = nuevos
-                                    .cast<Map<String, dynamic>?>()
-                                    .firstWhere(
-                                        (block) => block?['disponible'] == true,
-                                        orElse: () => null)?['inicio']
-                                    ?.toString() ??
-                                '';
-                            cargandoBloques = false;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        fontStyle: FontStyle.italic),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: horaRetiro.isEmpty ? null : horaRetiro,
-                    decoration: const InputDecoration(
-                      labelText: 'Bloque de recogida (1 hora)',
-                      prefixIcon: Icon(Icons.schedule),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Reservar Prenda en Tienda',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
+                    const SizedBox(height: 8),
+                    Text('Prenda: ${p['nombre']}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF14263D))),
+                    const SizedBox(height: 12),
+                    const Text('Fecha de recogida (hasta 3 días):',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [1, 2, 3].map((d) {
+                        final sel = diasReserva == d;
+                        return ChoiceChip(
+                          label: Text('$d días'),
+                          selected: sel,
+                          selectedColor: const Color(0xFFC5A880),
+                          onSelected: (_) async {
+                            setModalState(() {
+                              diasReserva = d;
+                              cargandoBloques = true;
+                              horaRetiro = '';
+                            });
+                            final nuevos = await cargarBloques(
+                                DateTime.now().add(Duration(days: d)));
+                            if (!ctx.mounted) return;
+                            setModalState(() {
+                              bloques = nuevos;
+                              horaRetiro = nuevos
+                                      .cast<Map<String, dynamic>?>()
+                                      .firstWhere(
+                                          (block) =>
+                                              block?['disponible'] == true,
+                                          orElse: () => null)?['inicio']
+                                      ?.toString() ??
+                                  '';
+                              cargandoBloques = false;
+                            });
+                          },
+                        );
+                      }).toList(),
                     ),
-                    hint: Text(cargandoBloques
-                        ? 'Consultando horarios...'
-                        : 'Selecciona un bloque disponible'),
-                    items: bloques.map((block) {
-                      final disponible = block['disponible'] == true;
-                      final inicio = block['inicio'].toString();
-                      final fin = block['fin'].toString();
-                      return DropdownMenuItem<String>(
-                        value: disponible ? inicio : 'ocupado-$inicio',
-                        enabled: disponible,
-                        child: Text(
-                            '$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
-                      );
-                    }).toList(),
-                    onChanged: cargandoBloques
-                        ? null
-                        : (value) =>
-                            setModalState(() => horaRetiro = value ?? ''),
-                  ),
-                  Text(
-                    'Horario de atención: $aperturaTexto – $cierreTexto',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: horaRetiro.isEmpty
-                        ? null
-                        : () async {
-                            Navigator.pop(ctx);
-                            final stockId = _selectedStockInventarioId;
-                            if (stockId == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Selecciona una talla disponible para reservar.')),
-                              );
-                              return;
-                            }
-
-                            final result =
-                                await Provider.of<OfflineSyncService>(context,
-                                        listen: false)
-                                    .submitReservation(
-                              {
-                                'sucursal_id': sucursalSeleccionada,
-                                'fecha_limite': fechaLimite.toIso8601String(),
-                                'hora_retiro': '$horaRetiro:00',
-                                'items': [
-                                  {
-                                    'stock_inventario_id': stockId,
-                                    'cantidad': _quantity,
-                                  }
-                                ],
-                              },
-                            );
-
-                            if (mounted) {
-                              if (result.confirmed) {
+                    const SizedBox(height: 8),
+                    Text(
+                      'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                          fontStyle: FontStyle.italic),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: horaRetiro.isEmpty ? null : horaRetiro,
+                      decoration: const InputDecoration(
+                        labelText: 'Bloque de recogida (1 hora)',
+                        prefixIcon: Icon(Icons.schedule),
+                      ),
+                      hint: Text(cargandoBloques
+                          ? 'Consultando horarios...'
+                          : 'Selecciona un bloque disponible'),
+                      items: bloques.map((block) {
+                        final disponible = block['disponible'] == true;
+                        final inicio = block['inicio'].toString();
+                        final fin = block['fin'].toString();
+                        return DropdownMenuItem<String>(
+                          value: disponible ? inicio : 'ocupado-$inicio',
+                          enabled: disponible,
+                          child: Text(
+                              '$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
+                        );
+                      }).toList(),
+                      onChanged: cargandoBloques
+                          ? null
+                          : (value) =>
+                              setModalState(() => horaRetiro = value ?? ''),
+                    ),
+                    Text(
+                      'Horario de atención: $aperturaTexto – $cierreTexto',
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                    if (horarioProvisional) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Sin conexión: el bloque es provisional. Se confirmará automáticamente al sincronizar.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9A5A00),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: horaRetiro.isEmpty
+                          ? null
+                          : () async {
+                              Navigator.pop(ctx);
+                              final stockId = _selectedStockInventarioId;
+                              if (stockId == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text(
-                                        '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
-                                    backgroundColor: AppTheme.successGreen,
-                                  ),
+                                      content: Text(
+                                          'Selecciona una talla disponible para reservar.')),
                                 );
-                                _loadProductData();
-                              } else if (result.queued) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
-                                    backgroundColor: const Color(0xFFB7791F),
-                                    duration: const Duration(seconds: 6),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(result.message),
-                                      backgroundColor: AppTheme.dangerRed),
-                                );
+                                return;
                               }
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF14263D),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+
+                              final result =
+                                  await Provider.of<OfflineSyncService>(context,
+                                          listen: false)
+                                      .submitReservation(
+                                {
+                                  'sucursal_id': sucursalSeleccionada,
+                                  'fecha_limite': fechaLimite.toIso8601String(),
+                                  'hora_retiro': '$horaRetiro:00',
+                                  'items': [
+                                    {
+                                      'stock_inventario_id': stockId,
+                                      'cantidad': _quantity,
+                                    }
+                                  ],
+                                },
+                              );
+
+                              if (mounted) {
+                                if (result.confirmed) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
+                                      backgroundColor: AppTheme.successGreen,
+                                    ),
+                                  );
+                                  _loadProductData();
+                                } else if (result.queued) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
+                                      backgroundColor: const Color(0xFFB7791F),
+                                      duration: const Duration(seconds: 6),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(result.message),
+                                        backgroundColor: AppTheme.dangerRed),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF14263D),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Confirmar Reserva en Sucursal',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
-                    child: const Text('Confirmar Reserva en Sucursal',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -1804,47 +1844,58 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: canBuy
-                    ? () => _agregarAlCarrito(irAlCheckout: false)
-                    : null,
-                icon: const Icon(Icons.add_shopping_cart, size: 18),
-                label: const Text('Al Carrito'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.accentIndigo,
-                  side: const BorderSide(color: AppTheme.accentIndigo),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
+            OutlinedButton.icon(
               onPressed: canBuy ? () => _abrirModalReserva(p) : null,
-              tooltip: 'Reservar Prenda (Elegibilidad v6)',
-              icon: const Icon(Icons.bookmark_add_outlined,
-                  color: Color(0xFFC5A880)),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed:
-                    canBuy ? () => _agregarAlCarrito(irAlCheckout: true) : null,
-                icon: const Icon(Icons.flash_on, size: 18),
-                label: const Text('Comprar Ahora'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF14263D),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
+              icon: const Icon(Icons.bookmark_add_outlined, size: 20),
+              label: const Text('Reservar para recoger en tienda'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF14263D),
+                side: const BorderSide(color: Color(0xFFC5A880), width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: canBuy
+                      ? () => _agregarAlCarrito(irAlCheckout: false)
+                      : null,
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('Al Carrito'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accentIndigo,
+                    side: const BorderSide(color: AppTheme.accentIndigo),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: canBuy
+                      ? () => _agregarAlCarrito(irAlCheckout: true)
+                      : null,
+                  icon: const Icon(Icons.flash_on, size: 18),
+                  label: const Text('Comprar Ahora'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF14263D),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ]),
           ],
         ),
       ),
