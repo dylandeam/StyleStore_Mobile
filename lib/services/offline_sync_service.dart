@@ -34,12 +34,13 @@ class OfflineSyncService extends ChangeNotifier {
     Connectivity().checkConnectivity().then((results) {
       _isOnline = !results.contains(ConnectivityResult.none);
       notifyListeners();
+      if (_isOnline) _scheduleSync();
     });
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen((results) {
       _isOnline = !results.contains(ConnectivityResult.none);
       notifyListeners();
-      if (_isOnline) unawaited(syncPending());
+      if (_isOnline) _scheduleSync();
     });
     unawaited(refreshPendingCount());
   }
@@ -47,6 +48,11 @@ class OfflineSyncService extends ChangeNotifier {
   int get pendingCount => _pendingCount;
   bool get syncing => _syncing;
   bool get isOnline => _isOnline;
+
+  void _scheduleSync() {
+    unawaited(Future<void>.delayed(const Duration(seconds: 3))
+        .then((_) => syncPending()));
+  }
 
   Future<OfflineSubmitResult> submitReservation(
       Map<String, dynamic> payload) async {
@@ -219,7 +225,8 @@ class OfflineSyncService extends ChangeNotifier {
     return await _database.getStorageDiagnostics(scope);
   }
 
-  Future<Map<String, dynamic>?> fetchRemoteSyncMetrics({int? sucursalId}) async {
+  Future<Map<String, dynamic>?> fetchRemoteSyncMetrics(
+      {int? sucursalId}) async {
     try {
       final response = await _api.get(
         ApiConfig.syncMetricasUrl(sucursalId: sucursalId),
@@ -239,4 +246,3 @@ class OfflineSyncService extends ChangeNotifier {
     super.dispose();
   }
 }
-
