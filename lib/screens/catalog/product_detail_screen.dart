@@ -1591,8 +1591,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final aperturaTexto =
         (selectedBranch?['hora_apertura'] ?? '09:00').toString();
     final cierreTexto = (selectedBranch?['hora_cierre'] ?? '18:00').toString();
-    String formatDate(DateTime value) =>
-        '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
     bool horarioProvisional = false;
     Future<List<Map<String, dynamic>>> cargarBloques(DateTime fecha) async {
       if (!offlineSync.isOnline) {
@@ -1602,7 +1600,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       try {
         final response = await api.get(
           ApiConfig.reservasDisponibilidadUrl(
-              sucursalSeleccionada, formatDate(fecha)),
+              sucursalSeleccionada, formatReservationDate(fecha)),
           requireAuth: true,
         );
         if (response.statusCode == 200) {
@@ -1770,7 +1768,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                       .submitReservation(
                                 {
                                   'sucursal_id': sucursalSeleccionada,
-                                  'fecha_limite': fechaLimite.toIso8601String(),
+                                  'fecha_limite':
+                                      formatReservationDate(fechaLimite),
                                   'hora_retiro': '$horaRetiro:00',
                                   'items': [
                                     {

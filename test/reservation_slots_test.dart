@@ -19,4 +19,8 @@ void main() {
     expect(slots.first['inicio'], '09:00');
     expect(slots.last['fin'], '18:00');
   });
+
+  test('serializa la fecha con el contrato date del backend', () {
+    expect(formatReservationDate(DateTime(2026, 10, 30, 18, 45)), '2026-10-30');
+  });
 }
