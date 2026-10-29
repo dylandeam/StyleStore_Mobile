@@ -19,13 +19,25 @@ void main() {
     expect(review.route, '/catalogo/producto/PROD-0001');
   });
 
-  test('un conflicto explica que la operación necesita revisión', () {
+  test('explica cuando una reserva offline pierde el último stock', () {
+    final result = describeOfflineOperationResult(
+      operationType: 'reserva',
+      status: 'conflicto',
+      reason: 'Stock insuficiente. Disponible: 0, solicitado: 1.',
+    );
+
+    expect(result.title, 'Reserva no realizada · prenda agotada');
+    expect(result.body, contains('Otra compra o reserva agotó la prenda'));
+    expect(result.body, contains('No se descontó ni se cobró nada'));
+  });
+
+  test('un conflicto de horario conserva el motivo de la reserva', () {
     final message = describeOfflineOperationResult(
       operationType: 'reserva',
       status: 'conflicto',
-      reason: 'Stock insuficiente',
+      reason: 'El bloque horario ya fue ocupado',
     );
-    expect(message.title, 'Operación pendiente de revisión');
-    expect(message.body, contains('Stock insuficiente'));
+    expect(message.title, 'Reserva no realizada');
+    expect(message.body, contains('El bloque horario ya fue ocupado'));
   });
 }
