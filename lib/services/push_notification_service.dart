@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/api_config.dart';
 import '../config/routes.dart';
+import '../models/offline_operation_notification.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 
@@ -93,6 +94,10 @@ class PushNotificationService {
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
             ?.createNotificationChannel(_channel);
+        await _localNotifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
         _localReady = true;
       } catch (error) {
         // Desktop/widget tests do not register the native notification plugin.
@@ -195,6 +200,39 @@ class PushNotificationService {
         iOS: DarwinNotificationDetails(presentSound: true),
       ),
       payload: message.data['route']?.toString(),
+    );
+  }
+
+  Future<void> showOfflineOperationResult({
+    required String operationType,
+    required String status,
+    String? reason,
+    String? productCode,
+  }) async {
+    if (!_localReady) return;
+    final message = describeOfflineOperationResult(
+      operationType: operationType,
+      status: status,
+      reason: reason,
+      productCode: productCode,
+    );
+    await _localNotifications.show(
+      id: DateTime.now().microsecondsSinceEpoch.remainder(2147483647),
+      title: message.title,
+      body: message.body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'stylestore_alerts',
+          'Alertas de StyleStore',
+          channelDescription:
+              'Compras, reservas, delivery, stock y novedades de tu tienda.',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+      payload: message.route,
     );
   }
 

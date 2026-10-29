@@ -148,30 +148,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _saveReview(StateSetter setSheetState) async {
     final comment = _reviewController.text.trim();
     if (_reviewScore < 1 || comment.length < 4) return;
-    final api = Provider.of<ApiService>(context, listen: false);
-    final response = await api.put(
-      '${ApiConfig.baseUrl}/productos/${widget.codigo}/resenas/mia',
-      body: {'puntuacion': _reviewScore, 'comentario': comment},
-    );
+    final result = await context.read<OfflineSyncService>().submitProductReview(
+          productCode: widget.codigo,
+          score: _reviewScore,
+          comment: comment,
+        );
     if (!mounted) return;
-    if (response.statusCode == 200) {
+    if (result.confirmed || result.queued) {
       Navigator.pop(context);
-      await _loadReviews();
+      if (result.confirmed) await _loadReviews();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Tu opinión ya está publicada.'),
-        backgroundColor: AppTheme.successGreen,
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message),
+        backgroundColor:
+            result.queued ? AppTheme.accentIndigo : AppTheme.successGreen,
       ));
       return;
     }
-    String message = 'No pudimos publicar tu opinión.';
-    try {
-      message =
-          jsonDecode(utf8.decode(response.bodyBytes))['detail'] ?? message;
-    } catch (_) {}
     setSheetState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppTheme.dangerRed));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.message), backgroundColor: AppTheme.dangerRed));
   }
 
   void _openReviewComposer() {

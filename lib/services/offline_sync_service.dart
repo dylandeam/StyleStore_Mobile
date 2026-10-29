@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../config/api_config.dart';
 import 'api_service.dart';
 import 'local_database_service.dart';
+import 'push_notification_service.dart';
 import 'storage_service.dart';
 
 class OfflineSubmitResult {
@@ -146,6 +147,60 @@ class OfflineSyncService extends ChangeNotifier {
     );
   }
 
+  Future<OfflineSubmitResult> submitProductReview({
+    required String productCode,
+    required int score,
+    required String comment,
+  }) async {
+    final payload = {
+      'codigo': productCode,
+      'puntuacion': score,
+      'comentario': comment.trim(),
+    };
+    final connectivity = await Connectivity().checkConnectivity();
+    if (!connectivity.contains(ConnectivityResult.none)) {
+      try {
+        final response = await _api.put(
+          '${ApiConfig.baseUrl}/productos/$productCode/resenas/mia',
+          body: payload,
+          requireAuth: true,
+        );
+        if (response.statusCode == 200) {
+          return const OfflineSubmitResult(
+            confirmed: true,
+            queued: false,
+            operationUuid: '',
+            message: 'Tu opinión ya está publicada.',
+          );
+        }
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        return OfflineSubmitResult(
+          confirmed: false,
+          queued: false,
+          operationUuid: '',
+          message:
+              body['detail']?.toString() ?? 'No pudimos publicar tu opinión.',
+        );
+      } catch (_) {
+        // Si la red cae durante el envío, preservamos la opinión en la cola.
+      }
+    }
+    final operationUuid = const Uuid().v4();
+    await _database.queueProductReview(
+      operationUuid: operationUuid,
+      scope: await _storage.getOfflineScope(),
+      payload: payload,
+    );
+    await refreshPendingCount();
+    return OfflineSubmitResult(
+      confirmed: false,
+      queued: true,
+      operationUuid: operationUuid,
+      message:
+          'Opinión guardada. Te avisaremos cuando se publique al recuperar conexión.',
+    );
+  }
+
   Future<void> syncPending() async {
     if (_syncing) return;
     _syncing = true;
@@ -183,6 +238,16 @@ class OfflineSyncService extends ChangeNotifier {
             reason: reason,
             resultId: result['result_id'] as int?,
           );
+          if (status != 'pendiente') {
+            final payload = jsonDecode(operation['payload'] as String)
+                as Map<String, dynamic>;
+            await PushNotificationService.instance.showOfflineOperationResult(
+              operationType: operation['operation_type'] as String,
+              status: status,
+              reason: reason,
+              productCode: payload['codigo']?.toString(),
+            );
+          }
         } catch (_) {
           break;
         }

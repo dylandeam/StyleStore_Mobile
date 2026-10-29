@@ -72,6 +72,32 @@ void main() {
     await service.close();
   });
 
+  test(
+      'una reseña offline conserva comentario y calificación hasta sincronizar',
+      () async {
+    final service = LocalDatabaseService();
+    const scope = 'empresa-7:usuario-11';
+    await service.queueProductReview(
+      operationUuid: '77777777-7777-4777-8777-777777777777',
+      scope: scope,
+      payload: {
+        'codigo': 'PROD-0001',
+        'puntuacion': 5,
+        'comentario': 'Me interesa esta prenda.',
+      },
+    );
+    final pending = await service.pendingOperations(scope);
+    expect(pending, hasLength(1));
+    expect(pending.single['operation_type'], 'resena_producto');
+    await service.updateOperation(
+      '77777777-7777-4777-8777-777777777777',
+      'confirmada',
+      resultId: 15,
+    );
+    expect((await service.allOperations(scope)).single['status'], 'confirmada');
+    await service.close();
+  });
+
   test('aislamiento y persistencia de clientes locales por ámbito', () async {
     final service = LocalDatabaseService();
     await service.saveLocalClient('empresa-1:usuario-10', {

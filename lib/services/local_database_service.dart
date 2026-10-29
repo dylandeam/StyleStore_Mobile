@@ -320,6 +320,22 @@ class LocalDatabaseService {
     });
   }
 
+  Future<void> queueProductReview({
+    required String operationUuid,
+    required String scope,
+    required Map<String, dynamic> payload,
+  }) async {
+    await (await database).insert('sync_queue', {
+      'operation_uuid': operationUuid,
+      'scope': scope,
+      'operation_type': 'resena_producto',
+      'payload_version': 1,
+      'payload': jsonEncode(payload),
+      'client_created_at': DateTime.now().toUtc().toIso8601String(),
+      'status': 'pendiente',
+    });
+  }
+
   Future<List<Map<String, dynamic>>> pendingOperations(String scope) async {
     return (await database).query(
       'sync_queue',
@@ -355,7 +371,8 @@ class LocalDatabaseService {
           where: 'operation_uuid = ?',
           whereArgs: [operationUuid],
           limit: 1);
-      if (typeRows.isNotEmpty) {
+      if (typeRows.isNotEmpty &&
+          typeRows.first['operation_type'] != 'resena_producto') {
         final table = typeRows.first['operation_type'] == 'reserva'
             ? 'local_reservations'
             : 'local_sales';
