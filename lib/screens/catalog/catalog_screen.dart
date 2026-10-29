@@ -3252,7 +3252,7 @@ class _CatalogScreenState extends State<CatalogScreen>
           ),
           const SizedBox(height: 6),
           Text(
-              'Total: Bs. ${order.total.toStringAsFixed(2)} | Tipo: ${order.tipoVenta}',
+              '${order.estado.toLowerCase() == 'pendiente_pago' ? 'Total de la orden' : 'Total pagado'}: Bs. ${order.total.toStringAsFixed(2)} | Tipo: ${order.tipoVenta}',
               style:
                   const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           if (order.envioEstado != null) ...[
@@ -3274,6 +3274,46 @@ class _CatalogScreenState extends State<CatalogScreen>
                         color: AppTheme.accentIndigo,
                         fontWeight: FontWeight.w600)),
               ],
+            ),
+          ],
+          if (order.paymentOperationUuid != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F7FA),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Referencia única\n${order.paymentOperationUuid}',
+                style: const TextStyle(
+                  color: Color(0xFF334155),
+                  fontSize: 11,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+          if (order.estado.toLowerCase() == 'reembolsada_stock') ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                border: Border.all(color: const Color(0xFF93C5FD)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Prenda agotada · dinero devuelto\n${order.refundReason ?? 'PayPal devolvió el importe a la cuenta de origen.'}${order.paypalRefundId != null ? '\nReembolso: ${order.paypalRefundId}' : ''}',
+                style: const TextStyle(
+                  color: Color(0xFF1E3A8A),
+                  fontSize: 12,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
 
@@ -3664,7 +3704,7 @@ class _CatalogScreenState extends State<CatalogScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.bgCard,
+      backgroundColor: const Color(0xFFFBF8F1),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
@@ -3706,11 +3746,14 @@ class _CatalogScreenState extends State<CatalogScreen>
                     const SizedBox(height: 6),
                     DropdownButtonFormField<int>(
                       initialValue: selectedDetalleId,
-                      dropdownColor: AppTheme.bgCard,
+                      dropdownColor: const Color(0xFFFBF8F1),
+                      style: const TextStyle(
+                          color: Color(0xFF172536), fontSize: 16),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10)),
                         filled: true,
+                        fillColor: const Color(0xFFFFFFFF),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                       ),
@@ -3719,7 +3762,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                           value: d.id,
                           child: Text(
                               '${d.productoNombre} (${d.tallaNombre ?? ''} / ${d.colorNombre ?? ''}) - Bs. ${d.subtotal.toStringAsFixed(2)}',
-                              overflow: TextOverflow.ellipsis),
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFF172536))),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -3739,7 +3783,10 @@ class _CatalogScreenState extends State<CatalogScreen>
                       children: [
                         Expanded(
                           child: ChoiceChip(
-                            label: const Center(child: Text('Cambio')),
+                            label: const Center(
+                                child: Text('Cambio',
+                                    style:
+                                        TextStyle(color: Color(0xFF172536)))),
                             selected: tipo == 'cambio',
                             selectedColor: const Color(0xFFC5A880),
                             onSelected: (_) =>
@@ -3749,7 +3796,10 @@ class _CatalogScreenState extends State<CatalogScreen>
                         const SizedBox(width: 10),
                         Expanded(
                           child: ChoiceChip(
-                            label: const Center(child: Text('Devolución')),
+                            label: const Center(
+                                child: Text('Devolución',
+                                    style:
+                                        TextStyle(color: Color(0xFF172536)))),
                             selected: tipo == 'devolucion',
                             selectedColor: const Color(0xFFC5A880),
                             onSelected: (_) =>
@@ -3767,18 +3817,22 @@ class _CatalogScreenState extends State<CatalogScreen>
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: motivo,
-                      dropdownColor: AppTheme.bgCard,
+                      dropdownColor: const Color(0xFFFBF8F1),
+                      style: const TextStyle(
+                          color: Color(0xFF172536), fontSize: 16),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10)),
                         filled: true,
+                        fillColor: const Color(0xFFFFFFFF),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                       ),
                       items: motivos.map((m) {
                         return DropdownMenuItem<String>(
                           value: m,
-                          child: Text(m),
+                          child: Text(m,
+                              style: const TextStyle(color: Color(0xFF172536))),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -3789,6 +3843,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                     TextField(
                       controller: descCtrl,
                       maxLines: 2,
+                      style: const TextStyle(
+                          color: Color(0xFF172536), fontSize: 16),
                       decoration: InputDecoration(
                         labelText: 'Descripción del problema',
                         hintText:
@@ -3796,6 +3852,9 @@ class _CatalogScreenState extends State<CatalogScreen>
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10)),
                         filled: true,
+                        fillColor: const Color(0xFFFFFFFF),
+                        labelStyle: const TextStyle(color: Color(0xFF526273)),
+                        hintStyle: const TextStyle(color: Color(0xFF64748B)),
                       ),
                     ),
                     const SizedBox(height: 16),

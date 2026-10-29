@@ -89,6 +89,8 @@ class ApiConfig {
 
   // Ventas y Pedidos
   static String get misComprasUrl => '$baseUrl/ventas/mis-compras';
+  static String get paypalReconcileUrl =>
+      '$baseUrl/pagos/paypal/reconciliar-pendientes';
   static String get ventasPresencialUrl => '$baseUrl/ventas/presencial';
 
   // Envíos (CU19)

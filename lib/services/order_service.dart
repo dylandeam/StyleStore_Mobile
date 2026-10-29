@@ -38,6 +38,17 @@ class OrderService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Una aprobación puede ocurrir en el teléfono de otra persona. Antes de
+      // leer el historial, el backend concilia esas capturas por su ID único.
+      try {
+        await _apiService.post(
+          ApiConfig.paypalReconcileUrl,
+          body: const <String, dynamic>{},
+          requireAuth: true,
+        );
+      } catch (_) {
+        // El historial sigue siendo útil aunque PayPal esté temporalmente lento.
+      }
       final res =
           await _apiService.get(ApiConfig.misComprasUrl, requireAuth: true);
       if (res.statusCode == 200) {

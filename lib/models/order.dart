@@ -58,6 +58,9 @@ class OrderItem {
   final String? pagoEstado;
   final String? reciboNumero;
   final bool pagoEmailConfirmado;
+  final String? paymentOperationUuid;
+  final String? paypalRefundId;
+  final String? refundReason;
 
   OrderItem({
     required this.id,
@@ -84,6 +87,9 @@ class OrderItem {
     this.pagoEstado,
     this.reciboNumero,
     this.pagoEmailConfirmado = false,
+    this.paymentOperationUuid,
+    this.paypalRefundId,
+    this.refundReason,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -137,6 +143,9 @@ class OrderItem {
       pagoEstado: json['pago_estado'] as String?,
       reciboNumero: json['recibo_numero'] as String?,
       pagoEmailConfirmado: json['pago_email_confirmado'] as bool? ?? false,
+      paymentOperationUuid: json['payment_operation_uuid'] as String?,
+      paypalRefundId: json['paypal_refund_id'] as String?,
+      refundReason: json['refund_reason'] as String?,
     );
   }
 
