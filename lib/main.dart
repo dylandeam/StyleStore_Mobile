@@ -17,6 +17,7 @@ import 'services/local_database_service.dart';
 import 'services/offline_sync_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/tenant_portal_service.dart';
+import 'services/permission_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,9 @@ class StyleStoreApp extends StatelessWidget {
           create: (_) =>
               AuthService(apiService, storageService, pushNotifications),
         ),
+        ChangeNotifierProvider<PermissionService>(
+          create: (_) => PermissionService(apiService, storageService),
+        ),
         ChangeNotifierProvider<TenantPortalService>(
           create: (_) => TenantPortalService(apiService, storageService),
         ),
@@ -66,13 +70,24 @@ class StyleStoreApp extends StatelessWidget {
           create: (_) => OrderService(apiService),
         ),
       ],
-      child: Consumer2<AuthService, TenantPortalService>(
-        builder: (context, authService, tenantPortal, _) {
+      child: Consumer3<AuthService, TenantPortalService, PermissionService>(
+        builder: (context, authService, tenantPortal, permissions, _) {
           if (authService.status == AuthStatus.authenticated &&
               !tenantPortal.hasTenant &&
               !tenantPortal.restoring) {
             WidgetsBinding.instance.addPostFrameCallback(
               (_) => tenantPortal.syncAuthenticatedTenant(),
+            );
+          }
+          final currentEmpresaId = authService.currentUser?.empresaId;
+          final currentRole = authService.currentUser?.role;
+          if (authService.status == AuthStatus.authenticated &&
+              currentEmpresaId != null &&
+              (permissions.empresaId != currentEmpresaId ||
+                  permissions.role != currentRole) &&
+              !permissions.loading) {
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => permissions.refresh(),
             );
           }
           return MaterialApp(

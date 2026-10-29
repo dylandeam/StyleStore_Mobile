@@ -11,6 +11,7 @@ import '../../services/api_service.dart';
 import '../../services/cart_service.dart';
 import '../../services/catalog_service.dart';
 import '../../services/offline_sync_service.dart';
+import '../../services/permission_service.dart';
 import '../../utils/reservation_slots.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -146,6 +147,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _saveReview(StateSetter setSheetState) async {
+    final permissions = context.read<PermissionService>();
+    if (!permissions.allows('resenas.crear')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(permissions.unavailableMessage('resenas.crear')),
+        backgroundColor: AppTheme.warningOrange,
+      ));
+      return;
+    }
     final comment = _reviewController.text.trim();
     if (_reviewScore < 1 || comment.length < 4) return;
     final result = await context.read<OfflineSyncService>().submitProductReview(
@@ -412,6 +421,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _agregarAlCarrito({bool irAlCheckout = false}) async {
+    final permissions = context.read<PermissionService>();
+    if (!permissions.allows('carrito.usar') ||
+        (irAlCheckout && !permissions.allows('ventas.comprar'))) {
+      final code = irAlCheckout ? 'ventas.comprar' : 'carrito.usar';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(permissions.unavailableMessage(code)),
+        backgroundColor: AppTheme.warningOrange,
+      ));
+      return;
+    }
     if (_selectedColorId == null ||
         _selectedTallaId == null ||
         _availableStock <= 0) {
@@ -1518,6 +1537,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _abrirModalReserva(Map<String, dynamic> p) async {
+    final permissions = context.read<PermissionService>();
+    if (!permissions.allows('reservas.crear')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(permissions.unavailableMessage('reservas.crear')),
+        backgroundColor: AppTheme.warningOrange,
+      ));
+      return;
+    }
     final api = Provider.of<ApiService>(context, listen: false);
     final catalogService = Provider.of<CatalogService>(context, listen: false);
     final offlineSync = Provider.of<OfflineSyncService>(context, listen: false);
@@ -1824,9 +1851,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildBottomBar(Map<String, dynamic> p) {
+    final permissions = context.watch<PermissionService>();
     final bool canBuy = _availableStock > 0 &&
         _selectedColorId != null &&
         _selectedTallaId != null;
+    final canReserve = canBuy && permissions.allows('reservas.crear');
+    final canUseCart = canBuy && permissions.allows('carrito.usar');
+    final canPurchase = canUseCart && permissions.allows('ventas.comprar');
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1844,7 +1875,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             OutlinedButton.icon(
-              onPressed: canBuy ? () => _abrirModalReserva(p) : null,
+              onPressed: canReserve ? () => _abrirModalReserva(p) : null,
               icon: const Icon(Icons.bookmark_add_outlined, size: 20),
               label: const Text('Reservar para recoger en tienda'),
               style: OutlinedButton.styleFrom(
@@ -1859,7 +1890,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Row(children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: canBuy
+                  onPressed: canUseCart
                       ? () => _agregarAlCarrito(irAlCheckout: false)
                       : null,
                   icon: const Icon(Icons.add_shopping_cart, size: 18),
@@ -1876,7 +1907,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: canBuy
+                  onPressed: canPurchase
                       ? () => _agregarAlCarrito(irAlCheckout: true)
                       : null,
                   icon: const Icon(Icons.flash_on, size: 18),
@@ -1926,7 +1957,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final reviews =
         List<Map<String, dynamic>>.from(_reviews?['resenas'] ?? const []);
     final average = (summary['promedio'] as num?)?.toDouble() ?? 0;
-    final canComment = _reviews?['puede_comentar'] == true;
+    final permissions = context.watch<PermissionService>();
+    final canComment = _reviews?['puede_comentar'] == true &&
+        permissions.allows('resenas.crear');
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1995,6 +2028,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14))),
+            ),
+          ],
+          if (_reviews?['puede_comentar'] == true && !canComment) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningOrange.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                permissions.unavailableMessage('resenas.crear'),
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
           ],
           const SizedBox(height: 18),

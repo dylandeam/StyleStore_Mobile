@@ -26,6 +26,7 @@ import 'delivery_tracking_screen.dart';
 import 'outfits_screen.dart';
 import 'chatbot_screen.dart';
 import '../../services/offline_sync_service.dart';
+import '../../services/permission_service.dart';
 
 class CatalogScreen extends StatefulWidget {
   final int initialTab;
@@ -1135,6 +1136,7 @@ class _CatalogScreenState extends State<CatalogScreen>
 
   Widget _buildProductCard(Producto p) {
     final imageUrl = _resolveImageUrl(p.foto);
+    final permissions = Provider.of<PermissionService>(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1404,7 +1406,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: p.stockTotal <= 0
+                        onPressed: p.stockTotal <= 0 ||
+                                !permissions.allows('carrito.usar')
                             ? null
                             : () => _handleAddToCart(p),
                         icon:
@@ -1422,7 +1425,8 @@ class _CatalogScreenState extends State<CatalogScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: p.stockTotal <= 0
+                        onPressed: p.stockTotal <= 0 ||
+                                !permissions.allows('reservas.crear')
                             ? null
                             : () => _handleReserveProduct(p),
                         icon: const Icon(Icons.bookmark_border, size: 16),
@@ -1961,9 +1965,12 @@ class _CatalogScreenState extends State<CatalogScreen>
   Widget _buildCartTab() {
     final cartService = Provider.of<CartService>(context);
     final offlineSync = Provider.of<OfflineSyncService>(context);
+    final permissions = Provider.of<PermissionService>(context);
     final discountAmount = cartService.total * _discountPercent / 100;
-    final checkoutBlocked =
-        !offlineSync.isOnline || cartService.pendingLocalItems > 0;
+    final purchaseAllowed = permissions.allows('ventas.comprar');
+    final checkoutBlocked = !purchaseAllowed ||
+        !offlineSync.isOnline ||
+        cartService.pendingLocalItems > 0;
 
     if (cartService.isLoading) {
       return const Center(
@@ -2013,6 +2020,28 @@ class _CatalogScreenState extends State<CatalogScreen>
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (!purchaseAllowed) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningOrange.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: AppTheme.warningOrange.withValues(alpha: .45)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.pause_circle_outline,
+                    color: AppTheme.warningOrange),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(
+                  permissions.unavailableMessage('ventas.comprar'),
+                  style: const TextStyle(color: AppTheme.textSecondary),
+                )),
+              ]),
             ),
             const SizedBox(height: 12),
           ],
@@ -2144,7 +2173,9 @@ class _CatalogScreenState extends State<CatalogScreen>
                       : () => _showCheckoutModal(cartService),
                   icon: const Icon(Icons.payment),
                   label: Text(checkoutBlocked
-                      ? 'Reconecta para confirmar y pagar'
+                      ? (!purchaseAllowed
+                          ? 'Compras pausadas temporalmente'
+                          : 'Reconecta para confirmar y pagar')
                       : 'Calcular delivery y continuar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF14263D),

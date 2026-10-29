@@ -39,6 +39,7 @@ class StorageService {
   static const String _keyDeviceId = 'stylestore_device_id';
   static const String _keyPushRegistration = 'stylestore_push_registration';
   static const String _keyTenantPortal = 'stylestore_tenant_portal';
+  static const String _keyPermissions = 'stylestore_effective_permissions';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -85,6 +86,14 @@ class StorageService {
       _storage.write(key: _keyTenantPortal, value: value);
 
   Future<void> clearTenantPortal() => _storage.delete(key: _keyTenantPortal);
+
+  Future<String?> getEffectivePermissions() => _readSafely(_keyPermissions);
+
+  Future<void> saveEffectivePermissions(String value) =>
+      _storage.write(key: _keyPermissions, value: value);
+
+  Future<void> clearEffectivePermissions() =>
+      _storage.delete(key: _keyPermissions);
 
   Future<String?> _readSafely(String key) async {
     try {
