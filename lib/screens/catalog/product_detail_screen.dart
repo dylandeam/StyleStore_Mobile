@@ -568,7 +568,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           p['nombre'] ?? 'Detalle de Prenda',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
-        backgroundColor: AppTheme.bgSecondary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         actions: [
           Consumer<CartService>(
@@ -1657,190 +1658,195 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final fechaLimite = DateTime.now().add(Duration(days: diasReserva));
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom +
-                    MediaQuery.of(ctx).viewPadding.bottom +
-                    20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('Reservar Prenda en Tienda',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary)),
-                    const SizedBox(height: 8),
-                    Text('Prenda: ${p['nombre']}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF14263D))),
-                    const SizedBox(height: 12),
-                    const Text('Fecha de recogida (hasta 3 días):',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      children: [1, 2, 3].map((d) {
-                        final sel = diasReserva == d;
-                        return ChoiceChip(
-                          label: Text('$d días'),
-                          selected: sel,
-                          selectedColor: const Color(0xFFC5A880),
-                          onSelected: (_) async {
-                            setModalState(() {
-                              diasReserva = d;
-                              cargandoBloques = true;
-                              horaRetiro = '';
-                            });
-                            final nuevos = await cargarBloques(
-                                DateTime.now().add(Duration(days: d)));
-                            if (!ctx.mounted) return;
-                            setModalState(() {
-                              bloques = nuevos;
-                              horaRetiro = nuevos
-                                      .cast<Map<String, dynamic>?>()
-                                      .firstWhere(
-                                          (block) =>
-                                              block?['disponible'] == true,
-                                          orElse: () => null)?['inicio']
-                                      ?.toString() ??
-                                  '';
-                              cargandoBloques = false;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
-                      style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                          fontStyle: FontStyle.italic),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: horaRetiro.isEmpty ? null : horaRetiro,
-                      decoration: const InputDecoration(
-                        labelText: 'Bloque de recogida (1 hora)',
-                        prefixIcon: Icon(Icons.schedule),
-                      ),
-                      hint: Text(cargandoBloques
-                          ? 'Consultando horarios...'
-                          : 'Selecciona un bloque disponible'),
-                      items: bloques.map((block) {
-                        final disponible = block['disponible'] == true;
-                        final inicio = block['inicio'].toString();
-                        final fin = block['fin'].toString();
-                        return DropdownMenuItem<String>(
-                          value: disponible ? inicio : 'ocupado-$inicio',
-                          enabled: disponible,
-                          child: Text(
-                              '$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
-                        );
-                      }).toList(),
-                      onChanged: cargandoBloques
-                          ? null
-                          : (value) =>
-                              setModalState(() => horaRetiro = value ?? ''),
-                    ),
-                    Text(
-                      'Horario de atención: $aperturaTexto – $cierreTexto',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                    if (horarioProvisional) ...[
+            return DefaultTextStyle.merge(
+              style: const TextStyle(color: AppTheme.textPrimary),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                      MediaQuery.of(ctx).viewPadding.bottom +
+                      20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Reservar Prenda en Tienda',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary)),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Sin conexión: el bloque es provisional. Se confirmará automáticamente al sincronizar.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF9A5A00),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Text('Prenda: ${p['nombre']}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF14263D))),
+                      const SizedBox(height: 12),
+                      const Text('Fecha de recogida (hasta 3 días):',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        children: [1, 2, 3].map((d) {
+                          final sel = diasReserva == d;
+                          return ChoiceChip(
+                            label: Text('$d días'),
+                            selected: sel,
+                            selectedColor: const Color(0xFFC5A880),
+                            onSelected: (_) async {
+                              setModalState(() {
+                                diasReserva = d;
+                                cargandoBloques = true;
+                                horaRetiro = '';
+                              });
+                              final nuevos = await cargarBloques(
+                                  DateTime.now().add(Duration(days: d)));
+                              if (!ctx.mounted) return;
+                              setModalState(() {
+                                bloques = nuevos;
+                                horaRetiro = nuevos
+                                        .cast<Map<String, dynamic>?>()
+                                        .firstWhere(
+                                            (block) =>
+                                                block?['disponible'] == true,
+                                            orElse: () => null)?['inicio']
+                                        ?.toString() ??
+                                    '';
+                                cargandoBloques = false;
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
-                    ],
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: horaRetiro.isEmpty
-                          ? null
-                          : () async {
-                              Navigator.pop(ctx);
-                              final stockId = _selectedStockInventarioId;
-                              if (stockId == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Selecciona una talla disponible para reservar.')),
-                                );
-                                return;
-                              }
-
-                              final result =
-                                  await Provider.of<OfflineSyncService>(context,
-                                          listen: false)
-                                      .submitReservation(
-                                {
-                                  'sucursal_id': sucursalSeleccionada,
-                                  'fecha_limite':
-                                      formatReservationDate(fechaLimite),
-                                  'hora_retiro': '$horaRetiro:00',
-                                  'items': [
-                                    {
-                                      'stock_inventario_id': stockId,
-                                      'cantidad': _quantity,
-                                    }
-                                  ],
-                                },
-                              );
-
-                              if (mounted) {
-                                if (result.confirmed) {
+                      const SizedBox(height: 8),
+                      Text(
+                        'Fecha límite para recojo: ${fechaLimite.day}/${fechaLimite.month}/${fechaLimite.year}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                            fontStyle: FontStyle.italic),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: horaRetiro.isEmpty ? null : horaRetiro,
+                        decoration: const InputDecoration(
+                          labelText: 'Bloque de recogida (1 hora)',
+                          prefixIcon: Icon(Icons.schedule),
+                        ),
+                        hint: Text(cargandoBloques
+                            ? 'Consultando horarios...'
+                            : 'Selecciona un bloque disponible'),
+                        items: bloques.map((block) {
+                          final disponible = block['disponible'] == true;
+                          final inicio = block['inicio'].toString();
+                          final fin = block['fin'].toString();
+                          return DropdownMenuItem<String>(
+                            value: disponible ? inicio : 'ocupado-$inicio',
+                            enabled: disponible,
+                            child: Text(
+                                '$inicio–$fin ${disponible ? 'Disponible' : 'Ocupado'}'),
+                          );
+                        }).toList(),
+                        onChanged: cargandoBloques
+                            ? null
+                            : (value) =>
+                                setModalState(() => horaRetiro = value ?? ''),
+                      ),
+                      Text(
+                        'Horario de atención: $aperturaTexto – $cierreTexto',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                      if (horarioProvisional) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Sin conexión: el bloque es provisional. Se confirmará automáticamente al sincronizar.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF9A5A00),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: horaRetiro.isEmpty
+                            ? null
+                            : () async {
+                                Navigator.pop(ctx);
+                                final stockId = _selectedStockInventarioId;
+                                if (stockId == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                          '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
-                                      backgroundColor: AppTheme.successGreen,
-                                    ),
+                                        content: Text(
+                                            'Selecciona una talla disponible para reservar.')),
                                   );
-                                  _loadProductData();
-                                } else if (result.queued) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
-                                      backgroundColor: const Color(0xFFB7791F),
-                                      duration: const Duration(seconds: 6),
-                                    ),
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(result.message),
-                                        backgroundColor: AppTheme.dangerRed),
-                                  );
+                                  return;
                                 }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF14263D),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+
+                                final result =
+                                    await Provider.of<OfflineSyncService>(
+                                            context,
+                                            listen: false)
+                                        .submitReservation(
+                                  {
+                                    'sucursal_id': sucursalSeleccionada,
+                                    'fecha_limite':
+                                        formatReservationDate(fechaLimite),
+                                    'hora_retiro': '$horaRetiro:00',
+                                    'items': [
+                                      {
+                                        'stock_inventario_id': stockId,
+                                        'cantidad': _quantity,
+                                      }
+                                    ],
+                                  },
+                                );
+
+                                if (mounted) {
+                                  if (result.confirmed) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            '¡Prenda reservada con éxito! Puedes verla en la pestaña Mis Pedidos.'),
+                                        backgroundColor: AppTheme.successGreen,
+                                      ),
+                                    );
+                                    _loadProductData();
+                                  } else if (result.queued) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            '${result.message} Comprobante: ${result.operationUuid.substring(0, 8).toUpperCase()}'),
+                                        backgroundColor:
+                                            const Color(0xFFB7791F),
+                                        duration: const Duration(seconds: 6),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(result.message),
+                                          backgroundColor: AppTheme.dangerRed),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF14263D),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Confirmar Reserva en Sucursal',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      child: const Text('Confirmar Reserva en Sucursal',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1859,12 +1865,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final canUseCart = canBuy && permissions.allows('carrito.usar');
     final canPurchase = canUseCart && permissions.allows('ventas.comprar');
 
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
-        color: AppTheme.bgCard,
-        border: Border(top: BorderSide(color: AppTheme.borderGlass)),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: const Border(top: BorderSide(color: AppTheme.borderGlass)),
+        boxShadow: const [
           BoxShadow(
               color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, -2)),
         ],
@@ -1879,7 +1886,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               icon: const Icon(Icons.bookmark_add_outlined, size: 20),
               label: const Text('Reservar para recoger en tienda'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF14263D),
+                foregroundColor: colors.onSurface,
                 side: const BorderSide(color: Color(0xFFC5A880), width: 1.5),
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
@@ -1896,8 +1903,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: const Icon(Icons.add_shopping_cart, size: 18),
                   label: const Text('Al Carrito'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.accentIndigo,
-                    side: const BorderSide(color: AppTheme.accentIndigo),
+                    foregroundColor: colors.onSurface,
+                    side: BorderSide(color: colors.onSurface),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -1913,8 +1920,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: const Icon(Icons.flash_on, size: 18),
                   label: const Text('Comprar Ahora'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF14263D),
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

@@ -105,19 +105,25 @@ class _CatalogScreenState extends State<CatalogScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.bgSecondary,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'StyleStore Moda',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            color: colors.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.accentIndigo,
-          labelColor: AppTheme.accentIndigo,
-          unselectedLabelColor: AppTheme.textMuted,
+          indicatorColor: colors.onSurface,
+          labelColor: colors.onSurface,
+          unselectedLabelColor: colors.onSurface.withValues(alpha: 0.68),
           isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.checkroom), text: 'Catálogo'),
@@ -2792,357 +2798,363 @@ class _CatalogScreenState extends State<CatalogScreen>
             final double totalPagar =
                 cartService.total * (1 - _discountPercent / 100) + costoEnvio;
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('Finalizar Pedido Online',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary)),
-                    const SizedBox(height: 14),
+            return DefaultTextStyle.merge(
+              style: const TextStyle(color: AppTheme.textPrimary),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Finalizar Pedido Online',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary)),
+                      const SizedBox(height: 14),
 
-                    // Alerta informativa Delivery StyleStore con Maps de Sucursal
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0x1A14263D),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0x6614263D)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.local_shipping_outlined,
-                                  color: Color(0xFF14263D), size: 20),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Delivery StyleStore: Servicio privado de despacho. Tarifa fija de Bs. 5.00 + Bs. 0.60 por kilómetro desde la sucursal.',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textPrimary,
-                                      height: 1.3),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (branchMapsUrl != null &&
-                              branchMapsUrl.toString().trim().isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: () {
-                                Clipboard.setData(ClipboardData(
-                                    text: branchMapsUrl.toString()));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '📍 Enlace de Maps de $branchName copiado'),
-                                    backgroundColor: AppTheme.accentIndigo,
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                      color: const Color(0x806366F1)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.location_on,
-                                        size: 16, color: AppTheme.accentIndigo),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        'Ver ubicación de $branchName en Google Maps ↗',
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.accentIndigo),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    TextField(
-                      controller: addressCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Dirección y referencia de entrega',
-                        hintText:
-                            'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: mapsCtrl,
-                      onChanged: (_) => setModalState(() {
-                        distanciaKm = null;
-                        costoEnvioCotizado = null;
-                        latDestino = null;
-                        lonDestino = null;
-                        errorCotizacion = null;
-                      }),
-                      onSubmitted: (value) => cotizarUbicacion(
-                        setModalState,
-                        mapsUrl: value,
-                      ),
-                      decoration: InputDecoration(
-                        labelText:
-                            'Enlace de Google Maps (Ubicación exacta del cliente)',
-                        hintText: 'https://maps.app.goo.gl/...',
-                        prefixIcon: const Icon(Icons.location_on,
-                            color: AppTheme.accentIndigo),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    FilledButton.icon(
-                      onPressed: cotizando
-                          ? null
-                          : () => usarUbicacionActual(setModalState),
-                      icon: cotizando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location),
-                      label: Text(cotizando
-                          ? 'Calculando ruta…'
-                          : 'Usar mi ubicación y calcular tarifa'),
-                    ),
-                    if (mapsCtrl.text.trim().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: cotizando
-                            ? null
-                            : () => cotizarUbicacion(
-                                  setModalState,
-                                  mapsUrl: mapsCtrl.text,
-                                ),
-                        icon: const Icon(Icons.calculate_outlined),
-                        label: const Text('Calcular desde enlace de Maps'),
-                      ),
-                    ],
-                    if (errorCotizacion != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        errorCotizacion!,
-                        style: const TextStyle(
-                            color: Colors.redAccent, fontSize: 12),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-
-                    // Resultado calculado por el servidor desde ambas coordenadas.
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.borderGlass),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Distancia de entrega estimada:',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppTheme.textSecondary)),
-                              Text(
-                                  distanciaKm == null
-                                      ? 'Pendiente'
-                                      : '${distanciaKm!.toStringAsFixed(2)} km',
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.accentIndigo)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'La distancia no se puede editar: se obtiene por GPS y se vuelve a validar en el servidor.',
-                            style: TextStyle(
-                                fontSize: 11, color: AppTheme.textSecondary),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Costo Delivery (5Bs + 0.6Bs/km):',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary)),
-                              Text('Bs. ${costoEnvio.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF14263D))),
-                            ],
-                          ),
-                          const Divider(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Total a Pagar (Prendas + Envío):',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF14263D))),
-                              Text('Bs. ${totalPagar.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF14263D))),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    const Text('Método de Pago Online:',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary)),
-                    const SizedBox(height: 8),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0x1A14263D),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.accentIndigo),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.radio_button_checked,
-                              color: AppTheme.accentIndigo, size: 20),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
+                      // Alerta informativa Delivery StyleStore con Maps de Sucursal
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A14263D),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0x6614263D)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('PayPal v2 (Tarjeta o Saldo Digital)',
+                                Icon(Icons.local_shipping_outlined,
+                                    color: Color(0xFF14263D), size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Delivery StyleStore: Servicio privado de despacho. Tarifa fija de Bs. 5.00 + Bs. 0.60 por kilómetro desde la sucursal.',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textPrimary,
+                                        height: 1.3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (branchMapsUrl != null &&
+                                branchMapsUrl.toString().trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(
+                                      text: branchMapsUrl.toString()));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '📍 Enlace de Maps de $branchName copiado'),
+                                      backgroundColor: AppTheme.accentIndigo,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: const Color(0x806366F1)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.location_on,
+                                          size: 16,
+                                          color: AppTheme.accentIndigo),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Ver ubicación de $branchName en Google Maps ↗',
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.accentIndigo),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      TextField(
+                        controller: addressCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Dirección y referencia de entrega',
+                          hintText:
+                              'Ej: Av. Melchor Pérez #120, Condominio Los Álamos Depto 4B',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          filled: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: mapsCtrl,
+                        onChanged: (_) => setModalState(() {
+                          distanciaKm = null;
+                          costoEnvioCotizado = null;
+                          latDestino = null;
+                          lonDestino = null;
+                          errorCotizacion = null;
+                        }),
+                        onSubmitted: (value) => cotizarUbicacion(
+                          setModalState,
+                          mapsUrl: value,
+                        ),
+                        decoration: InputDecoration(
+                          labelText:
+                              'Enlace de Google Maps (Ubicación exacta del cliente)',
+                          hintText: 'https://maps.app.goo.gl/...',
+                          prefixIcon: const Icon(Icons.location_on,
+                              color: AppTheme.accentIndigo),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          filled: true,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: cotizando
+                            ? null
+                            : () => usarUbicacionActual(setModalState),
+                        icon: cotizando
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: Text(cotizando
+                            ? 'Calculando ruta…'
+                            : 'Usar mi ubicación y calcular tarifa'),
+                      ),
+                      if (mapsCtrl.text.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: cotizando
+                              ? null
+                              : () => cotizarUbicacion(
+                                    setModalState,
+                                    mapsUrl: mapsCtrl.text,
+                                  ),
+                          icon: const Icon(Icons.calculate_outlined),
+                          label: const Text('Calcular desde enlace de Maps'),
+                        ),
+                      ],
+                      if (errorCotizacion != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          errorCotizacion!,
+                          style: const TextStyle(
+                              color: Colors.redAccent, fontSize: 12),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+
+                      // Resultado calculado por el servidor desde ambas coordenadas.
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.borderGlass),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Distancia de entrega estimada:',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.textSecondary)),
+                                Text(
+                                    distanciaKm == null
+                                        ? 'Pendiente'
+                                        : '${distanciaKm!.toStringAsFixed(2)} km',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.accentIndigo)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'La distancia no se puede editar: se obtiene por GPS y se vuelve a validar en el servidor.',
+                              style: TextStyle(
+                                  fontSize: 11, color: AppTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Costo Delivery (5Bs + 0.6Bs/km):',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary)),
+                                Text('Bs. ${costoEnvio.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF14263D))),
+                              ],
+                            ),
+                            const Divider(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total a Pagar (Prendas + Envío):',
                                     style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.textPrimary)),
-                                SizedBox(height: 2),
-                                Text(
-                                    'Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppTheme.textSecondary)),
+                                        color: Color(0xFF14263D))),
+                                Text('Bs. ${totalPagar.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF14263D))),
                               ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
+                      const SizedBox(height: 14),
 
-                    ElevatedButton(
-                      onPressed: distanciaKm == null ||
-                              costoEnvioCotizado == null ||
-                              latDestino == null ||
-                              lonDestino == null
-                          ? null
-                          : () async {
-                              final address = addressCtrl.text.trim();
-                              final mapsUrl = mapsCtrl.text.trim();
-                              if (address.isEmpty && mapsUrl.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Por favor ingresa la dirección de entrega o enlace de Maps.')),
-                                );
-                                return;
-                              }
+                      const Text('Método de Pago Online:',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary)),
+                      const SizedBox(height: 8),
 
-                              Navigator.pop(ctx);
-                              final direccionCompleta = mapsUrl.isNotEmpty
-                                  ? (address.isNotEmpty
-                                      ? '$address | Maps: $mapsUrl'
-                                      : mapsUrl)
-                                  : address;
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A14263D),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.accentIndigo),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.radio_button_checked,
+                                color: AppTheme.accentIndigo, size: 20),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('PayPal v2 (Tarjeta o Saldo Digital)',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textPrimary)),
+                                  SizedBox(height: 2),
+                                  Text(
+                                      'Pago seguro internacional. Para compras presenciales en efectivo o QR Simple visita nuestras cajas POS en tienda física.',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
 
-                              final res = await cartService.checkout(
-                                metodoPago: 'paypal',
-                                distanciaKm: distanciaKm,
-                                direccionEnvio: direccionCompleta,
-                                latitudDestino: latDestino,
-                                longitudDestino: lonDestino,
-                                ubicacionUrl:
-                                    mapsUrl.isNotEmpty ? mapsUrl : null,
-                                ciudad: branch != null
-                                    ? (branch['ciudad'] ?? 'Santa Cruz')
-                                    : 'Santa Cruz',
-                                sucursalId: sucursalId,
-                                codigoDescuento: _appliedDiscountCode.isNotEmpty
-                                    ? _appliedDiscountCode
-                                    : null,
-                              );
-
-                              if (res != null) {
-                                final ordenId = (res['orden_venta_id'] ??
-                                    res['orden_id'] ??
-                                    res['id']) as int?;
-                                final trackingToken =
-                                    res['token_seguimiento'] as String?;
-                                if (ordenId != null && mounted) {
-                                  _procesarPagoPayPal(context, ordenId,
-                                      totalPagar, trackingToken);
+                      ElevatedButton(
+                        onPressed: distanciaKm == null ||
+                                costoEnvioCotizado == null ||
+                                latDestino == null ||
+                                lonDestino == null
+                            ? null
+                            : () async {
+                                final address = addressCtrl.text.trim();
+                                final mapsUrl = mapsCtrl.text.trim();
+                                if (address.isEmpty && mapsUrl.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Por favor ingresa la dirección de entrega o enlace de Maps.')),
+                                  );
+                                  return;
                                 }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF14263D),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+
+                                Navigator.pop(ctx);
+                                final direccionCompleta = mapsUrl.isNotEmpty
+                                    ? (address.isNotEmpty
+                                        ? '$address | Maps: $mapsUrl'
+                                        : mapsUrl)
+                                    : address;
+
+                                final res = await cartService.checkout(
+                                  metodoPago: 'paypal',
+                                  distanciaKm: distanciaKm,
+                                  direccionEnvio: direccionCompleta,
+                                  latitudDestino: latDestino,
+                                  longitudDestino: lonDestino,
+                                  ubicacionUrl:
+                                      mapsUrl.isNotEmpty ? mapsUrl : null,
+                                  ciudad: branch != null
+                                      ? (branch['ciudad'] ?? 'Santa Cruz')
+                                      : 'Santa Cruz',
+                                  sucursalId: sucursalId,
+                                  codigoDescuento:
+                                      _appliedDiscountCode.isNotEmpty
+                                          ? _appliedDiscountCode
+                                          : null,
+                                );
+
+                                if (res != null) {
+                                  final ordenId = (res['orden_venta_id'] ??
+                                      res['orden_id'] ??
+                                      res['id']) as int?;
+                                  final trackingToken =
+                                      res['token_seguimiento'] as String?;
+                                  if (ordenId != null && mounted) {
+                                    _procesarPagoPayPal(context, ordenId,
+                                        totalPagar, trackingToken);
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF14263D),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                            'Confirmar y Pagar Bs. ${totalPagar.toStringAsFixed(2)} con PayPal',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      child: Text(
-                          'Confirmar y Pagar Bs. ${totalPagar.toStringAsFixed(2)} con PayPal',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -3168,11 +3180,12 @@ class _CatalogScreenState extends State<CatalogScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('📦 Mis Compras y Envíos',
-                style: TextStyle(
-                    fontSize: 16,
+            Text(
+              '📦 Mis Compras y Envíos',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary)),
+                  ),
+            ),
             const SizedBox(height: 10),
             if (orderService.saldoFavor > 0) ...[
               Container(
@@ -3197,26 +3210,31 @@ class _CatalogScreenState extends State<CatalogScreen>
               const SizedBox(height: 10),
             ],
             if (orderService.orders.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('No tienes órdenes de compra registradas.',
-                    style: TextStyle(color: AppTheme.textMuted)),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'No tienes órdenes de compra registradas.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               )
             else
               ...orderService.orders
                   .map((o) => _buildOrderCard(o, orderService)),
             const SizedBox(height: 20),
-            const Text('🔖 Mis Reservas Activas (48h)',
-                style: TextStyle(
-                    fontSize: 16,
+            Text(
+              '🔖 Mis Reservas Activas (48h)',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary)),
+                  ),
+            ),
             const SizedBox(height: 10),
             if (orderService.reservas.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('No tienes reservas activas.',
-                    style: TextStyle(color: AppTheme.textMuted)),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'No tienes reservas activas.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               )
             else
               ...orderService.reservas.map((r) => _buildReservaCard(r)),

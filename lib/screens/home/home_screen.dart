@@ -13,17 +13,18 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.bgCard,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
         elevation: 1,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.storefront_rounded,
-                color: AppTheme.accentIndigo, size: 24),
-            SizedBox(width: 8),
-            Text(
+            Icon(Icons.storefront_rounded, color: colors.onSurface, size: 24),
+            const SizedBox(width: 8),
+            const Text(
               'StyleStore',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
@@ -45,8 +46,8 @@ class HomeScreen extends StatelessWidget {
       drawer: _buildNavigationDrawer(context, authService, user),
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
-        backgroundColor: AppTheme.bgCard,
-        indicatorColor: AppTheme.bgSecondary,
+        backgroundColor: colors.surface,
+        indicatorColor: colors.primary,
         onDestinationSelected: (index) {
           if (index == 1) {
             Navigator.pushNamed(context, AppRoutes.catalog);
@@ -90,6 +91,7 @@ class HomeScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
+                                color: colors.surface,
                                 gradient: const LinearGradient(
                                   colors: [
                                     Color(0x336366F1),
@@ -132,17 +134,18 @@ class HomeScreen extends StatelessWidget {
                                   const SizedBox(height: 16),
                                   Text(
                                     '¡Hola, ${user?.name ?? "Usuario"}!',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
-                                      color: AppTheme.textPrimary,
+                                      color: colors.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  const Text(
+                                  Text(
                                     'Has ingresado correctamente a través de la aplicación móvil de StyleStore.',
                                     style: TextStyle(
-                                      color: AppTheme.textSecondary,
+                                      color: colors.onSurface
+                                          .withValues(alpha: 0.78),
                                       fontSize: 14,
                                     ),
                                   ),

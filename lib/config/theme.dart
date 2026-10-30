@@ -88,13 +88,39 @@ class AppTheme {
   // Alias para retrocompatibilidad
   static ThemeData get darkTheme => lightTheme;
 
+  static double contrastRatio(Color first, Color second) {
+    final firstLuminance = first.computeLuminance();
+    final secondLuminance = second.computeLuminance();
+    final light =
+        firstLuminance > secondLuminance ? firstLuminance : secondLuminance;
+    final dark =
+        firstLuminance > secondLuminance ? secondLuminance : firstLuminance;
+    return (light + 0.05) / (dark + 0.05);
+  }
+
+  static Color readableOn(Color background, {Color? preferred}) {
+    final requested = preferred ?? textPrimary;
+    if (contrastRatio(background, requested) >= 4.5) return requested;
+    final candidates = <Color>[Colors.white, Colors.black, textPrimary];
+    candidates.sort((a, b) =>
+        contrastRatio(background, b).compareTo(contrastRatio(background, a)));
+    return candidates.first;
+  }
+
   static ThemeData forTenant(TenantPortal? portal) {
     if (portal == null) return lightTheme;
     final primary = portal.primaryColor;
     final secondary = portal.accentColor;
     final surface = portal.secondaryColor;
     final background = portal.backgroundColor;
-    final text = portal.textColor;
+    final onBackground = readableOn(background, preferred: portal.textColor);
+    final onSurface = readableOn(surface, preferred: portal.textColor);
+    final onPrimary = readableOn(primary, preferred: portal.contrastTextColor);
+    final onSecondary =
+        readableOn(secondary, preferred: portal.contrastTextColor);
+    const controlSurface = Colors.white;
+    final onControl = readableOn(controlSurface, preferred: portal.textColor);
+    final mutedOnControl = onControl.withValues(alpha: 0.72);
     return lightTheme.copyWith(
       scaffoldBackgroundColor: background,
       primaryColor: primary,
@@ -104,28 +130,88 @@ class AppTheme {
         secondary: secondary,
         surface: surface,
         error: dangerRed,
-        onPrimary:
-            ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
-                ? Colors.white
-                : const Color(0xFF111827),
-        onSurface: text,
+        onPrimary: onPrimary,
+        onSecondary: onSecondary,
+        onSurface: onSurface,
+        onError: readableOn(dangerRed, preferred: Colors.white),
       ),
       textTheme:
           GoogleFonts.plusJakartaSansTextTheme(ThemeData.light().textTheme)
-              .apply(bodyColor: text, displayColor: text),
+              .apply(bodyColor: onBackground, displayColor: onBackground),
       appBarTheme: AppBarTheme(
         backgroundColor: surface,
-        foregroundColor: text,
+        foregroundColor: onSurface,
         elevation: 0,
-        iconTheme: IconThemeData(color: primary),
+        iconTheme: IconThemeData(color: onSurface),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: onSurface,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      cardTheme: CardThemeData(color: surface),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: onSurface,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: GoogleFonts.plusJakartaSans(color: onSurface),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        modalBackgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: primary,
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color:
+                  states.contains(WidgetState.selected) ? onPrimary : onSurface,
+            )),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              color: states.contains(WidgetState.selected)
+                  ? onSurface
+                  : onSurface.withValues(alpha: 0.82),
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            )),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: controlSurface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        labelStyle: TextStyle(color: mutedOnControl),
+        floatingLabelStyle: TextStyle(color: onControl),
+        hintStyle: TextStyle(color: mutedOnControl, fontSize: 14),
+        prefixIconColor: onControl,
+        suffixIconColor: onControl,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: borderGlass),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: borderGlass),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: primary, width: 2),
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primary,
+        selectionColor: primary.withValues(alpha: 0.22),
+        selectionHandleColor: primary,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor:
-              ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
-                  ? Colors.white
-                  : const Color(0xFF111827),
+          foregroundColor: onPrimary,
           elevation: 2,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape:

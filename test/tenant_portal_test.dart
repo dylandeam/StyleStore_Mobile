@@ -14,11 +14,17 @@ void main() {
       'color_acento': '#A06020',
       'color_fondo': '#EEE8DB',
       'color_texto': '#172536',
+      'color_texto_contraste': '#FFFDF8',
     });
 
     expect(portal.codigo, 'varones');
     expect(portal.nombreMarca, 'Varones');
     expect(portal.primaryColor.toARGB32(), 0xFF102030);
+    expect(portal.contrastTextColor.toARGB32(), 0xFFFFFDF8);
     expect(TenantPortal.fromJson(portal.toJson()).eslogan, 'Viste mejor');
+    expect(
+      TenantPortal.fromJson(portal.toJson()).colorTextoContraste,
+      '#FFFDF8',
+    );
   });
 }

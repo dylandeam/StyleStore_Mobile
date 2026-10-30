@@ -13,6 +13,7 @@ class TenantPortal {
     required this.colorAcento,
     required this.colorFondo,
     required this.colorTexto,
+    this.colorTextoContraste = '#FFFFFF',
   });
 
   final int id;
@@ -26,6 +27,7 @@ class TenantPortal {
   final String colorAcento;
   final String colorFondo;
   final String colorTexto;
+  final String colorTextoContraste;
 
   factory TenantPortal.fromJson(Map<String, dynamic> json) => TenantPortal(
         id: int.parse(json['id'].toString()),
@@ -39,6 +41,8 @@ class TenantPortal {
         colorAcento: (json['color_acento'] ?? '#274C77').toString(),
         colorFondo: (json['color_fondo'] ?? '#EEE7D8').toString(),
         colorTexto: (json['color_texto'] ?? '#172536').toString(),
+        colorTextoContraste:
+            (json['color_texto_contraste'] ?? '#FFFFFF').toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -53,6 +57,7 @@ class TenantPortal {
         'color_acento': colorAcento,
         'color_fondo': colorFondo,
         'color_texto': colorTexto,
+        'color_texto_contraste': colorTextoContraste,
       };
 
   Color get primaryColor => _parseColor(colorPrimario, const Color(0xFF14263D));
@@ -61,6 +66,7 @@ class TenantPortal {
   Color get accentColor => _parseColor(colorAcento, const Color(0xFF274C77));
   Color get backgroundColor => _parseColor(colorFondo, const Color(0xFFEEE7D8));
   Color get textColor => _parseColor(colorTexto, const Color(0xFF172536));
+  Color get contrastTextColor => _parseColor(colorTextoContraste, Colors.white);
 
   static Color _parseColor(String value, Color fallback) {
     final normalized = value.replaceFirst('#', '');
